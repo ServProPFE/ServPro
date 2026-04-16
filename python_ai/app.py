@@ -50,26 +50,26 @@ LLM_TIMEOUT_SECONDS = get_env_float('LLM_TIMEOUT_SECONDS', 8.0)
 # Service keywords database
 SERVICES_DB = {
     'plomberie': {
-        'keywords': ['plombier', 'plumber', 'plumbing', 'robinet', 'tuyau', 'fuite', 'eau', 'évier', 'toilette', 'leak', 'pipe', 'faucet', 'drain', 'sink', 'سباك', 'سباكة', 'تسرب', 'أنبوب', 'حنفية'],
-        'service_name': 'Plomberie',
+        'keywords': ['plumber', 'plumbing', 'water', 'leak', 'pipe', 'faucet', 'drain', 'sink', 'toilet', 'سباك', 'سباكة', 'تسرب', 'أنبوب', 'حنفية', 'مرحاض'],
+        'service_name': 'Plumbing',
         'category': 'PLOMBERIE',
         'confidence_threshold': 0.08
     },
     'electricite': {
-        'keywords': ['électricien', 'electrician', 'électrique', 'electrical', 'courant', 'ampoule', 'prise', 'disjoncteur', 'wire', 'circuit', 'power', 'light', 'breaker', 'كهرباء', 'كهربائي', 'أسلاك', 'مقبس', 'ضوء'],
-        'service_name': 'Électricité',
+        'keywords': ['electrician', 'electrical', 'wire', 'circuit', 'power', 'light', 'breaker', 'socket', 'switch', 'кухня', 'كهرباء', 'كهربائي', 'أسلاك', 'مقبس', 'ضوء', 'مفتاح'],
+        'service_name': 'Electrical',
         'category': 'ELECTRICITE',
         'confidence_threshold': 0.08
     },
     'climatisation': {
-        'keywords': ['climatisation', 'ac', 'air conditioner', 'air conditioning', 'ac repair', 'ac repair', 'clim', 'chaud', 'froid', 'refroidissement', 'chauffage', 'hvac', 'cooling', 'heating', 'thermostat', 'تكييف', 'تبريد', 'تدفئة', 'برودة'],
-        'service_name': 'Climatisation',
+        'keywords': ['ac', 'air conditioner', 'air conditioning', 'hvac', 'cooling', 'heating', 'thermostat', 'temperature', 'hot', 'cold', 'تكييف', 'تبريد', 'تدفئة', 'برودة', 'ثرموستات', 'حرارة'],
+        'service_name': 'HVAC',
         'category': 'CLIMATISATION',
         'confidence_threshold': 0.08
     },
     'nettoyage': {
-        'keywords': ['nettoyage', 'propre', 'ménage', 'poussière', 'cleaning', 'cleaner', 'house cleaning', 'sweep', 'dust', 'wash', 'hygiene', 'sanitaire', 'clean', 'maid', 'تنظيف', 'نظافة', 'ممسحة'],
-        'service_name': 'Nettoyage',
+        'keywords': ['cleaning', 'cleaner', 'house cleaning', 'sweep', 'dust', 'wash', 'hygiene', 'clean', 'maid', 'sanitize', 'تنظيف', 'نظافة', 'ممسحة', 'غبار', 'تعقيم'],
+        'service_name': 'Cleaning',
         'category': 'NETTOYAGE',
         'confidence_threshold': 0.08
     }
@@ -77,24 +77,24 @@ SERVICES_DB = {
 
 ISSUE_PATTERNS = {
     'plomberie': {
-        'leak': ['leak', 'fuite', 'تسرب', 'water leak'],
-        'drain': ['drain', 'sink', 'évier', 'pipe', 'tuyau', 'canalisation', 'أنبوب'],
-        'fixture': ['faucet', 'robinet', 'toilet', 'toilette', 'حنفية', 'مرحاض']
+        'leak': ['leak', 'water leak', 'تسرب'],
+        'drain': ['drain', 'sink', 'pipe', 'clogged', 'blockage', 'أنبوب', 'انسداد'],
+        'fixture': ['faucet', 'toilet', 'valve', 'tap', 'حنفية', 'مرحاض']
     },
     'electricite': {
-        'power_outage': ['power', 'courant', 'blackout', 'breaker', 'disjoncteur', 'electricity', 'كهرباء'],
-        'wiring': ['wire', 'wiring', 'circuit', 'prise', 'socket', 'أسلاك', 'مقبس'],
-        'lighting': ['light', 'ampoule', 'lamp', 'ضوء']
+        'power_outage': ['power', 'blackout', 'breaker', 'electricity', 'outage', 'كهرباء', 'انقطاع'],
+        'wiring': ['wire', 'wiring', 'circuit', 'socket', 'outlet', 'أسلاك', 'مقبس'],
+        'lighting': ['light', 'lamp', 'bulb', 'fixture', 'ضوء', 'مصباح']
     },
     'climatisation': {
-        'no_cooling': ['ac', 'air conditioner', 'cooling', 'clim', 'climatisation', 'تبريد', 'تكييف'],
-        'heating': ['heating', 'chauffage', 'hot', 'chaud', 'تدفئة', 'حرارة'],
-        'thermostat': ['thermostat', 'temperature', 'température']
+        'no_cooling': ['ac', 'air conditioner', 'cooling', 'hvac', 'broken', 'تبريد', 'تكييف', 'معطل'],
+        'heating': ['heating', 'warm', 'hot', 'furnace', 'تدفئة', 'حرارة'],
+        'thermostat': ['thermostat', 'temperature', 'control', 'ثرموستات']
     },
     'nettoyage': {
-        'deep_cleaning': ['deep cleaning', 'cleaning', 'ménage', 'تنظيف', 'نظافة'],
-        'dust': ['dust', 'poussière', 'dirt', 'غبار'],
-        'sanitation': ['sanitary', 'hygiene', 'wash', 'sanitaire', 'تعقيم']
+        'deep_cleaning': ['deep cleaning', 'cleaning', 'thorough', 'تنظيف', 'نظافة'],
+        'dust': ['dust', 'dirt', 'debris', 'غبار', 'أوساخ'],
+        'sanitation': ['sanitary', 'hygiene', 'sanitize', 'disinfect', 'تعقيم', 'نظافة']
     }
 }
 
@@ -106,7 +106,6 @@ SERVICE_LABEL_ALIASES = {
     'electricite': 'electricite',
     'electricity': 'electricite',
     'electrical': 'electricite',
-    'électricité': 'electricite',
     'كهرباء': 'electricite',
     'climatisation': 'climatisation',
     'hvac': 'climatisation',
@@ -405,7 +404,7 @@ class ServiceRecommender:
             self.service_keyword_sets[service_key] = set(self.tokenize(doc))
         
         # Also add common terms
-        common_terms_doc = 'besoin need help aide problème problem réparer fix installer install service'
+        common_terms_doc = 'need help problem fix install service repair urgent broken maintain'
         all_docs.append(common_terms_doc)
         
         self.vectorizer.build_vocab(all_docs)
