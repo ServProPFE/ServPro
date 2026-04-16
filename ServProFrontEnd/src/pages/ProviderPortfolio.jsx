@@ -183,34 +183,6 @@ const ProviderPortfolio = () => {
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-xl font-semibold text-slate-900">{t('providerPortfolio.locationTitle')}</h2>
-            <div className="mt-4 space-y-2 text-sm text-slate-700">
-              <p><span className="font-semibold text-slate-900">{t('providerPortfolio.address')}:</span> {formatLocation(provider, t)}</p>
-              <p><span className="font-semibold text-slate-900">{t('providerPortfolio.serviceRadius')}:</span> {profile.serviceRadius || 0} km</p>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-xl font-semibold text-slate-900">{t('providerPortfolio.teamTitle')}</h2>
-            <div className="mt-4 space-y-2 text-sm text-slate-700">
-              {teamItems.map((item) => (
-                <p key={`team-${item}`} className="rounded-lg bg-slate-50 px-3 py-2">{item}</p>
-              ))}
-              {!teamItems.length && <p>{t('providerPortfolio.notProvided')}</p>}
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-xl font-semibold text-slate-900">{t('providerPortfolio.equipmentTitle')}</h2>
-            <div className="mt-4 space-y-2 text-sm text-slate-700">
-              {equipmentItems.map((item) => (
-                <p key={`equipment-${item}`} className="rounded-lg bg-slate-50 px-3 py-2">{item}</p>
-              ))}
-              {!equipmentItems.length && <p>{t('providerPortfolio.notProvided')}</p>}
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="text-xl font-semibold text-slate-900">{t('providerPortfolio.certificatesTitle')}</h2>
             <div className="mt-4 space-y-2 text-sm text-slate-700">
               {mergedCertificationItems.map((certification, index) => (
