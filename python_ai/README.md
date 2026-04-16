@@ -1,6 +1,10 @@
 # Python AI Chatbot Service
 
-This is a Flask-based microservice that provides intent detection for the chatbot using a lightweight pure-Python TF-IDF + cosine similarity engine (no scikit-learn / numpy required).
+This is a Flask-based microservice that provides intent detection for the chatbot using a hybrid NLP pipeline:
+
+- Pure-Python TF-IDF + cosine similarity (no scikit-learn / numpy required)
+- Structured LLM classification with Google Gemini
+- Score fusion (TF-IDF + LLM) for more robust routing
 
 ## Architecture
 
@@ -9,7 +13,7 @@ Frontend (React)
     ↓
 Node.js Backend (Port 4000)
     ↓
-Python AI Service (Port 5000) ← TF-IDF + Cosine Similarity
+Python AI Service (Port 5000) ← Hybrid NLP (TF-IDF + LLM)
     ↓
 MongoDB (Services Database)
 ```
@@ -17,13 +21,14 @@ MongoDB (Services Database)
 ## Features
 
 - **Pure Python NLP Engine**: TF-IDF + cosine similarity implemented without external ML libraries
-- **Hybrid Scoring**: Weighted score from cosine similarity + keyword overlap
+- **Structured LLM NLP Classification**: Gemini extracts service intent, issue type, and confidence in JSON format
+- **Hybrid Score Fusion**: Combines TF-IDF and LLM scores for final routing decisions
 - **Actionable Responses**: Returns service-specific guidance (not confidence only)
 - **Issue Type Detection**: Detects subtype hints (e.g., leak, wiring, no cooling, dust)
 - **Bilingual Support**: English and Arabic response generation, with multilingual keyword sets (EN/FR/AR)
 - **Arabic Token Normalization**: Handles common prefixes to improve matching quality
-- **Gemini AI Fallback**: Intelligent fallback using Google Gemini API when confidence is low (< 8%)
-- **Detailed Debug Output**: Per-service `all_scores` with `cosine_score`, `keyword_score`, and `matched_keywords`
+- **Gemini AI Fallback**: Intelligent fallback when no reliable service can be detected
+- **Detailed Debug Output**: Per-service `all_scores` with `cosine_score`, `keyword_score`, `llm_score`, `combined_score`, and `matched_keywords`
 
 ## Installation
 
@@ -46,11 +51,11 @@ python -m flask --version
 python -m py_compile app.py
 ```
 
-### Gemini API Setup (Optional)
+### Gemini API Setup (Optional but Recommended)
 
-The service includes an intelligent fallback using Google Gemini API for queries that don't match predefined service patterns (confidence < 8%).
+The service can run without Gemini, but hybrid NLP+LLM routing is enabled when an API key is provided.
 
-**To enable Gemini fallback:**
+**To enable Gemini integration:**
 
 1. **Get API Key**:
    - Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
@@ -79,7 +84,22 @@ The service includes an intelligent fallback using Google Gemini API for queries
    GEMINI_API_KEY=your-api-key-here
    ```
 
-**Note:** The service works without the API key - it gracefully falls back to standard "Unable to detect service" messages if the key is not configured.
+4. **Optional Behavior Controls**:
+  ```bash
+  # Enable/disable LLM integration entirely (default: true)
+  LLM_ENABLED=true
+
+  # TF-IDF weight in blended score (0..1, default: 0.6)
+  LLM_BLEND_ALPHA=0.6
+
+  # Minimum confidence to trust LLM direct routing (default: 0.15)
+  LLM_MIN_CONFIDENCE=0.15
+
+  # Timeout for LLM requests in seconds (default: 8)
+  LLM_TIMEOUT_SECONDS=8
+  ```
+
+**Note:** Without API key/config, the service still works with TF-IDF-only routing.
 
 ## Running the Service
 
@@ -138,8 +158,10 @@ Expected response:
 ```json
 {
   "status": "AI Chatbot service is running",
-  "model": "TF-IDF + Cosine Similarity (Lightweight - No ML Library)",
-  "version": "1.0.0"
+  "model": "Hybrid NLP: TF-IDF + LLM (Gemini)",
+  "version": "1.1.0",
+  "llm_enabled": true,
+  "llm_blend_alpha": 0.6
 }
 ```
 
@@ -299,9 +321,13 @@ Where:
 - Similarity ranges from 0 to 1
 
 ### 3. Confidence Scoring
-Confidence is computed from a hybrid score:
+The service computes confidence in two steps:
 
+1. **TF-IDF score** per service:
 `0.6 * cosine_score + 0.4 * keyword_score`
+
+2. **Hybrid blend** with LLM:
+`combined_score = (LLM_BLEND_ALPHA * tfidf_score) + ((1 - LLM_BLEND_ALPHA) * llm_score)`
 
 **Example Scores:**
 - Plomberie: 0.21 (21%) ← Recommended
@@ -312,10 +338,10 @@ Confidence is computed from a hybrid score:
 ### 4. Service Lookup
 If confidence passes threshold (default `0.08`), the Node.js backend fetches actual service details from MongoDB and returns them to the frontend.
 
-### 5. Gemini AI Fallback (Optional)
-When confidence is below the threshold (`< 0.08`), the service can optionally use Google Gemini API to generate helpful responses:
+### 5. LLM Routing + Fallback (Optional)
+When Gemini is enabled, the service first attempts structured LLM classification and blends the result with TF-IDF. If no reliable service is detected, it falls back to a general helpful Gemini response.
 
-**Trigger Condition:** `confidence < 0.08` AND `GEMINI_API_KEY` is configured
+**Fallback Trigger Condition:** no service passes confidence logic after hybrid merge
 
 **Fallback Behavior:**
 - Sends user query + service context to Gemini API
@@ -399,7 +425,11 @@ const aiResponse = await axios.post(`${PYTHON_AI_SERVICE}/recommend`, {
 In `ServProBackend/.env`:
 ```bash
 PYTHON_AI_SERVICE=http://localhost:5000
-GEMINI_API_KEY=your-gemini-api-key-here  # Optional: Enables AI fallback for unmatched queries
+GEMINI_API_KEY=your-gemini-api-key-here
+LLM_ENABLED=true
+LLM_BLEND_ALPHA=0.6
+LLM_MIN_CONFIDENCE=0.15
+LLM_TIMEOUT_SECONDS=8
 ```
 
 ## Troubleshooting
@@ -513,12 +543,12 @@ python-ai:
 ## Future Enhancements
 
 - [ ] Machine learning model training on user queries
-- [ ] Intent classification (not just service category)
+- [x] Intent classification via structured LLM JSON output ✅ **IMPLEMENTED**
 - [ ] Entity extraction (location, time, urgency)
 - [ ] Conversation memory (context awareness)
 - [ ] Multi-turn dialogue support
 - [ ] Sentiment analysis
-- [x] Integration with Gemini API for complex queries ✅ **IMPLEMENTED**
+- [x] Hybrid TF-IDF + Gemini routing ✅ **IMPLEMENTED**
 - [ ] Speech recognition (audio to text)
 - [ ] Chat analytics dashboard
 

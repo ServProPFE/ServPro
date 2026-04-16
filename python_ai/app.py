@@ -4,6 +4,7 @@ from collections import Counter
 import math
 import re
 import os
+import json
 from dotenv import load_dotenv
 import google.generativeai as genai
 
@@ -22,6 +23,29 @@ if GEMINI_API_KEY:
 else:
     gemini_model = None
     print("⚠️  Gemini API key not found - fallback disabled")
+
+
+def get_env_float(name, default):
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return default
+
+
+def get_env_bool(name, default):
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return str(raw).strip().lower() in ('1', 'true', 'yes', 'y', 'on')
+
+
+LLM_ENABLED = get_env_bool('LLM_ENABLED', True)
+LLM_MIN_CONFIDENCE = get_env_float('LLM_MIN_CONFIDENCE', 0.15)
+LLM_BLEND_ALPHA = min(max(get_env_float('LLM_BLEND_ALPHA', 0.6), 0.0), 1.0)
+LLM_TIMEOUT_SECONDS = get_env_float('LLM_TIMEOUT_SECONDS', 8.0)
 
 # Service keywords database
 SERVICES_DB = {
@@ -74,6 +98,27 @@ ISSUE_PATTERNS = {
     }
 }
 
+SERVICE_LABEL_ALIASES = {
+    'plomberie': 'plomberie',
+    'plumbing': 'plomberie',
+    'plumber': 'plomberie',
+    'سباكة': 'plomberie',
+    'electricite': 'electricite',
+    'electricity': 'electricite',
+    'electrical': 'electricite',
+    'électricité': 'electricite',
+    'كهرباء': 'electricite',
+    'climatisation': 'climatisation',
+    'hvac': 'climatisation',
+    'ac': 'climatisation',
+    'air conditioning': 'climatisation',
+    'تكييف': 'climatisation',
+    'nettoyage': 'nettoyage',
+    'cleaning': 'nettoyage',
+    'house cleaning': 'nettoyage',
+    'تنظيف': 'nettoyage'
+}
+
 def normalize_tokens(text):
     """Tokenize and normalize words (including common Arabic prefixes)."""
     raw_tokens = re.findall(r"\w+", text.lower())
@@ -95,6 +140,183 @@ def normalize_tokens(text):
             normalized.add(token[3:])
 
     return list(normalized)
+
+
+def normalize_service_label(label):
+    if not label:
+        return None
+    key = str(label).strip().lower()
+    return SERVICE_LABEL_ALIASES.get(key, key if key in SERVICES_DB else None)
+
+
+def extract_json_object(raw_text):
+    """Extract a JSON object from plain text or fenced markdown."""
+    if not raw_text:
+        return None
+
+    cleaned = raw_text.strip()
+    if cleaned.startswith('```'):
+        cleaned = re.sub(r'^```(?:json)?\s*', '', cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r'\s*```$', '', cleaned)
+
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        pass
+
+    # Try to parse the first object-like section.
+    match = re.search(r'\{[\s\S]*\}', cleaned)
+    if not match:
+        return None
+
+    try:
+        return json.loads(match.group(0))
+    except json.JSONDecodeError:
+        return None
+
+
+def llm_nlp_classify(user_input, language='en'):
+    """Use Gemini to perform structured NLP classification for service routing."""
+    llm_result = {
+        'enabled': bool(LLM_ENABLED and gemini_model),
+        'used': False,
+        'detected_service': None,
+        'confidence': 0.0,
+        'issue_type': 'general',
+        'service_scores': {},
+        'assistant_message': None
+    }
+
+    if not LLM_ENABLED:
+        return llm_result
+    if not gemini_model:
+        return llm_result
+
+    service_catalog = []
+    for key, data in SERVICES_DB.items():
+        service_catalog.append(f"- {key}: {data['service_name']} ({data['category']})")
+
+    prompt = f"""You are an NLP classifier for a home services chatbot.
+Return ONLY strict JSON, no markdown.
+
+Allowed services:
+{chr(10).join(service_catalog)}
+
+Input language hint: {language}
+User input: \"{user_input}\"
+
+Output JSON schema:
+{{
+  "detected_service": "plomberie|electricite|climatisation|nettoyage|null",
+  "confidence": 0.0,
+  "issue_type": "short_label",
+  "service_scores": {{
+    "plomberie": 0.0,
+    "electricite": 0.0,
+    "climatisation": 0.0,
+    "nettoyage": 0.0
+  }},
+  "assistant_message": "2-3 sentence helpful routing advice in the same language as user"
+}}
+
+Rules:
+- confidence and all service_scores must be between 0 and 1.
+- detected_service must be null when no service is reliable.
+- Keep assistant_message concise and professional.
+"""
+
+    try:
+        response = gemini_model.generate_content(
+            prompt,
+            request_options={"timeout": LLM_TIMEOUT_SECONDS}
+        )
+        if not response:
+            return llm_result
+
+        text = response.text.strip() if hasattr(response, 'text') and response.text else ''
+        payload = extract_json_object(text)
+        if not payload or not isinstance(payload, dict):
+            return llm_result
+
+        llm_service = normalize_service_label(payload.get('detected_service'))
+        confidence = payload.get('confidence', 0.0)
+        try:
+            confidence = float(confidence)
+        except (TypeError, ValueError):
+            confidence = 0.0
+        confidence = max(0.0, min(1.0, confidence))
+
+        service_scores = payload.get('service_scores', {})
+        normalized_scores = {}
+        if isinstance(service_scores, dict):
+            for service_key in SERVICES_DB.keys():
+                score = service_scores.get(service_key, 0.0)
+                try:
+                    score = float(score)
+                except (TypeError, ValueError):
+                    score = 0.0
+                normalized_scores[service_key] = max(0.0, min(1.0, score))
+        else:
+            normalized_scores = dict.fromkeys(SERVICES_DB.keys(), 0.0)
+
+        if llm_service and normalized_scores.get(llm_service, 0.0) < 1e-9:
+            normalized_scores[llm_service] = confidence
+
+        llm_result.update({
+            'used': True,
+            'detected_service': llm_service,
+            'confidence': confidence,
+            'issue_type': str(payload.get('issue_type', 'general') or 'general').strip().lower(),
+            'service_scores': normalized_scores,
+            'assistant_message': str(payload.get('assistant_message', '')).strip() or None
+        })
+        return llm_result
+    except Exception as e:
+        print(f"⚠️ LLM classification failed: {e}")
+        return llm_result
+
+
+def merge_tfidf_llm_scores(tfidf_result, llm_result):
+    """Blend TF-IDF scores with LLM scores and return final routing decision."""
+    merged = {
+        'detected_service': tfidf_result.get('detected_service'),
+        'confidence': float(tfidf_result.get('confidence', 0.0) or 0.0),
+        'all_scores': tfidf_result.get('all_scores', {}),
+        'source': 'tfidf'
+    }
+
+    if not llm_result.get('used'):
+        return merged
+
+    best_service = None
+    best_score = 0.0
+
+    for service_key, score_data in merged['all_scores'].items():
+        tfidf_score = float(score_data.get('similarity', 0.0) or 0.0)
+        llm_score = float(llm_result.get('service_scores', {}).get(service_key, 0.0) or 0.0)
+        combined = (LLM_BLEND_ALPHA * tfidf_score) + ((1.0 - LLM_BLEND_ALPHA) * llm_score)
+
+        score_data['llm_score'] = llm_score
+        score_data['combined_score'] = combined
+
+        if combined > best_score:
+            best_score = combined
+            best_service = service_key
+
+    if best_service and best_score >= SERVICES_DB[best_service]['confidence_threshold']:
+        merged['detected_service'] = best_service
+        merged['confidence'] = best_score
+        merged['source'] = 'hybrid_tfidf_llm'
+
+    # If blended score is low but LLM is confident, trust LLM when above minimum.
+    llm_service = llm_result.get('detected_service')
+    llm_confidence = float(llm_result.get('confidence', 0.0) or 0.0)
+    if llm_service and llm_confidence >= LLM_MIN_CONFIDENCE and llm_confidence > merged['confidence']:
+        merged['detected_service'] = llm_service
+        merged['confidence'] = llm_confidence
+        merged['source'] = 'llm'
+
+    return merged
 
 class SimpleVectorizer:
     """Lightweight TF-IDF vectorizer without scikit-learn dependency"""
@@ -204,7 +426,7 @@ class ServiceRecommender:
             # Calculate cosine similarity
             cosine_score = self.vectorizer.cosine_similarity(user_vec, service_vec)
             keyword_set = self.service_keyword_sets.get(service_key, set())
-            matched_keywords = sorted(list(user_tokens & keyword_set))
+            matched_keywords = sorted(user_tokens & keyword_set)
             keyword_score = len(matched_keywords) / max(len(user_tokens), 1)
             similarity = (0.6 * cosine_score) + (0.4 * keyword_score)
             
@@ -237,8 +459,10 @@ def health():
     """Health check endpoint"""
     return jsonify({
         'status': 'AI Chatbot service is running',
-        'model': 'TF-IDF + Cosine Similarity (Lightweight - No ML Library)',
-        'version': '1.0.0'
+        'model': 'Hybrid NLP: TF-IDF + LLM (Gemini)',
+        'version': '1.1.0',
+        'llm_enabled': bool(LLM_ENABLED and gemini_model),
+        'llm_blend_alpha': LLM_BLEND_ALPHA
     }), 200
 
 @app.route('/services', methods=['GET'])
@@ -273,6 +497,7 @@ def recommend():
     Recommend service based on user input
     Expected JSON: {"text": "user message", "language": "en" or "ar"}
     """
+    language = 'en'
     try:
         data = request.get_json()
         user_input = data.get('text', '').strip()
@@ -318,8 +543,10 @@ def recommend():
                 'all_scores': {}
             }), 200
         
-        # Get recommendation
-        result = recommender.recommend_service(user_input)
+        # Get baseline NLP recommendation then blend with structured LLM classification.
+        tfidf_result = recommender.recommend_service(user_input)
+        llm_result = llm_nlp_classify(user_input, language)
+        result = merge_tfidf_llm_scores(tfidf_result, llm_result)
         
         # Prepare response
         response = {
@@ -331,24 +558,28 @@ def recommend():
         }
         
         if result['detected_service'] and result['confidence'] > 0:
-            service_data = result['service_data']
+            service_data = SERVICES_DB.get(result['detected_service'])
             best_score = result['all_scores'].get(result['detected_service'], {})
             matched_keywords = best_score.get('matched_keywords', [])
-            issue_type = detect_issue_type(result['detected_service'], user_input)
+            issue_type = llm_result.get('issue_type') if llm_result.get('used') else detect_issue_type(result['detected_service'], user_input)
+            if not issue_type or issue_type == 'general':
+                issue_type = detect_issue_type(result['detected_service'], user_input)
+
+            recommendation_message = llm_result.get('assistant_message') if llm_result.get('used') else None
+            if not recommendation_message:
+                recommendation_message = generate_response(
+                    result['detected_service'],
+                    language,
+                    issue_type
+                )
+
             response['recommendations'].append({
                 'service_name': service_data['service_name'],
                 'category': service_data['category'],
                 'confidence': result['confidence'],
                 'matched_keywords': matched_keywords,
                 'issue_type': issue_type,
-                'message': generate_response(
-                    result['detected_service'],
-                    service_data['service_name'],
-                    result['confidence'],
-                    language,
-                    matched_keywords,
-                    issue_type
-                )
+                'message': recommendation_message
             })
             response['message'] = response['recommendations'][0]['message']
         else:
@@ -360,10 +591,11 @@ def recommend():
             response['fallback_used'] = True
         
         response['all_scores'] = result['all_scores']
+        response['llm_used'] = bool(llm_result.get('used'))
         
         # Add source metadata
         if 'source' not in response:
-            response['source'] = 'tfidf'
+            response['source'] = result.get('source', 'tfidf')
             response['fallback_used'] = False
         
         return jsonify(response), 200
@@ -392,7 +624,9 @@ def analyze():
         if not user_input:
             return jsonify({'error': 'Empty input'}), 400
         
-        result = recommender.recommend_service(user_input)
+        tfidf_result = recommender.recommend_service(user_input)
+        llm_result = llm_nlp_classify(user_input, language)
+        result = merge_tfidf_llm_scores(tfidf_result, llm_result)
         
         return jsonify({
             'user_input': user_input,
@@ -401,7 +635,9 @@ def analyze():
             'best_match': {
                 'service': result['detected_service'],
                 'confidence': result['confidence']
-            }
+            },
+            'source': result.get('source', 'tfidf'),
+            'llm_used': bool(llm_result.get('used'))
         }), 200
 
     except Exception as e:
@@ -427,10 +663,8 @@ def detect_issue_type(service_key, user_input):
 
     return best_type
 
-def generate_response(service_key, service_name, confidence, language='en', matched_keywords=None, issue_type='general'):
+def generate_response(service_key, language='en', issue_type='general'):
     """Generate an accurate, actionable response message."""
-    confidence_pct = int(confidence * 100)
-    matched_keywords = matched_keywords or []
 
     english_advice = {
         'plomberie': {
@@ -489,7 +723,6 @@ def generate_response(service_key, service_name, confidence, language='en', matc
     advice_map = arabic_advice if language == 'ar' else english_advice
     service_advice = advice_map.get(service_key, {})
     advice = service_advice.get(issue_type, service_advice.get('general', 'Service found.'))
-    keywords_text = ', '.join(matched_keywords[:4]) if matched_keywords else ('كلمات محددة قليلة' if language == 'ar' else 'limited keyword evidence')
 
     if language == 'ar':
         return f" {advice} "
