@@ -100,10 +100,13 @@ ServProBackend/
 
 6. **(Optional but recommended) Start Python AI service for chatbot**
   ```bash
+  # If you keep the AI repo checked out beside this one
   cd ../python_ai
   python -m pip install -r requirements.txt
   python app.py
   ```
+
+   If the AI service is deployed on Render, set `PYTHON_AI_SERVICE` to the Render URL instead of running it locally.
 
 7. **Run the backend unit tests**
   ```bash
@@ -145,8 +148,8 @@ PYTHON_AI_HEALTH_RETRIES=3
 | `NODE_ENV`     | Environment (development/production) | `development`                     |
 | `JWT_SECRET`   | Secret key for JWT signing           | *Required*                        |
 | `JWT_EXPIRES_IN` | Token expiration time              | `7d`                              |
-| `PYTHON_AI_SERVICE` | Python chatbot service base URL | `http://localhost:5000`          |
-| `GEMINI_API_KEY` | Optional fallback model API key for Python AI service | *Optional* |
+| `PYTHON_AI_SERVICE` | Python chatbot service base URL or Render URL | `http://localhost:5000`          |
+| `GEMINI_API_KEY` | Optional fallback model API key for the AI service | *Optional* |
 | `PYTHON_AI_TIMEOUT_MS` | Timeout for AI requests (ms) | `12000` |
 | `PYTHON_AI_RETRIES` | Retry attempts for AI requests | `2` |
 | `PYTHON_AI_RETRY_BASE_DELAY_MS` | Exponential backoff base delay (ms) | `1500` |

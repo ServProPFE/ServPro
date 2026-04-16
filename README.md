@@ -1,6 +1,6 @@
 # ServPro Platform
 
-Plateforme de services professionnels avec:
+Plateforme de services professionnels avec plusieurs depots Git separes:
 - une API backend Node.js,
 - une application client React,
 - un dashboard prestataire/admin React,
@@ -9,27 +9,27 @@ Plateforme de services professionnels avec:
 
 Langues supportees: anglais et arabe (RTL).
 
-## Services du workspace
+## Depots du workspace
 
-1. `Backend`
+1. `ServProBackend`
 - API REST Express + MongoDB
 - Auth JWT, RBAC, reservations, transactions, factures, etc.
 - Delegation NLP du chatbot vers le service Python
 
-2. `FrontEnd`
+2. `ServProFrontEnd`
 - Application client (React + Vite)
 - Recherche, reservation, suivi, historique des transactions, chatbot
 
-3. `Dashboard`
+3. `ServProDashboard`
 - Back-office prestataire/admin (React + Vite)
 - Gestion services, reservations, offres, disponibilites, transactions, factures
 
-4. `Python AI Chatbot`
+4. `python_ai`
 - Microservice Flask sur `:5000`
 - Moteur TF-IDF + similarite cosinus en pur Python
 - Fallback Gemini optionnel via `GEMINI_API_KEY`
 
-5. `Mobile`
+5. `ServProMobile`
 - Application mobile (Expo Router + React Native)
 - Flux auth, catalogue services, details et reservations
 - Chatbot AI mobile (tab dedie)
@@ -160,10 +160,10 @@ EXPO_PUBLIC_API_BASE_URL=https://servpro-backend.onrender.com
 
 ## Deploiement Render (prod)
 
-Le fichier `render.yaml` de la racine decrit:
+Chaque depot a son propre `render.yaml`:
 
-- `servpro-backend`
-- `servpro-python-ai`
+- `ServProBackend/render.yaml` pour le backend
+- `python_ai/render.yaml` pour le service AI
 
 Variables critiques backend (Render):
 
@@ -176,7 +176,7 @@ PYTHON_AI_HEALTH_TIMEOUT_MS=20000
 PYTHON_AI_HEALTH_RETRIES=3
 ```
 
-Verification post-deploiement:
+Verification post-deploiement backend:
 
 - `https://servpro-backend.onrender.com/health`
 - `https://servpro-backend.onrender.com/chatbot/health`

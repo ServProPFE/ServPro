@@ -22,7 +22,8 @@ Back-office web app for providers and admins to manage services, bookings, offer
 
 ## Requirements
 - Node.js 20+
-- Backend running on `http://localhost:4000`
+- Backend running locally on `http://localhost:4000` or deployed on Render
+- Chatbot AI is handled by the backend through its separately deployed Python AI service
 
 ## Setup
 ```bash
@@ -32,6 +33,12 @@ npm install
 Create `.env` (or copy `.env.example`) and set:
 ```
 VITE_API_BASE_URL=http://localhost:4000
+```
+
+For production, point `VITE_API_BASE_URL` to the backend Render URL:
+
+```env
+VITE_API_BASE_URL=https://servpro-backend.onrender.com
 ```
 
 ## Run
@@ -114,6 +121,7 @@ The new transactions management system allows admins to:
 - Booking status updates use `PUT /bookings/:id` with status field.
 - Transactions endpoint: `GET/PUT/DELETE /transactions`
 - Transactions auto-created when booking status changes to CONFIRMED
+- Chatbot endpoints are proxied by the backend to the standalone Python AI service
 
 ## Common Issues
 - Access denied: Check user role matches the page requirements

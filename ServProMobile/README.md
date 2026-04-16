@@ -86,6 +86,12 @@ Set this in `ServProMobile/.env` for stable mobile deployment:
 EXPO_PUBLIC_API_BASE_URL=https://servpro-backend.onrender.com
 ```
 
+For local development, you can point this to your local backend instead:
+
+```env
+EXPO_PUBLIC_API_BASE_URL=http://localhost:4000
+```
+
 Then restart Metro with cache clear:
 
 ```bash
@@ -96,8 +102,9 @@ If chatbot displays the fallback message about AI availability, check:
 
 - `https://servpro-backend.onrender.com/chatbot/health`
 - backend Render env var `PYTHON_AI_SERVICE`
+- the separate Python AI service at `https://chatbot-ai-smpu.onrender.com/health`
 
-For containerized/Kubernetes runs, ensure backend DNS/URL is reachable from the mobile runtime environment.
+For containerized/Kubernetes runs, ensure the backend DNS/URL is reachable from the mobile runtime environment. The mobile app does not talk to the AI service directly; it only talks to the backend.
 
 ## Localization
 

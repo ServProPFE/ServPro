@@ -5,7 +5,7 @@ Guide Docker pour l'application client ServPro.
 ## Prerequis
 
 - Docker Desktop (Compose v2)
-- Backend ServPro disponible sur `http://localhost:4000`
+- Backend ServPro disponible sur `http://localhost:4000` en local ou sur Render en production
 
 ## Lancer le frontend client
 
@@ -26,7 +26,11 @@ Par defaut, `compose.yaml` utilise:
 VITE_API_BASE_URL=http://localhost:4000
 ```
 
-Pour pointer vers une autre API, definir la variable avant de lancer compose.
+Pour pointer vers une autre API, definir la variable avant de lancer compose. En production, utiliser par exemple:
+
+```env
+VITE_API_BASE_URL=https://servpro-backend.onrender.com
+```
 
 ## Arreter
 

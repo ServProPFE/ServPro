@@ -5,7 +5,7 @@ Guide Docker pour l'application mobile ServPro (Expo).
 ## Prerequis
 
 - Docker Desktop (Compose v2)
-- Backend ServPro accessible (local ou distant)
+- Backend ServPro accessible (local ou distant, for example `https://servpro-backend.onrender.com`)
 
 ## Lancer en local avec Docker Compose
 
@@ -50,6 +50,11 @@ docker push docker.io/<your-user>/servpro-mobile:v1
 
 2. Mobile ne joint pas l'API:
 - verifier l'URL backend dans la config Expo et/ou variables d'environnement
+- verifier que le backend Render est joignable et que `PYTHON_AI_SERVICE` est configure cote backend
 
-3. Erreur de build npm:
+3. Chatbot affiche un message de fallback:
+- verifier `https://servpro-backend.onrender.com/chatbot/health`
+- verifier `https://chatbot-ai-smpu.onrender.com/health`
+
+4. Erreur de build npm:
 - supprimer cache local Docker puis rebuild: `docker builder prune -f`

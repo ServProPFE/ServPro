@@ -24,7 +24,8 @@ Customer-facing web app for browsing services, viewing details, and booking prov
 
 ## Requirements
 - Node.js 20+
-- Backend running on `http://localhost:4000`
+- Backend running locally on `http://localhost:4000` or deployed on Render
+- AI chatbot is handled by the backend via its configured `PYTHON_AI_SERVICE`
 
 ## Setup
 ```bash
@@ -34,6 +35,12 @@ npm install
 Create `.env` (or copy `.env.example`) and set:
 ```
 VITE_API_BASE_URL=http://localhost:4000
+```
+
+For production, point `VITE_API_BASE_URL` to the Render backend URL, for example:
+
+```env
+VITE_API_BASE_URL=https://servpro-backend.onrender.com
 ```
 
 ## Run
@@ -56,9 +63,14 @@ Default dev URL: `http://localhost:5173`
 
 ## Chatbot Integration
 
-- Frontend calls `POST /chatbot` on the backend (which delegates NLP to Python AI service).
+- Frontend calls `POST /chatbot` on the backend (which delegates NLP to the separately deployed Python AI service).
 - Chatbot responses include `message`, `confidence`, and optional `recommendedService`.
 - `recommendedService.provider` is an object (`_id`, `name`, `email`, `phone`) and should be rendered using text fields (e.g., provider name), not as a raw object.
+
+If you are testing production, verify the backend first:
+
+- `https://servpro-backend.onrender.com/health`
+- `https://servpro-backend.onrender.com/chatbot/health`
 
 ## Internationalization (i18n)
 
