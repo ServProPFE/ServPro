@@ -1,0 +1,21 @@
+.services-management {
+  width: 100%;
+}
+
+.services-table {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+.services-table .actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.services-table .btn-edit,
+.services-table .btn-delete {
+  padding: 0.4rem 1rem;
+  font-size: 0.9rem;
+}

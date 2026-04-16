@@ -1,0 +1,85 @@
+pipeline {
+	agent any
+
+	parameters {
+		booleanParam(name: 'deploy_k8s', defaultValue: true, description: 'Deploy mobile image to Kubernetes after successful checks')
+		string(name: 'kubeconfig_credential_id', defaultValue: '', description: 'Jenkins secret file credential ID containing kubeconfig for kubectl access')
+		booleanParam(name: 'k8s_insecure_skip_tls', defaultValue: true, description: 'Set true to bypass TLS certificate validation for kubectl (useful for local/dev clusters with invalid CA data)')
+	}
+
+	triggers {
+		githubPush()
+		pollSCM('H/5 * * * *')
+	}
+
+	environment {
+		IMAGE_REPO = 'docker.io/hechmi10/servpro-mobile'
+		IMAGE_TAG = "build-${BUILD_NUMBER}"
+		CONTAINER_NAME = 'servpro-mobile-ci'
+		K8S_NAMESPACE = 'servpro'
+		K8S_DEPLOYMENT = 'mobile'
+		K8S_CONTAINER = 'mobile'
+	}
+
+	stages {
+		stage('Install Dependencies') {
+			steps {
+				echo 'Installing dependencies...'
+				bat 'npm ci'
+			}
+		}
+
+		stage('Lint') {
+			steps {
+				echo 'Running lint...'
+				bat 'npm run lint'
+			}
+		}
+
+		stage('Build Docker Image') {
+			steps {
+				echo 'Building mobile image...'
+				bat 'docker build -t %IMAGE_REPO%:latest -t %IMAGE_REPO%:%IMAGE_TAG% .'
+			}
+		}
+
+		stage('Smoke Test Container') {
+			steps {
+				bat 'docker rm -f %CONTAINER_NAME% || ver > nul'
+				bat 'docker run -d --name %CONTAINER_NAME% -p 8081:8081 %IMAGE_REPO%:%IMAGE_TAG%'
+				powershell '''
+					$url = "http://localhost:8081"
+					$maxAttempts = 15
+					$delaySeconds = 5
+					$ready = $false
+
+					for ($i = 1; $i -le $maxAttempts; $i++) {
+						try {
+							$response = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 5
+							if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 500) {
+								$ready = $true
+								Write-Host "Mobile web server is reachable on attempt $i with status $($response.StatusCode)."
+								break
+							}
+						} catch {
+							Write-Host "Attempt $i/$maxAttempts failed: $($_.Exception.Message)"
+						}
+
+						Start-Sleep -Seconds $delaySeconds
+					}
+
+					if (-not $ready) {
+						docker logs ${env:CONTAINER_NAME}
+						throw "Mobile container is not reachable on $url"
+					}
+				'''
+			}
+		}
+	}
+
+	post {
+		always {
+			bat 'docker rm -f %CONTAINER_NAME% || ver > nul'
+		}
+	}
+}

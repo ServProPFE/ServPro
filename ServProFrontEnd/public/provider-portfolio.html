@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Provider Portfolio</title>
+  <style>
+    :root {
+      --bg: #fbf9f6;
+      --ink: #202a30;
+      --card: #ffffff;
+      --accent: #0c6d89;
+      --line: #d5dde2;
+      --muted: #60717a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        linear-gradient(120deg, #eef6f8 0%, #fbf9f6 55%, #f8efe9 100%);
+    }
+    .shell { max-width: 1100px; margin: 0 auto; padding: 1rem; }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+      align-items: center;
+      margin: 1rem 0;
+    }
+    .title { font-size: clamp(1.4rem, 2.5vw, 2rem); font-weight: 700; }
+    .muted { color: var(--muted); }
+    a.back {
+      text-decoration: none;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      padding: 0.55rem 0.8rem;
+      border-radius: 10px;
+    }
+    .section {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 1rem;
+      margin-top: 1rem;
+      box-shadow: 0 6px 14px rgba(0,0,0,0.05);
+    }
+    .list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 0.8rem;
+      margin-top: 0.8rem;
+    }
+    .item {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 0.8rem;
+      background: #fff;
+    }
+    .images {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 0.6rem;
+      margin-top: 0.6rem;
+    }
+    .images img {
+      width: 100%;
+      height: 130px;
+      object-fit: cover;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #f5f5f5;
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="topbar">
+      <a class="back" href="providers.html">Back to providers</a>
+      <div>
+        <div id="pageTitle" class="title">Provider Portfolio</div>
+        <div id="providerMeta" class="muted"></div>
+      </div>
+    </div>
+
+    <section class="section">
+      <h2>Services</h2>
+      <div id="services" class="list"></div>
+    </section>
+
+    <section class="section">
+      <h2>Portfolio Items</h2>
+      <div id="portfolios" class="list"></div>
+    </section>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const providerId = params.get("providerId") || "";
+    const providerName = params.get("providerName") || "Provider";
+
+    const API_BASE_URL = (() => {
+      const fromQuery = params.get("apiBase");
+      if (fromQuery) return fromQuery.replace(/\/$/, "");
+      return window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+        ? "http://localhost:4000"
+        : `${window.location.protocol}//${window.location.hostname}:4000`;
+    })();
+
+    const titleEl = document.getElementById("pageTitle");
+    const metaEl = document.getElementById("providerMeta");
+    const servicesEl = document.getElementById("services");
+    const portfoliosEl = document.getElementById("portfolios");
+
+    titleEl.textContent = `${providerName} - Portfolio`;
+    metaEl.textContent = providerId ? `Provider ID: ${providerId}` : "Missing providerId";
+
+    function showEmpty(container, message) {
+      container.innerHTML = `<div class="item muted">${message}</div>`;
+    }
+
+    async function fetchJson(url) {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP ${response.status} on ${url}`);
+      return response.json();
+    }
+
+    function renderServices(items) {
+      if (!items.length) {
+        showEmpty(servicesEl, "No services found for this provider.");
+        return;
+      }
+      servicesEl.innerHTML = "";
+      items.forEach((service) => {
+        const card = document.createElement("article");
+        card.className = "item";
+        card.innerHTML = `
+          <strong>${service.name || "Service"}</strong>
+          <div class="muted">Category: ${service.category || "-"}</div>
+          <div class="muted">Price: ${service.priceMin ?? "-"} ${service.currency || ""}</div>
+          <div class="muted">Duration: ${service.duration ?? "-"} min</div>
+        `;
+        servicesEl.appendChild(card);
+      });
+    }
+
+    function renderPortfolios(items) {
+      if (!items.length) {
+        showEmpty(portfoliosEl, "No portfolio items found for this provider.");
+        return;
+      }
+      portfoliosEl.innerHTML = "";
+      items.forEach((portfolio) => {
+        const card = document.createElement("article");
+        card.className = "item";
+        const imageTags = (Array.isArray(portfolio.images) ? portfolio.images : [])
+          .filter(Boolean)
+          .map((src) => `<img src="${src}" alt="Portfolio image" loading="lazy">`)
+          .join("");
+
+        card.innerHTML = `
+          <strong>${portfolio.title || "Untitled portfolio"}</strong>
+          <div class="muted">${portfolio.description || "No description"}</div>
+          <div class="muted">Created: ${portfolio.createdAt ? new Date(portfolio.createdAt).toLocaleString() : "-"}</div>
+          <div class="images">${imageTags || '<div class="muted">No images</div>'}</div>
+        `;
+        portfoliosEl.appendChild(card);
+      });
+    }
+
+    async function init() {
+      if (!providerId) {
+        showEmpty(servicesEl, "Cannot load services without providerId query parameter.");
+        showEmpty(portfoliosEl, "Cannot load portfolios without providerId query parameter.");
+        return;
+      }
+
+      try {
+        const [servicesRes, portfoliosRes] = await Promise.all([
+          fetchJson(`${API_BASE_URL}/services?providerId=${encodeURIComponent(providerId)}`),
+          fetchJson(`${API_BASE_URL}/portfolios?providerId=${encodeURIComponent(providerId)}`),
+        ]);
+
+        const services = Array.isArray(servicesRes?.items) ? servicesRes.items : (Array.isArray(servicesRes) ? servicesRes : []);
+        const portfolios = Array.isArray(portfoliosRes?.items) ? portfoliosRes.items : (Array.isArray(portfoliosRes) ? portfoliosRes : []);
+
+        renderServices(services);
+        renderPortfolios(portfolios);
+      } catch (error) {
+        showEmpty(servicesEl, `Failed to load services: ${error.message}`);
+        showEmpty(portfoliosEl, `Failed to load portfolios: ${error.message}`);
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
+@import 'tailwindcss';
+
+:root {
+  --primary-color: #0f766e;
+  --secondary-color: #fb923c;
+  --danger-color: #dc2626;
+  --warning-color: #f59e0b;
+  --background-color: #f1f5f9;
+  --text-color: #0f172a;
+  --border-color: #cbd5e1;
+  --shadow: 0 10px 25px -15px rgba(2, 6, 23, 0.25);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+html {
+  scroll-padding-top: calc(78px + env(safe-area-inset-top));
+}
+
+#root {
+  isolation: isolate;
+}
+
+body {
+  margin: 0;
+  font-family: 'Manrope', 'Segoe UI', sans-serif;
+  color: var(--text-color);
+  background:
+    radial-gradient(circle at 10% 20%, rgba(20, 184, 166, 0.2), transparent 30%),
+    radial-gradient(circle at 90% 8%, rgba(251, 146, 60, 0.2), transparent 28%),
+    linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.display-title {
+  font-family: 'Space Grotesk', 'Manrope', sans-serif;
+}
+
+.main-content {
+  flex: 1;
+  padding-top: calc(78px + env(safe-area-inset-top));
+}
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+@media (max-width: 640px) {
+  .main-content {
+    padding-top: calc(74px + env(safe-area-inset-top));
+  }
+}
+
+.loading {
+  display: flex;
+  min-height: 360px;
+  align-items: center;
+  justify-content: center;
+  color: #334155;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.error {
+  margin: 1.5rem auto;
+  max-width: 56rem;
+  border: 1px solid #fecaca;
+  border-radius: 0.75rem;
+  background: #fef2f2;
+  color: #991b1b;
+  padding: 0.9rem 1rem;
+  text-align: center;
+}

@@ -1,0 +1,86 @@
+.bookings-management {
+  width: 100%;
+}
+
+.status-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.filter-btn {
+  padding: 0.5rem 1.25rem;
+  border: 2px solid var(--primary-color);
+  background-color: white;
+  color: var(--primary-color);
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.filter-btn:hover {
+  background-color: #eef2ff;
+}
+
+.filter-btn.active {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.filter-btn .count {
+  background: rgba(0, 0, 0, 0.1);
+  padding: 0.15rem 0.5rem;
+  border-radius: 10px;
+  font-size: 0.8rem;
+}
+
+.filter-btn.active .count {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.bookings-table {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+.status-select {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.status-select.PENDING {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-select.CONFIRMED {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status-select.IN_PROGRESS {
+  background: #e9d5ff;
+  color: #6b21a8;
+}
+
+.status-select.DONE {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-select.CANCELLED {
+  background: #fee2e2;
+  color: #991b1b;
+}

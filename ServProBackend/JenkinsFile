@@ -1,0 +1,147 @@
+pipeline {
+    agent any
+
+    parameters {
+        booleanParam(name: 'deploy_render', defaultValue: true, description: 'Trigger Render deployment after successful smoke test')
+        string(name: 'render_deploy_hook_credential_id', defaultValue: '', description: 'Optional Jenkins secret text credential ID for the Render deploy hook URL')
+    }
+
+    triggers {
+        githubPush()
+        pollSCM('H/5 * * * *')
+    }
+
+    environment {
+        IMAGE_NAME = 'servpro-backend'
+        IMAGE_TAG = 'latest'
+        CONTAINER_NAME = 'servpro-backend-ci'
+        MONGO_CONTAINER_NAME = 'servpro-mongodb-ci'
+        CI_DOCKER_NETWORK = 'servpro-ci-net'
+        K8S_NAMESPACE = 'servpro'
+        K8S_DEPLOYMENT = 'backend'
+        K8S_CONTAINER = 'backend'
+    }
+
+    stages {
+        stage('Install Dependencies') {
+            steps {
+                echo 'Installing dependencies...'
+                bat 'npm ci'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                echo 'Running tests...'
+                bat 'npm test'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                echo 'Building backend image...'
+                bat 'docker build -t %IMAGE_NAME%:%IMAGE_TAG% .'
+            }
+        }
+
+        stage('Smoke Test Container') {
+            steps {
+                bat 'docker rm -f %MONGO_CONTAINER_NAME% || ver > nul'
+                bat 'docker rm -f %CONTAINER_NAME% || ver > nul'
+                bat 'docker network rm %CI_DOCKER_NETWORK% || ver > nul'
+                bat 'docker network create %CI_DOCKER_NETWORK%'
+                bat 'docker run -d --name %MONGO_CONTAINER_NAME% --network %CI_DOCKER_NETWORK% mongo:7'
+                bat 'powershell -NoProfile -Command "Start-Sleep -Seconds 10"'
+                bat 'docker run -d --name %CONTAINER_NAME% --network %CI_DOCKER_NETWORK% -e MONGODB_URI=mongodb://%MONGO_CONTAINER_NAME%:27017/servpro -e JWT_SECRET=ci-smoke-secret -P %IMAGE_NAME%:%IMAGE_TAG%'
+                powershell '''
+                    $portMapping = docker port ${env:CONTAINER_NAME} 4000/tcp
+                    if (-not $portMapping) {
+                        docker logs ${env:CONTAINER_NAME}
+                        throw "Could not determine mapped host port for container port 4000"
+                    }
+
+                    $hostPort = ($portMapping -split ':')[-1].Trim()
+                    $url = "http://localhost:$hostPort/health"
+                    $maxAttempts = 12
+                    $delaySeconds = 5
+                    $ready = $false
+
+                    for ($i = 1; $i -le $maxAttempts; $i++) {
+                        try {
+                            $response = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 5
+                            if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 500) {
+                                $ready = $true
+                                Write-Host "Backend is reachable on attempt $i with status $($response.StatusCode)."
+                                break
+                            }
+                        } catch {
+                            Write-Host "Attempt $i/$maxAttempts failed: $($_.Exception.Message)"
+                        }
+
+                        Start-Sleep -Seconds $delaySeconds
+                    }
+
+                    if (-not $ready) {
+                        docker logs ${env:MONGO_CONTAINER_NAME}
+                        docker logs ${env:CONTAINER_NAME}
+                        throw "Backend container is not reachable on $url"
+                    }
+                '''
+            }
+        }
+
+        stage('Deploy To Render') {
+            when {
+                allOf {
+                    expression { params.deploy_render }
+                    expression { params.render_deploy_hook_credential_id?.trim() }
+                }
+            }
+            steps {
+                echo 'Triggering Render deployment for backend...'
+                withCredentials([string(credentialsId: params.render_deploy_hook_credential_id.trim(), variable: 'RENDER_DEPLOY_HOOK_URL')]) {
+                    powershell '''
+                        $ErrorActionPreference = "Stop"
+
+                        function Invoke-RenderDeployHook {
+                            param([string]$Url)
+
+                            if ([string]::IsNullOrWhiteSpace($Url)) {
+                                throw "Render deploy hook URL is empty"
+                            }
+
+                            for ($i = 1; $i -le 3; $i++) {
+                                try {
+                                    $response = Invoke-WebRequest -Uri $Url -Method Post -UseBasicParsing -TimeoutSec 60
+                                    if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 300) {
+                                        Write-Host "Render deployment triggered successfully on attempt $i."
+                                        return
+                                    }
+
+                                    throw "Unexpected Render response status: $($response.StatusCode)"
+                                } catch {
+                                    Write-Host "Render deploy attempt $i failed: $($_.Exception.Message)"
+                                    if ($i -eq 3) {
+                                        throw
+                                    }
+
+                                    Start-Sleep -Seconds 5
+                                }
+                            }
+                        }
+
+                        Invoke-RenderDeployHook -Url $env:RENDER_DEPLOY_HOOK_URL
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            bat 'docker rm -f %MONGO_CONTAINER_NAME% || ver > nul'
+            bat 'docker rm -f %CONTAINER_NAME% || ver > nul'
+            bat 'docker network rm %CI_DOCKER_NETWORK% || ver > nul'
+        }
+    }
+}

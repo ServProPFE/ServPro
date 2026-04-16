@@ -1,0 +1,265 @@
+.my-transactions-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 2rem 0;
+}
+
+.transactions-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.page-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: white;
+}
+
+.page-header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.page-header .subtitle {
+  font-size: 1.125rem;
+  opacity: 0.9;
+}
+
+.status-filters {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  padding: 0.75rem 1.5rem;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border-radius: 25px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s;
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.filter-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.8);
+}
+
+.filter-btn.active {
+  background: white;
+  color: #667eea;
+  border-color: white;
+}
+
+.filter-btn .count {
+  background: rgba(255, 255, 255, 0.3);
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.875rem;
+}
+
+.filter-btn.active .count {
+  background: #667eea;
+  color: white;
+}
+
+.no-transactions {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.no-transactions .icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.no-transactions h3 {
+  font-size: 1.5rem;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.no-transactions p {
+  color: #666;
+}
+
+.transactions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.transaction-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.transaction-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.transaction-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.transaction-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.transaction-id {
+  font-weight: 600;
+  color: #333;
+  font-size: 0.875rem;
+}
+
+.transaction-date {
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.status-badge {
+  padding: 0.5rem 1rem;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.status-badge.PENDING {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.status-badge.SUCCESS {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-badge.FAILED {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.transaction-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.transaction-detail {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.transaction-detail .label {
+  font-weight: 500;
+  color: #666;
+  font-size: 0.875rem;
+}
+
+.transaction-detail .value {
+  font-weight: 600;
+  color: #333;
+}
+
+.transaction-detail .value.amount {
+  font-size: 1.25rem;
+  color: #667eea;
+}
+
+.method-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.method-badge.CARD {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.method-badge.CASH {
+  background: #f3e5f5;
+  color: #7b1fa2;
+}
+
+.method-badge.PAYPAL {
+  background: #e8eaf6;
+  color: #3f51b5;
+}
+
+.method-badge.APPLE_PAY,
+.method-badge.GOOGLE_PAY {
+  background: #e0f2f1;
+  color: #00796b;
+}
+
+.loading-container,
+.error-container {
+  min-height: calc(100vh - 60px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.loading,
+.error {
+  background: white;
+  padding: 2rem 3rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  font-size: 1.125rem;
+}
+
+.error {
+  color: #f44336;
+}
+
+@media (max-width: 768px) {
+  .page-header h1 {
+    font-size: 2rem;
+  }
+
+  .status-filters {
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+
+  .transaction-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .transaction-detail {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+}

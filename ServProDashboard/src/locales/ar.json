@@ -1,0 +1,479 @@
+{
+  "nav": {
+    "dashboard": "لوحة التحكم",
+    "services": "الخدمات",
+    "bookings": "الحجوزات",
+    "offers": "العروض",
+    "portfolio": "المعرض",
+    "availability": "التوفر",
+    "competences": "الكفاءات",
+    "certifications": "الشهادات",
+    "tracking": "التتبع",
+    "commissions": "العمولات",
+    "reviews": "المراجعات",
+    "invoices": "الفواتير",
+    "transactions": "المعاملات",
+    "packages": "الباقات",
+    "notations": "التقييمات",
+    "logout": "تسجيل الخروج"
+  },
+  "roles": {
+    "ADMIN": "مسؤول",
+    "PROVIDER": "مزود خدمة",
+    "CLIENT": "عميل"
+  },
+  "dashboard": {
+    "title": "لوحة التحكم",
+    "welcome": "مرحبا، {{name}}",
+    "stats": {
+      "totalBookings": "إجمالي الحجوزات",
+      "pending": "قيد الانتظار",
+      "services": "الخدمات",
+      "revenue": "الإيرادات"
+    },
+    "recentTitle": "أحدث الحجوزات",
+    "table": {
+      "service": "الخدمة",
+      "client": "العميل",
+      "date": "التاريخ",
+      "status": "الحالة",
+      "price": "السعر"
+    },
+    "noRecent": "لا توجد حجوزات حديثة"
+  },
+  "services": {
+    "title": "إدارة الخدمات",
+    "new": "خدمة جديدة",
+    "table": {
+      "name": "الاسم",
+      "category": "الفئة",
+      "price": "السعر",
+      "duration": "المدة",
+      "actions": "الإجراءات"
+    },
+    "categories": {
+      "PLOMBERIE": "سباكة",
+      "ELECTRICITE": "كهرباء",
+      "CLIMATISATION": "تكييف",
+      "NETTOYAGE": "تنظيف",
+      "AUTRE": "أخرى"
+    },
+    "noData": "لا توجد خدمات",
+    "confirmDelete": "هل تريد حذف هذه الخدمة؟"
+  },
+  "serviceForm": {
+    "newTitle": "خدمة جديدة",
+    "editTitle": "تعديل الخدمة",
+    "name": "اسم الخدمة",
+    "category": "الفئة",
+    "priceMin": "السعر الأدنى (د.ت)",
+    "duration": "المدة (دقائق)",
+    "description": "الوصف",
+    "placeholderName": "مثال: تركيب تكييف",
+    "placeholderDescription": "وصف مفصل للخدمة...",
+    "save": "حفظ",
+    "saving": "جارٍ الحفظ...",
+    "cancel": "إلغاء",
+    "loadError": "خطأ في تحميل الخدمة",
+    "saveError": "خطأ في حفظ الخدمة"
+  },
+  "bookings": {
+    "title": "إدارة الحجوزات",
+    "filters": {
+      "all": "الكل",
+      "PENDING": "قيد الانتظار",
+      "CONFIRMED": "مؤكد",
+      "IN_PROGRESS": "قيد التنفيذ",
+      "DONE": "مكتمل",
+      "CANCELLED": "ملغي"
+    },
+    "table": {
+      "id": "المعرف",
+      "service": "الخدمة",
+      "client": "العميل",
+      "date": "التاريخ",
+      "price": "السعر",
+      "status": "الحالة",
+      "actions": "الإجراءات"
+    },
+    "viewDetails": "تفاصيل",
+    "details": {
+      "title": "تفاصيل الحجز",
+      "serviceInfo": "معلومات الخدمة",
+      "clientInfo": "معلومات العميل",
+      "bookingInfo": "تفاصيل الحجز",
+      "service": "الخدمة",
+      "category": "الفئة",
+      "name": "الاسم",
+      "email": "البريد الإلكتروني",
+      "phone": "الهاتف",
+      "expectedAt": "التاريخ المتوقع",
+      "status": "الحالة",
+      "totalPrice": "السعر الإجمالي",
+      "address": "العنوان",
+      "notes": "ملاحظات"
+    },
+    "noData": "لا توجد حجوزات",
+    "updateError": "خطأ في تحديث الحالة"
+  },
+  "offers": {
+    "title": "إدارة العروض",
+    "new": "عرض جديد",
+    "editTitle": "تعديل العرض",
+    "newTitle": "عرض جديد",
+    "fields": {
+      "title": "العنوان",
+      "description": "الوصف",
+      "discount": "الخصم (%)",
+      "basePrice": "السعر الأساسي (اختياري)",
+      "validUntil": "صالح حتى",
+      "active": "عرض نشط"
+    },
+    "table": {
+      "title": "العنوان",
+      "description": "الوصف",
+      "discount": "الخصم",
+      "basePrice": "السعر الأساسي",
+      "validUntil": "صالح حتى",
+      "status": "الحالة",
+      "actions": "الإجراءات"
+    },
+    "status": {
+      "active": "نشط",
+      "inactive": "غير نشط"
+    },
+    "noData": "لا توجد عروض",
+    "confirmDelete": "حذف هذا العرض؟"
+  },
+  "invoices": {
+    "title": "إدارة الفواتير",
+    "new": "فاتورة جديدة",
+    "modalTitle": "إنشاء فاتورة",
+    "number": "الرقم",
+    "amount": "المبلغ",
+    "booking": "الحجز",
+    "issuedAt": "تاريخ الإصدار",
+    "creating": "جارٍ الإنشاء...",
+    "create": "إنشاء",
+    "selectBookingError": "يرجى اختيار حجز",
+    "table": {
+      "number": "الرقم",
+      "client": "العميل",
+      "service": "الخدمة",
+      "amount": "المبلغ",
+      "issuedAt": "تاريخ الإصدار",
+      "actions": "الإجراءات"
+    },
+    "fields": {
+      "number": "الرقم",
+      "amount": "المبلغ",
+      "booking": "الحجز",
+      "issuedAt": "تاريخ الإصدار"
+    },
+    "noData": "لا توجد فواتير",
+    "missingBooking": "لا يوجد حجز",
+    "unknownClient": "عميل غير معروف",
+    "unknownService": "خدمة غير معروفة",
+    "view": "عرض",
+    "download": "تحميل",
+    "delete": "حذف",
+    "deleteConfirm": "هل أنت متأكد أنك تريد حذف هذه الفاتورة؟",
+    "deleteError": "خطأ في حذف الفاتورة",
+    "selectBooking": "اختر حجزا",
+    "loadError": "خطأ في تحميل الفواتير",
+    "saveError": "خطأ في إنشاء الفاتورة"
+  },
+  "portfolio": {
+    "title": "المعرض",
+    "newProject": "مشروع جديد",    "add": "إضافة",    "fields": {
+      "title": "العنوان",
+      "description": "الوصف",
+      "images": "الصور (عناوين URL مفصولة بفاصلة)"
+    },
+    "myProjects": "مشاريعي",
+    "table": {
+      "title": "العنوان",
+      "description": "الوصف",
+      "images": "الصور",
+      "actions": "الإجراءات"
+    },
+    "noData": "لا توجد مشاريع",
+    "confirmDelete": "حذف هذا العنصر؟",
+    "createError": "خطأ في إنشاء المعرض"
+  },
+  "availability": {
+    "title": "التوفر",    "addTitle": "إضافة توفر",
+    "add": "إضافة",    "fields": {
+      "day": "اليوم",
+      "start": "البداية",
+      "end": "النهاية"
+    },
+    "mySlots": "فتراتي",
+    "table": {
+      "day": "اليوم",
+      "start": "البداية",
+      "end": "النهاية",
+      "actions": "الإجراءات"
+    },
+    "noData": "لا توجد مواعيد",
+    "confirmDelete": "حذف هذا التوفر؟",
+    "createError": "خطأ في إنشاء التوفر",
+    "days": ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"]
+  },
+  "reviews": {
+    "title": "إدارة المراجعات",
+    "service": "الخدمة",
+    "reviewer": "المراجع",
+    "rating": "التقييم",
+    "comment": "التعليق",
+    "table": {
+      "id": "المعرف",
+      "service": "الخدمة",
+      "reviewer": "المراجع",
+      "rating": "التقييم",
+      "comment": "التعليق",
+      "date": "التاريخ",
+      "actions": "الإجراءات"
+    },
+    "noData": "لا توجد مراجعات",
+    "noComment": "لا يوجد تعليق",
+    "confirmDelete": "هل تريد حذف هذه المراجعة؟"
+  },
+  "commissions": {
+    "title": "إدارة العمولات",
+    "new": "+ عمولة جديدة",
+    "totalCommission": "إجمالي العمولات",
+    "count": "عدد العمولات",
+    "id": "المعرف",
+    "booking": "الحجز",
+    "provider": "المزود",
+    "amount": "المبلغ",
+    "percentage": "النسبة",
+    "date": "التاريخ",
+    "noData": "لا توجد عمولات",
+    "selectBooking": "اختر حجزا",
+    "fields": {
+      "booking": "الحجز",
+      "percentage": "النسبة",
+      "amount": "المبلغ"
+    },
+    "placeholders": {
+      "percentage": "مثال: 15",
+      "amount": "مثال: 150"
+    },
+    "createError": "خطأ في إنشاء العمولة"
+  },
+  "transactions": {
+    "title": "إدارة المعاملات",
+    "filters": {
+      "all": "الكل",
+      "PENDING": "قيد الانتظار",
+      "SUCCESS": "نجحت",
+      "FAILED": "فشلت"
+    },
+    "table": {
+      "id": "المعرف",
+      "booking": "الحجز",
+      "amount": "المبلغ",
+      "method": "طريقة الدفع",
+      "status": "الحالة",
+      "date": "التاريخ",
+      "actions": "الإجراءات"
+    },
+    "noData": "لا توجد معاملات",
+    "confirmDelete": "هل تريد حذف هذه المعاملة؟"
+  },
+  "competences": {
+    "title": "إدارة الكفاءات",
+    "new": "كفاءة جديدة",
+    "fields": {
+      "serviceId": "الخدمة",
+      "level": "المستوى",
+      "provider": "المزود"
+    },
+    "levels": {
+      "BEGINNER": "مبتدئ",
+      "INTERMEDIATE": "متوسط",
+      "EXPERT": "خبير"
+    },
+    "table": {
+      "serviceId": "معرف الخدمة",
+      "level": "المستوى",
+      "provider": "المزود",
+      "actions": "الإجراءات"
+    },
+    "confirmDelete": "هل تريد حذف هذه الكفاءة؟",
+    "noData": "لا توجد كفاءات",
+    "editTitle": "تعديل كفاءة",
+    "newTitle": "إنشاء كفاءة"
+  },
+  "certifications": {
+    "title": "إدارة الشهادات",
+    "new": "شهادة جديدة",
+    "fields": {
+      "name": "الاسم",
+      "authority": "الجهة المانحة",
+      "expiresAt": "تاريخ الانتهاء",
+      "provider": "المزود"
+    },
+    "table": {
+      "name": "الاسم",
+      "authority": "الجهة المانحة",
+      "expiresAt": "تاريخ الانتهاء",
+      "provider": "المزود",
+      "actions": "الإجراءات"
+    },
+    "confirmDelete": "هل تريد حذف هذه الشهادة؟",
+    "noData": "لا توجد شهادات",
+    "editTitle": "تعديل شهادة",
+    "newTitle": "إنشاء شهادة"
+  },
+  "tracking": {
+    "title": "إدارة التتبع",
+    "new": "نقطة تتبع جديدة",
+    "fields": {
+      "booking": "الحجز",
+      "position": "الموقع",
+      "at": "الوقت"
+    },
+    "table": {
+      "booking": "الحجز",
+      "position": "الموقع",
+      "at": "الوقت",
+      "actions": "الإجراءات"
+    },
+    "confirmDelete": "هل تريد حذف نقطة التتبع هذه؟",
+    "noData": "لا توجد سجلات تتبع",
+    "editTitle": "تعديل تتبع",
+    "newTitle": "إنشاء تتبع"
+  },
+  "packages": {
+    "title": "إدارة الباقات",
+    "new": "باقة جديدة",
+    "fields": {
+      "name": "الاسم",
+      "months": "الأشهر",
+      "numberVisits": "عدد الزيارات",
+      "monthlyPrice": "السعر الشهري"
+    },
+    "table": {
+      "name": "الاسم",
+      "months": "الأشهر",
+      "numberVisits": "الزيارات",
+      "monthlyPrice": "السعر الشهري",
+      "actions": "الإجراءات"
+    },
+    "confirmDelete": "هل تريد حذف هذه الباقة؟",
+    "noData": "لا توجد باقات",
+    "editTitle": "تعديل باقة",
+    "newTitle": "إنشاء باقة"
+  },
+  "notations": {
+    "title": "إدارة التقييمات",
+    "new": "تقييم جديد",
+    "fields": {
+      "average": "المتوسط",
+      "total": "الإجمالي",
+      "provider": "المزود"
+    },
+    "table": {
+      "average": "المتوسط",
+      "total": "الإجمالي",
+      "provider": "المزود",
+      "actions": "الإجراءات"
+    },
+    "confirmDelete": "هل تريد حذف هذا التقييم؟",
+    "noData": "لا توجد تقييمات",
+    "editTitle": "تعديل تقييم",
+    "newTitle": "إنشاء تقييم"
+  },
+  "bookingDetails": {
+    "title": "تفاصيل الحجز",
+    "serviceInfo": "معلومات الخدمة",
+    "clientInfo": "معلومات العميل",
+    "bookingInfo": "تفاصيل الحجز",
+    "service": "الخدمة",
+    "category": "الفئة",
+    "name": "الاسم",
+    "email": "البريد الإلكتروني",
+    "phone": "الهاتف",
+    "date": "التاريخ المحدد",
+    "status": "الحالة",
+    "total": "السعر الإجمالي",
+    "address": "العنوان",
+    "notes": "ملاحظات",
+    "close": "إغلاق",
+    "notAvailable": "غير متوفر"
+  },
+  "buttons": {
+    "edit": "تعديل",
+    "delete": "حذف",
+    "save": "حفظ",
+    "saving": "جارٍ الحفظ...",
+    "cancel": "إلغاء",
+    "close": "إغلاق",
+    "create": "إنشاء"
+  },
+  "common": {
+    "id": "المعرف",
+    "date": "التاريخ",
+    "actions": "الإجراءات",
+    "loading": "جارٍ التحميل...",
+    "error": "خطأ: {{message}}",
+    "yes": "نعم",
+    "no": "لا"  },
+  "auth": {
+    "subtitle": "كيف يمكنني مساعدتك اليوم؟",
+    "registerSubtitle": "أنشئ حسابك في لوحة التحكم",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "confirmPassword": "تأكيد كلمة المرور",
+    "name": "الاسم الكامل",
+    "phone": "رقم الهاتف",
+    "address": "العنوان",
+    "businessName": "اسم النشاط",
+    "accountType": "نوع الحساب",
+    "provider": "مزود خدمة",
+    "admin": "مسؤول",
+    "emailPlaceholder": "your@email.com",
+    "namePlaceholder": "الاسم الكامل",
+    "phonePlaceholder": "+216 XX XXX XXX",
+    "addressPlaceholder": "المدينة، الشارع، المبنى",
+    "businessNamePlaceholder": "اسم الشركة",
+    "loginButton": "تسجيل الدخول",
+    "loginLoading": "جارٍ تسجيل الدخول...",
+    "registerButton": "إنشاء حساب",
+    "registerLoading": "جارٍ إنشاء الحساب...",
+    "noAccount": "ليس لديك حساب؟",
+    "signupLink": "إنشاء حساب",
+    "haveAccount": "لديك حساب بالفعل؟",
+    "loginLink": "تسجيل الدخول",
+    "errors": {
+      "login": "فشل تسجيل الدخول. تحقق من البيانات.",
+      "register": "فشل إنشاء الحساب. حاول مرة أخرى.",
+      "passwordMismatch": "كلمتا المرور غير متطابقتين.",
+      "passwordLength": "يجب أن تكون كلمة المرور 6 أحرف على الأقل."
+    }
+  },
+  "serviceNames": {
+    "waterLeakRepair": "إصلاح تسرب المياه",
+    "completeSanitaryInstallation": "تركيب صحي كامل",
+    "pipeCleaning": "تنظيف أنابيب المياه",
+    "electricalInstallation": "تركيب كهرباء منزلي",
+    "electricityRepair": "إصلاح عطل كهربائي",
+    "electricalPanelUpgrade": "تحديث لوحة الكهرباء",
+    "acInstallation": "تركيب مكيف سبليت",
+    "acMaintenance": "صيانة وتنظيف مكيف",
+    "acRepair": "إصلاح مكيف",
+    "apartmentCleaning": "تنظيف عميق لشقة",
+    "postConstructionCleaning": "تنظيف عميق بعد أعمال البناء",
+    "windowCleaning": "تنظيف نوافذ وواجهات",
+    "urgentRepair": "إصلاح عاجل 24/7",
+    "handymanTasks": "مهام صغيرة (تركيب أثاث، إصلاحات بسيطة)"
+  },
+  "offerTitles": {
+    "plumberyPromotion": "عرض سباكة - خصم 20%",
+    "acOffer": "عرض مكيفات - خصم 15%",
+    "springCleaning": "تنظيف الربيع - خصم 25%"
+  }
+}

@@ -1,0 +1,39 @@
+.entity-management {
+  width: 100%;
+}
+
+.entity-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+
+.entity-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 1rem;
+}
+
+.entity-card h2 {
+  margin-bottom: 1rem;
+}
+
+.entity-table {
+  overflow-x: auto;
+}
+
+.entity-table table {
+  min-width: 760px;
+}
+
+.id-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 900px) {
+  .entity-table table {
+    min-width: 640px;
+  }
+}

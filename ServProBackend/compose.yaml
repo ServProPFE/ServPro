@@ -1,0 +1,82 @@
+# ServPro backend stack
+# Professional by default, friendly to local development.
+
+name: servpro-backend
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: servpro-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  python-ai:
+    image: python:3.11-slim
+    container_name: servpro-python-ai
+    restart: unless-stopped
+    working_dir: /app
+    command: >-
+      sh -c "pip install --no-cache-dir -r requirements.txt && python app.py"
+    env_file:
+      - ../python_ai/.env.example
+    volumes:
+      - ../python_ai:/app
+    ports:
+      - "5000:5000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:5000/health', timeout=2)"
+        ]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
+
+  backend:
+    build:
+      context: .
+    container_name: servpro-backend
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      python-ai:
+        condition: service_started
+    env_file:
+      - ./.env.example
+    environment:
+      PORT: 4000
+      MONGODB_URI: mongodb://mongodb:27017/servpro
+      PYTHON_AI_SERVICE: http://python-ai:5000
+      NODE_ENV: development
+    ports:
+      - "4000:4000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://127.0.0.1:4000/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
+        ]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  mongo-data:
+

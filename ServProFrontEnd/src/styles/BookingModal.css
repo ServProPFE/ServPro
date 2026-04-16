@@ -1,0 +1,120 @@
+.booking-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid var(--primary-color);
+}
+
+.booking-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.booking-header h3 {
+  font-size: 1.25rem;
+  color: var(--text-color);
+}
+
+.status-badge {
+  padding: 0.35rem 0.75rem;
+  border-radius: 15px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge.yellow {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.blue {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status-badge.purple {
+  background: #e9d5ff;
+  color: #6b21a8;
+}
+
+.status-badge.green {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.red {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.booking-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.info-row .label {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.info-row .value {
+  color: var(--text-color);
+  font-weight: 500;
+}
+
+.info-row .value.price {
+  color: var(--primary-color);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.booking-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.btn-cancel {
+  padding: 0.5rem 1.5rem;
+  background-color: var(--danger-color);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-cancel:hover {
+  background-color: #dc2626;
+}
+
+@media (max-width: 768px) {
+  .booking-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .info-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+}

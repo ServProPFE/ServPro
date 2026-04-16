@@ -1,0 +1,138 @@
+pipeline {
+    agent any
+
+    parameters {
+        booleanParam(name: 'deploy_vercel', defaultValue: true, description: 'Trigger Vercel deployment after successful smoke test')
+        string(name: 'vercel_deploy_hook_credential_id', defaultValue: '', description: 'Optional Jenkins secret text credential ID for the Vercel deploy hook URL')
+    }
+
+    triggers {
+        githubPush()
+        pollSCM('H/5 * * * *')
+    }
+
+    environment {
+        IMAGE_NAME = 'servpro-frontend'
+        IMAGE_TAG = 'latest'
+        CONTAINER_NAME = 'servpro-frontend-ci'
+        K8S_NAMESPACE = 'servpro'
+        K8S_DEPLOYMENT = 'frontend'
+        K8S_CONTAINER = 'frontend'
+    }
+
+    stages {
+        stage('Install Dependencies') {
+            steps {
+                echo 'Installing dependencies...'
+                bat 'npm ci'
+            }
+        }
+
+        stage('Build Frontend') {
+            steps {
+                echo 'Building frontend...'
+                bat 'npm run build'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                echo 'Building frontend image...'
+                bat 'docker build -t %IMAGE_NAME%:%IMAGE_TAG% .'
+            }
+        }
+
+        stage('Smoke Test Container') {
+            steps {
+                bat 'docker rm -f %CONTAINER_NAME% || ver > nul'
+                bat 'docker run -d --name %CONTAINER_NAME% -P %IMAGE_NAME%:%IMAGE_TAG%'
+                powershell '''
+                    $portMapping = docker port ${env:CONTAINER_NAME} 5173/tcp
+                    if (-not $portMapping) {
+                        docker logs ${env:CONTAINER_NAME}
+                        throw "Could not determine mapped host port for container port 5173"
+                    }
+
+                    $hostPort = ($portMapping -split ':')[-1].Trim()
+                    $url = "http://localhost:$hostPort"
+                    $maxAttempts = 12
+                    $delaySeconds = 5
+                    $ready = $false
+
+                    for ($i = 1; $i -le $maxAttempts; $i++) {
+                        try {
+                            $response = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 5
+                            if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 500) {
+                                $ready = $true
+                                Write-Host "Frontend is reachable on attempt $i with status $($response.StatusCode)."
+                                break
+                            }
+                        } catch {
+                            Write-Host "Attempt $i/$maxAttempts failed: $($_.Exception.Message)"
+                        }
+
+                        Start-Sleep -Seconds $delaySeconds
+                    }
+
+                    if (-not $ready) {
+                        Write-Host "Frontend failed readiness check. Dumping container logs..."
+                        docker logs ${env:CONTAINER_NAME}
+                        throw "Frontend container is not reachable on $url"
+                    }
+                '''
+            }
+        }
+
+        stage('Deploy To Vercel') {
+            when {
+                allOf {
+                    expression { params.deploy_vercel }
+                    expression { params.vercel_deploy_hook_credential_id?.trim() }
+                }
+            }
+            steps {
+                echo 'Triggering Vercel deployment for frontend...'
+                withCredentials([string(credentialsId: params.vercel_deploy_hook_credential_id.trim(), variable: 'VERCEL_DEPLOY_HOOK_URL')]) {
+                    powershell '''
+                        $ErrorActionPreference = "Stop"
+
+                        function Invoke-VercelDeployHook {
+                            param([string]$Url)
+
+                            if ([string]::IsNullOrWhiteSpace($Url)) {
+                                throw "Vercel deploy hook URL is empty"
+                            }
+
+                            for ($i = 1; $i -le 3; $i++) {
+                                try {
+                                    $response = Invoke-WebRequest -Uri $Url -Method Post -UseBasicParsing -TimeoutSec 60
+                                    if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 300) {
+                                        Write-Host "Vercel deployment triggered successfully on attempt $i."
+                                        return
+                                    }
+
+                                    throw "Unexpected Vercel response status: $($response.StatusCode)"
+                                } catch {
+                                    Write-Host "Vercel deploy attempt $i failed: $($_.Exception.Message)"
+                                    if ($i -eq 3) {
+                                        throw
+                                    }
+
+                                    Start-Sleep -Seconds 5
+                                }
+                            }
+                        }
+
+                        Invoke-VercelDeployHook -Url $env:VERCEL_DEPLOY_HOOK_URL
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            bat 'docker rm -f %CONTAINER_NAME% || ver > nul'
+        }
+    }
+}

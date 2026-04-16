@@ -1,0 +1,21 @@
+# Global monorepo ignores
+**/.env
+**/.env.local
+**/.env.*.local
+**/node_modules/
+**/dist/
+**/build/
+**/coverage/
+**/.expo/
+**/.idea/
+**/.vscode/
+
+# Python
+**/__pycache__/
+**/.pytest_cache/
+**/*.pyc
+.venv/
+
+# OS / editor
+.DS_Store
+Thumbs.db

@@ -1,0 +1,46 @@
+# React Native Expo Mobile App - Docker Compose Configuration
+
+services:
+  # Expo mobile app development server
+  expo-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: servpro-mobile
+    restart: unless-stopped
+    
+    environment:
+      NODE_ENV: development
+      SKIP_ENV_VALIDATION: "true"
+      EXPO_DEBUG: "false"
+      # Connect to backend API running on host (use host.docker.internal on Docker Desktop)
+      # Adjust based on your backend deployment
+      REACT_APP_API_URL: "http://host.docker.internal:4000"
+    
+    # Expose all Expo development ports
+    ports:
+      # 8081: Metro bundler (web interface)
+      - "8081:8081"
+      # 19000: Expo development server (physical devices/iOS simulator)
+      - "19000:19000"
+      # 19001: Alternative bundler port
+      - "19001:19001"
+    
+    # Mount source code for hot reload during development
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    
+    # Health check for container
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8081"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Optional: Uncomment to depend on backend service
+    # depends_on:
+    #   backend:
+    #     condition: service_healthy
+

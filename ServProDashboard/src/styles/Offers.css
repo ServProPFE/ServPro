@@ -1,0 +1,54 @@
+.offers-management {
+  width: 100%;
+}
+
+.offers-table table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.offers-table th,
+.offers-table td {
+  text-align: left;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.offers-table th {
+  font-size: 0.9rem;
+  color: #6b7280;
+  background: #f9fafb;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.status-badge.active {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.inactive {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.no-data {
+  margin-top: 1rem;
+  color: #6b7280;
+}

@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ServPro Providers</title>
+  <style>
+    :root {
+      --bg: #f4f1ea;
+      --ink: #1f2a2e;
+      --accent: #0b6e4f;
+      --card: #ffffff;
+      --muted: #66737a;
+      --line: #d7ddd8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 10% 20%, #d8e2dc 0%, transparent 40%),
+        radial-gradient(circle at 90% 10%, #f8edeb 0%, transparent 40%),
+        var(--bg);
+      min-height: 100vh;
+    }
+    header {
+      padding: 2rem 1rem 1rem;
+      text-align: center;
+    }
+    h1 {
+      margin: 0;
+      letter-spacing: 0.04em;
+      font-size: clamp(1.8rem, 3vw, 2.5rem);
+    }
+    .subtitle {
+      margin-top: 0.5rem;
+      color: var(--muted);
+    }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1rem;
+    }
+    .toolbar {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+    input[type="search"] {
+      flex: 1;
+      min-width: 220px;
+      padding: 0.75rem 0.9rem;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-size: 1rem;
+    }
+    .status {
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1rem;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 1rem;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+    .name { font-size: 1.1rem; font-weight: 700; }
+    .meta { color: var(--muted); font-size: 0.92rem; }
+    a.button {
+      margin-top: auto;
+      text-decoration: none;
+      display: inline-block;
+      text-align: center;
+      background: var(--accent);
+      color: #fff;
+      padding: 0.65rem 0.8rem;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+    .empty {
+      padding: 1.2rem;
+      border: 1px dashed var(--line);
+      border-radius: 12px;
+      background: #fff;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Service Providers</h1>
+    <div class="subtitle">Standalone HTML page for clients to access provider portfolios</div>
+  </header>
+
+  <main class="container">
+    <div class="toolbar">
+      <input id="searchInput" type="search" placeholder="Search provider by name...">
+    </div>
+    <div id="status" class="status">Loading providers...</div>
+    <section id="providersGrid" class="grid"></section>
+  </main>
+
+  <script>
+    const API_BASE_URL = (() => {
+      const fromQuery = new URLSearchParams(window.location.search).get("apiBase");
+      if (fromQuery) return fromQuery.replace(/\/$/, "");
+      return window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+        ? "http://localhost:4000"
+        : `${window.location.protocol}//${window.location.hostname}:4000`;
+    })();
+
+    const state = { providers: [], filtered: [] };
+    const statusEl = document.getElementById("status");
+    const gridEl = document.getElementById("providersGrid");
+    const searchEl = document.getElementById("searchInput");
+
+    async function fetchJson(url) {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP ${response.status} on ${url}`);
+      return response.json();
+    }
+
+    function normalizeProvider(raw, serviceCount, portfolioCount) {
+      if (!raw) return null;
+      const isObject = typeof raw === "object";
+      const providerId = isObject ? (raw._id || raw.id || "") : String(raw);
+      if (!providerId) return null;
+
+      return {
+        id: providerId,
+        name: (isObject ? raw.name : "Provider") || "Provider",
+        email: isObject ? (raw.email || "") : "",
+        phone: isObject ? (raw.phone || "") : "",
+        serviceCount,
+        portfolioCount,
+      };
+    }
+
+    function renderProviders() {
+      gridEl.innerHTML = "";
+      if (state.filtered.length === 0) {
+        gridEl.innerHTML = '<div class="empty">No providers found.</div>';
+        return;
+      }
+
+      state.filtered.forEach((provider) => {
+        const card = document.createElement("article");
+        card.className = "card";
+
+        const details = [
+          provider.email ? `Email: ${provider.email}` : "",
+          provider.phone ? `Phone: ${provider.phone}` : "",
+          `Services: ${provider.serviceCount}`,
+          `Portfolio items: ${provider.portfolioCount}`,
+        ].filter(Boolean).map((line) => `<div>${line}</div>`).join("");
+
+        card.innerHTML = `
+          <div class="name">${provider.name}</div>
+          <div class="meta">ID: ${provider.id}</div>
+          <div class="meta">${details}</div>
+          <a class="button" href="provider-portfolio.html?providerId=${encodeURIComponent(provider.id)}&providerName=${encodeURIComponent(provider.name)}">Open Portfolio Page</a>
+        `;
+
+        gridEl.appendChild(card);
+      });
+    }
+
+    function applyFilter() {
+      const q = searchEl.value.trim().toLowerCase();
+      state.filtered = state.providers.filter((p) => p.name.toLowerCase().includes(q));
+      renderProviders();
+      statusEl.textContent = `${state.filtered.length} / ${state.providers.length} providers shown`;
+    }
+
+    async function loadProviders() {
+      try {
+        const [providersRes, servicesRes, portfoliosRes] = await Promise.all([
+          fetchJson(`${API_BASE_URL}/auth/providers`),
+          fetchJson(`${API_BASE_URL}/services`),
+          fetchJson(`${API_BASE_URL}/portfolios`),
+        ]);
+
+        const providers = Array.isArray(providersRes?.items) ? providersRes.items : (Array.isArray(providersRes) ? providersRes : []);
+        const services = Array.isArray(servicesRes?.items) ? servicesRes.items : (Array.isArray(servicesRes) ? servicesRes : []);
+        const portfolios = Array.isArray(portfoliosRes?.items) ? portfoliosRes.items : (Array.isArray(portfoliosRes) ? portfoliosRes : []);
+
+        const serviceCounts = new Map();
+        const providerRawById = new Map();
+        services.forEach((service) => {
+          const provider = service.provider;
+          const providerId = provider && typeof provider === "object" ? (provider._id || provider.id) : provider;
+          if (!providerId) return;
+          serviceCounts.set(String(providerId), (serviceCounts.get(String(providerId)) || 0) + 1);
+          if (provider && typeof provider === "object") providerRawById.set(String(providerId), provider);
+        });
+
+        const portfolioCounts = new Map();
+        portfolios.forEach((portfolio) => {
+          const providerId = portfolio.provider && typeof portfolio.provider === "object"
+            ? (portfolio.provider._id || portfolio.provider.id)
+            : portfolio.provider;
+          if (!providerId) return;
+          portfolioCounts.set(String(providerId), (portfolioCounts.get(String(providerId)) || 0) + 1);
+          if (portfolio.provider && typeof portfolio.provider === "object") {
+            providerRawById.set(String(providerId), portfolio.provider);
+          }
+        });
+
+        // Source of truth: users with PROVIDER role.
+        state.providers = providers.map((provider) => {
+          const id = String(provider._id || provider.id || '');
+          providerRawById.set(id, provider);
+          return normalizeProvider(
+            provider,
+            serviceCounts.get(id) || 0,
+            portfolioCounts.get(id) || 0
+          );
+        }).filter(Boolean);
+
+        // Include legacy providers referenced by data if user records are missing.
+        const providerIds = new Set([...serviceCounts.keys(), ...portfolioCounts.keys()]);
+        providerIds.forEach((id) => {
+          if (state.providers.some((p) => p.id === id)) {
+            return;
+          }
+
+          const fallbackProvider = normalizeProvider(
+            providerRawById.get(id) || { _id: id, name: `Provider ${id.slice(0, 6)}` },
+            serviceCounts.get(id) || 0,
+            portfolioCounts.get(id) || 0
+          );
+
+          if (fallbackProvider) {
+            state.providers.push(fallbackProvider);
+          }
+        });
+
+        state.providers = state.providers.map((provider) => {
+          const providerId = String(provider.id || provider._id || '');
+          return normalizeProvider(
+            providerRawById.get(providerId) || provider,
+            serviceCounts.get(providerId) || 0,
+            portfolioCounts.get(providerId) || 0
+          );
+        }).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name));
+
+        state.filtered = [...state.providers];
+        renderProviders();
+        statusEl.textContent = `${state.providers.length} providers loaded`;
+      } catch (error) {
+        statusEl.textContent = `Failed to load providers: ${error.message}`;
+        gridEl.innerHTML = '<div class="empty">Check backend URL or CORS settings.</div>';
+      }
+    }
+
+    searchEl.addEventListener("input", applyFilter);
+    loadProviders();
+  </script>
+</body>
+</html>
