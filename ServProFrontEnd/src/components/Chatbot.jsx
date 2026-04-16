@@ -18,6 +18,20 @@ const Chatbot = () => {
 
   const resolveServiceId = (service) => service?.id || service?._id;
 
+  const normalizeBotMessage = useCallback((text) => {
+    const raw = (text || '').trim();
+    if (!raw) {
+      return t('chatbot.error');
+    }
+
+    const isLegacyUnavailable = raw.toLowerCase().includes('ai service is currently unavailable');
+    if (isLegacyUnavailable) {
+      return 'I can help with plumbing, electrical, HVAC, or cleaning. Send your request and I will suggest the right service.';
+    }
+
+    return raw;
+  }, [t]);
+
   const resolveSuggestions = (data, lang) => {
     if (Array.isArray(data?.suggestions)) {
       return data.suggestions;
@@ -88,17 +102,17 @@ const Chatbot = () => {
 
       const botMessage = {
         type: 'bot',
-        text: response?.message || t('chatbot.error'),
+        text: normalizeBotMessage(response?.message),
         service: response?.recommendedService || response?.service || null,
         confidence: response?.confidence,
         timestamp: new Date()
       };
 
       setMessages(prev => [...prev, botMessage]);
-    } catch (error) {
+    } catch {
       const errorMessage = {
         type: 'bot',
-        text: error?.message ? `${t('chatbot.error')} (${error.message})` : t('chatbot.error'),
+        text: t('chatbot.error'),
         timestamp: new Date()
       };
       setMessages(prev => [...prev, errorMessage]);

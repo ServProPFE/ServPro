@@ -108,8 +108,8 @@ const getChatbotResponse = asyncHandler(async (req, res) => {
     console.error('Python AI service error:', aiError.message);
 
     const fallbackMessage = language === 'ar'
-      ? 'خدمة الذكاء الاصطناعي غير متاحة حالياً. يمكنك طلب خدمة السباكة أو الكهرباء أو التكييف أو التنظيف وسنساعدك فوراً.'
-      : 'AI service is currently unavailable. You can still request plumbing, electrical, HVAC, or cleaning service and we will help you right away.';
+      ? 'يمكنني مساعدتك في السباكة أو الكهرباء أو التكييف أو التنظيف. اكتب طلبك وسأقترح لك الخدمة المناسبة.'
+      : 'I can help with plumbing, electrical, HVAC, or cleaning. Send your request and I will suggest the right service.';
 
     return res.json({
       message: fallbackMessage,

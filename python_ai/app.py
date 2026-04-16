@@ -26,25 +26,25 @@ else:
 # Service keywords database
 SERVICES_DB = {
     'plomberie': {
-        'keywords': ['plombier', 'robinet', 'tuyau', 'fuite', 'eau', 'évier', 'toilette', 'plumbing', 'leak', 'pipe', 'faucet', 'drain', 'sink', 'سباك', 'سباكة', 'تسرب', 'أنبوب', 'حنفية'],
+        'keywords': ['plombier', 'plumber', 'plumbing', 'robinet', 'tuyau', 'fuite', 'eau', 'évier', 'toilette', 'leak', 'pipe', 'faucet', 'drain', 'sink', 'سباك', 'سباكة', 'تسرب', 'أنبوب', 'حنفية'],
         'service_name': 'Plomberie',
         'category': 'PLOMBERIE',
         'confidence_threshold': 0.08
     },
     'electricite': {
-        'keywords': ['électricien', 'électrique', 'courant', 'ampoule', 'prise', 'disjoncteur', 'electrical', 'wire', 'circuit', 'power', 'light', 'breaker', 'كهرباء', 'كهربائي', 'أسلاك', 'مقبس', 'ضوء'],
+        'keywords': ['électricien', 'electrician', 'électrique', 'electrical', 'courant', 'ampoule', 'prise', 'disjoncteur', 'wire', 'circuit', 'power', 'light', 'breaker', 'كهرباء', 'كهربائي', 'أسلاك', 'مقبس', 'ضوء'],
         'service_name': 'Électricité',
         'category': 'ELECTRICITE',
         'confidence_threshold': 0.08
     },
     'climatisation': {
-        'keywords': ['climatisation', 'ac', 'clim', 'air conditioner', 'chaud', 'froid', 'refroidissement', 'chauffage', 'hvac', 'cooling', 'heating', 'thermostat', 'تكييف', 'تبريد', 'تدفئة', 'برودة'],
+        'keywords': ['climatisation', 'ac', 'air conditioner', 'air conditioning', 'ac repair', 'ac repair', 'clim', 'chaud', 'froid', 'refroidissement', 'chauffage', 'hvac', 'cooling', 'heating', 'thermostat', 'تكييف', 'تبريد', 'تدفئة', 'برودة'],
         'service_name': 'Climatisation',
         'category': 'CLIMATISATION',
         'confidence_threshold': 0.08
     },
     'nettoyage': {
-        'keywords': ['nettoyage', 'propre', 'ménage', 'poussière', 'cleaning', 'sweep', 'dust', 'wash', 'hygiene', 'sanitaire', 'clean', 'maid', 'تنظيف', 'نظافة', 'ممسحة'],
+        'keywords': ['nettoyage', 'propre', 'ménage', 'poussière', 'cleaning', 'cleaner', 'house cleaning', 'sweep', 'dust', 'wash', 'hygiene', 'sanitaire', 'clean', 'maid', 'تنظيف', 'نظافة', 'ممسحة'],
         'service_name': 'Nettoyage',
         'category': 'NETTOYAGE',
         'confidence_threshold': 0.08

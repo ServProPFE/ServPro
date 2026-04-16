@@ -59,6 +59,18 @@ const resolveProviderName = (provider?: ChatService['provider']) => {
   return parts.join(' • ');
 };
 
+const normalizeBotMessage = (text: string | undefined, fallback: string) => {
+  const raw = (text || '').trim();
+  if (!raw) return fallback;
+
+  const isLegacyUnavailable = raw.toLowerCase().includes('ai service is currently unavailable');
+  if (isLegacyUnavailable) {
+    return 'I can help with plumbing, electrical, HVAC, or cleaning. Send your request and I will suggest the right service.';
+  }
+
+  return raw;
+};
+
 export default function ChatbotScreen() {
   const { t, i18n } = useTranslation();
   const { isAuthenticated } = useAuth();
@@ -110,13 +122,13 @@ export default function ChatbotScreen() {
 
       addMessage({
         role: 'bot',
-        text: response.message || t('chatbot.error'),
+        text: normalizeBotMessage(response.message, t('chatbot.error')),
         service: response.recommendedService || response.service || null,
       });
-    } catch (error) {
+    } catch {
       addMessage({
         role: 'bot',
-        text: error instanceof Error ? `${t('chatbot.error')} (${error.message})` : t('chatbot.error'),
+        text: t('chatbot.error'),
       });
     } finally {
       setIsLoading(false);
