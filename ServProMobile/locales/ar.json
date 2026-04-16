@@ -211,6 +211,7 @@
     "loadingPortfolio": "جارٍ تحميل الملف...",
     "infoTitle": "معلومات المزوّد",
     "location": "الموقع",
+    "noLocation": "لا يوجد موقع",
     "team": "الفريق",
     "equipment": "المعدات",
     "availability": "التوفر",

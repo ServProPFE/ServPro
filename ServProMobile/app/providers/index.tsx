@@ -15,9 +15,13 @@ type ProviderApiItem = {
   name?: string;
   email?: string;
   phone?: string;
+  location?: string | Record<string, unknown>;
+  address?: string;
+  city?: string;
   providerProfile?: {
     companyName?: string;
     verificationStatus?: string;
+    location?: string | Record<string, unknown>;
   };
 };
 
@@ -34,6 +38,7 @@ type ProviderCard = {
   name: string;
   email: string;
   phone: string;
+  location: string;
   companyName: string;
   verificationStatus: string;
   servicesCount: number;
@@ -51,6 +56,41 @@ const getProviderId = (value: string | { _id?: string; id?: string } | undefined
   if (!value) return '';
   if (typeof value === 'string') return value;
   return value._id || value.id || '';
+};
+
+const hasValue = (value: unknown) => {
+  if (value === null || value === undefined) return false;
+  if (typeof value === 'string') return value.trim().length > 0;
+  if (typeof value === 'object') return Object.keys(value).length > 0;
+  return true;
+};
+
+const firstNonEmpty = (...values: Array<unknown>) => values.find((value) => hasValue(value));
+
+const formatLocation = (provider: ProviderApiItem, fallback: string) => {
+  const raw = firstNonEmpty(
+    provider.providerProfile?.location,
+    provider.location,
+    provider.address,
+    provider.city,
+  );
+
+  if (!raw) {
+    return fallback;
+  }
+
+  if (typeof raw === 'string') {
+    return raw;
+  }
+
+  if (typeof raw === 'object') {
+    const values = Object.values(raw)
+      .map((value) => (typeof value === 'string' ? value.trim() : ''))
+      .filter(Boolean);
+    return values.join(', ') || fallback;
+  }
+
+  return fallback;
 };
 
 export default function ProvidersScreen() {
@@ -100,6 +140,7 @@ export default function ProvidersScreen() {
               name: provider.name || t('providers.fallbackName'),
               email: provider.email || '-',
               phone: provider.phone || '-',
+              location: formatLocation(provider, t('providers.noLocation')),
               companyName: provider.providerProfile?.companyName || '-',
               verificationStatus: provider.providerProfile?.verificationStatus || 'PENDING',
               servicesCount: serviceMap.get(id) || 0,
@@ -125,7 +166,7 @@ export default function ProvidersScreen() {
     if (!query) return providers;
 
     return providers.filter((provider) =>
-      [provider.name, provider.companyName].join(' ').toLowerCase().includes(query),
+      [provider.name, provider.companyName, provider.location].join(' ').toLowerCase().includes(query),
     );
   }, [providers, search]);
 
@@ -165,6 +206,7 @@ export default function ProvidersScreen() {
                     <Text style={styles.name}>{provider.name}</Text>
                     <Text style={styles.meta}>{provider.email}</Text>
                     <Text style={styles.meta}>{provider.phone}</Text>
+                    <Text style={styles.meta}>{t('providers.location')}: {provider.location}</Text>
                   </View>
                 </View>
 

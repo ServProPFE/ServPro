@@ -14,6 +14,9 @@ type ProviderApiItem = {
   name?: string;
   email?: string;
   phone?: string;
+  location?: string | Record<string, unknown>;
+  address?: string;
+  city?: string;
   providerProfile?: {
     companyName?: string;
     experienceYears?: number;
@@ -21,7 +24,7 @@ type ProviderApiItem = {
     serviceRadius?: number;
     equipments?: string[] | string;
     teamMembers?: string[] | string;
-    location?: string;
+    location?: string | Record<string, unknown>;
     turnover?: string;
     chiffrement?: string;
   };
@@ -65,6 +68,41 @@ const normalizeList = (value: string[] | string | undefined) => {
   if (Array.isArray(value)) return value.filter(Boolean).map((item) => item.trim()).filter(Boolean);
   if (typeof value === 'string') return value.split(',').map((item) => item.trim()).filter(Boolean);
   return [];
+};
+
+const hasValue = (value: unknown) => {
+  if (value === null || value === undefined) return false;
+  if (typeof value === 'string') return value.trim().length > 0;
+  if (typeof value === 'object') return Object.keys(value).length > 0;
+  return true;
+};
+
+const firstNonEmpty = (...values: Array<unknown>) => values.find((value) => hasValue(value));
+
+const formatLocation = (provider: ProviderApiItem | null, fallback: string) => {
+  const raw = firstNonEmpty(
+    provider?.providerProfile?.location,
+    provider?.location,
+    provider?.address,
+    provider?.city,
+  );
+
+  if (!raw) {
+    return fallback;
+  }
+
+  if (typeof raw === 'string') {
+    return raw;
+  }
+
+  if (typeof raw === 'object') {
+    const values = Object.values(raw)
+      .map((value) => (typeof value === 'string' ? value.trim() : ''))
+      .filter(Boolean);
+    return values.join(', ') || fallback;
+  }
+
+  return fallback;
 };
 
 export default function ProviderPortfolioScreen() {
@@ -111,8 +149,6 @@ export default function ProviderPortfolioScreen() {
   }, [providerId, t]);
 
   const profile = provider?.providerProfile;
-  const equipmentItems = useMemo(() => normalizeList(profile?.equipments), [profile?.equipments]);
-  const teamItems = useMemo(() => normalizeList(profile?.teamMembers), [profile?.teamMembers]);
 
   return (
     <AppBackground>
@@ -134,7 +170,7 @@ export default function ProviderPortfolioScreen() {
               <Text style={styles.infoLine}>{t('auth.phone')}: {provider?.phone || '-'}</Text>
               <Text style={styles.infoLine}>{t('service.experience')}: {profile?.experienceYears || 0}</Text>
               <Text style={styles.infoLine}>{t('providers.verification')}: {profile?.verificationStatus || 'PENDING'}</Text>
-              <Text style={styles.infoLine}>{t('providers.location')}: {profile?.location || '-'}</Text>
+              <Text style={styles.infoLine}>{t('providers.location')}: {formatLocation(provider, t('providers.noLocation'))}</Text>
             </View>
 
             <View style={styles.card}>
@@ -166,23 +202,6 @@ export default function ProviderPortfolioScreen() {
               {portfolio.length === 0 ? <Text style={styles.muted}>{t('providers.emptyPortfolio')}</Text> : null}
             </View>
 
-            <View style={styles.gridRow}>
-              <View style={[styles.card, styles.gridCard]}>
-                <Text style={styles.cardTitle}>{t('providers.team')}</Text>
-                {teamItems.map((member) => (
-                  <Text key={member} style={styles.listLine}>• {member}</Text>
-                ))}
-                {teamItems.length === 0 ? <Text style={styles.muted}>-</Text> : null}
-              </View>
-
-              <View style={[styles.card, styles.gridCard]}>
-                <Text style={styles.cardTitle}>{t('providers.equipment')}</Text>
-                {equipmentItems.map((item) => (
-                  <Text key={item} style={styles.listLine}>• {item}</Text>
-                ))}
-                {equipmentItems.length === 0 ? <Text style={styles.muted}>-</Text> : null}
-              </View>
-            </View>
 
             <View style={styles.card}>
               <Text style={styles.cardTitle}>{t('providers.availability')}</Text>

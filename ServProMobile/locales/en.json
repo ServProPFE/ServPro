@@ -211,6 +211,7 @@
     "loadingPortfolio": "Loading portfolio...",
     "infoTitle": "Provider information",
     "location": "Location",
+    "noLocation": "No location",
     "team": "Team",
     "equipment": "Equipment",
     "availability": "Availability",
