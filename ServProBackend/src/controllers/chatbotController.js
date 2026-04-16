@@ -9,9 +9,10 @@ const configuredPythonAIService = (process.env.PYTHON_AI_SERVICE || '')
   .map(normalizeServiceUrl)
   .filter(Boolean);
 
-const defaultPythonAIServices = process.env.RENDER
-  ? ['https://chatbot-ai-smpu.onrender.com']
-  : ['http://localhost:5000'];
+const defaultPythonAIServices = [
+  'https://chatbot-ai-smpu.onrender.com',
+  'http://localhost:5000'
+];
 
 const PYTHON_AI_SERVICES = Array.from(
   new Set([...configuredPythonAIService, ...defaultPythonAIServices.map(normalizeServiceUrl)]),
