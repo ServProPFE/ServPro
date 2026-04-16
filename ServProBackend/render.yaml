@@ -30,6 +30,12 @@ services:
         value: 15000
       - key: PYTHON_AI_HEALTH_RETRIES
         value: 2
+      - key: PYTHON_AI_WARMUP_ON_START
+        value: "true"
+      - key: PYTHON_AI_WARMUP_TIMEOUT_MS
+        value: 30000
+      - key: PYTHON_AI_WARMUP_ENDPOINT
+        value: /health
 
   - type: web
     name: servpro-python-ai
