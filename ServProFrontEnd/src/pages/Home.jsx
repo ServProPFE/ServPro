@@ -5,7 +5,7 @@ import { API_ENDPOINTS } from '../config/api';
 import apiService from '../services/apiService';
 import ServiceCard from '../components/ServiceCard';
 import SearchBar from '../components/SearchBar';
-import { resolveServiceName } from '../utils/serviceName';
+import { filterServicesBySearch } from '../utils/serviceSearch';
 
 const Home = () => {
   const { t } = useTranslation();
@@ -59,18 +59,12 @@ const Home = () => {
   };
 
   const handleSearch = (searchTerm, category) => {
-    let filtered = services;
-
-    if (searchTerm) {
-      filtered = filtered.filter(service => {
-        const translatedName = resolveServiceName(t, service.name);
-        return translatedName.toLowerCase().includes(searchTerm.toLowerCase());
-      });
-    }
-
-    if (category && category !== 'ALL') {
-      filtered = filtered.filter(service => service.category === category);
-    }
+    const filtered = filterServicesBySearch({
+      services,
+      searchTerm,
+      category,
+      t,
+    });
 
     setFilteredServices(filtered);
   };
@@ -110,7 +104,7 @@ const Home = () => {
         <div className="absolute -left-10 top-6 h-56 w-56 rounded-full bg-teal-300/25 blur-3xl" />
         <div className="absolute -right-10 bottom-0 h-64 w-64 rounded-full bg-orange-300/20 blur-3xl" />
 
-        <div className="relative z-10 grid items-end gap-8 lg:grid-cols-[1.2fr_0.8fr]">
+        <div className="relative z-10 grid items-end gap-8 lg:grid-cols-[1.05fr_0.95fr] xl:grid-cols-[1fr_1fr]">
           <div>
             <p className="mb-4 inline-flex items-center rounded-full border border-white/25 bg-white/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-100">
               {t('home.badge', { defaultValue: 'Trusted Home Service Platform' })}
@@ -138,7 +132,7 @@ const Home = () => {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
+          <div className="w-full rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-100/80">
               {t('home.quickSearch', { defaultValue: 'Quick Search' })}
             </p>

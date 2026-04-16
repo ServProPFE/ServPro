@@ -4,7 +4,7 @@ import { API_ENDPOINTS } from '../config/api';
 import apiService from '../services/apiService';
 import ServiceCard from '../components/ServiceCard';
 import SearchBar from '../components/SearchBar';
-import { resolveServiceName } from '../utils/serviceName';
+import { filterServicesBySearch } from '../utils/serviceSearch';
 
 const Services = () => {
   const { t } = useTranslation();
@@ -51,20 +51,14 @@ const Services = () => {
   };
 
   const handleSearch = (searchTerm, category) => {
-    let filtered = services;
+    const filtered = filterServicesBySearch({
+      services,
+      searchTerm,
+      category,
+      t,
+    });
 
-    if (searchTerm) {
-      filtered = filtered.filter(service => {
-        const translatedName = resolveServiceName(t, service.name);
-        return translatedName.toLowerCase().includes(searchTerm.toLowerCase());
-      });
-    }
-
-    if (category && category !== 'ALL') {
-      filtered = filtered.filter(service => service.category === category);
-      setSelectedCategory(category);
-    }
-
+    setSelectedCategory(category || 'ALL');
     setFilteredServices(filtered);
   };
 
@@ -94,7 +88,7 @@ const Services = () => {
             <h1 className="display-title mt-2 text-3xl font-extrabold text-slate-900 sm:text-4xl">{t('services.allTitle')}</h1>
             <p className="mt-2 text-sm text-slate-600">{filteredServices.length} {t('services.title').toLowerCase()}</p>
           </div>
-          <div className="w-full lg:max-w-3xl">
+          <div className="w-full lg:max-w-4xl xl:max-w-5xl">
             <SearchBar onSearch={handleSearch} />
           </div>
         </div>
