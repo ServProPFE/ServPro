@@ -213,6 +213,8 @@
     "fallbackName": "مزوّد",
     "noEmail": "لا يوجد بريد إلكتروني",
     "noPhone": "لا يوجد رقم هاتف",
+    "location": "الموقع",
+    "noLocation": "لا يوجد موقع",
     "company": "الشركة",
     "verification": "التحقق",
     "servicesCount": "الخدمات",

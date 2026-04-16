@@ -23,6 +23,34 @@ const Providers = () => {
     return [];
   };
 
+  const firstNonEmpty = (...values) => values.find((value) => value !== null && value !== undefined && String(value).trim() !== '');
+
+  const formatLocation = (provider) => {
+    const raw = firstNonEmpty(
+      provider?.providerProfile?.location,
+      provider?.location,
+      provider?.address,
+      provider?.city,
+    );
+
+    if (!raw) {
+      return t('providers.noLocation');
+    }
+
+    if (typeof raw === 'string') {
+      return raw;
+    }
+
+    if (typeof raw === 'object') {
+      const values = Object.values(raw)
+        .map((value) => (typeof value === 'string' ? value.trim() : ''))
+        .filter(Boolean);
+      return values.join(', ') || t('providers.noLocation');
+    }
+
+    return t('providers.noLocation');
+  };
+
   useEffect(() => {
     const loadProviders = async () => {
       setLoading(true);
@@ -68,6 +96,7 @@ const Providers = () => {
               name: provider.name || t('providers.fallbackName'),
               email: provider.email || '',
               phone: provider.phone || '',
+              location: formatLocation(provider),
               companyName: provider.providerProfile?.companyName || '',
               verificationStatus: provider.providerProfile?.verificationStatus || '',
               servicesCount: serviceCountByProvider.get(id) || 0,
@@ -91,7 +120,13 @@ const Providers = () => {
   const filteredProviders = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return providers;
-    return providers.filter((provider) => provider.name.toLowerCase().includes(q));
+    return providers.filter((provider) => {
+      const haystack = [provider.name, provider.email, provider.phone, provider.companyName, provider.location]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(q);
+    });
   }, [providers, search]);
 
   return (
@@ -123,6 +158,7 @@ const Providers = () => {
                 <h2 className="text-lg font-semibold text-slate-900">{provider.name}</h2>
                 <p className="mt-1 text-sm text-slate-600">{provider.email || t('providers.noEmail')}</p>
                 <p className="text-sm text-slate-600">{provider.phone || t('providers.noPhone')}</p>
+                <p className="text-sm text-slate-600">{t('providers.location')}: {provider.location}</p>
                 <p className="mt-2 text-sm text-slate-700">{t('providers.company')}: {provider.companyName || '-'}</p>
                 <p className="text-sm text-slate-700">{t('providers.verification')}: {provider.verificationStatus || '-'}</p>
                 <p className="text-sm text-slate-700">{t('providers.servicesCount')}: {provider.servicesCount}</p>

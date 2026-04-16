@@ -213,6 +213,8 @@
     "fallbackName": "Provider",
     "noEmail": "No email",
     "noPhone": "No phone",
+    "location": "Location",
+    "noLocation": "No location",
     "company": "Company",
     "verification": "Verification",
     "servicesCount": "Services",

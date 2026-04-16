@@ -53,7 +53,7 @@ const SearchBar = ({ onSearch }) => {
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2 px-1">
         <p className="text-xs font-medium text-slate-100/85">
           {t('search.scopeHint', {
-            defaultValue: 'Search by service name, category, description, provider, price, or duration.',
+            defaultValue: 'Search by service name, category, price, or duration.',
           })}
         </p>
 
