@@ -5,8 +5,6 @@ import apiService from '../services/apiService';
 import API_BASE_URL, { API_ENDPOINTS } from '../config/api';
 import { resolveServiceName } from '../utils/serviceName';
 
-const DAY_LABELS_FR = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
-
 const toArray = (response) => {
   if (Array.isArray(response?.items)) return response.items;
   if (Array.isArray(response)) return response;
@@ -36,25 +34,27 @@ const normalizeList = (value) => {
   return [];
 };
 
-const formatLocation = (provider) => {
+const formatLocation = (provider, t) => {
   const profile = provider?.providerProfile || {};
   const raw = firstNonEmpty(profile.location, provider?.location, provider?.address, provider?.city);
 
-  if (!raw) return 'Non renseigné';
+  if (!raw) return t('providerPortfolio.notProvided');
   if (typeof raw === 'string') return raw;
   if (typeof raw === 'object') {
     const values = Object.values(raw)
       .map((value) => (typeof value === 'string' ? value.trim() : ''))
       .filter(Boolean);
-    return values.join(', ') || 'Non renseigné';
+    return values.join(', ') || t('providerPortfolio.notProvided');
   }
 
-  return 'Non renseigné';
+  return t('providerPortfolio.notProvided');
 };
 
-const formatAvailabilityDay = (day) => {
+const formatAvailabilityDay = (day, t) => {
   const dayNumber = Number(day);
-  return Number.isInteger(dayNumber) && dayNumber >= 0 && dayNumber <= 6 ? DAY_LABELS_FR[dayNumber] : 'Jour inconnu';
+  return Number.isInteger(dayNumber) && dayNumber >= 0 && dayNumber <= 6
+    ? t(`providerPortfolio.days.${dayNumber}`)
+    : t('providerPortfolio.unknownDay');
 };
 
 const ProviderPortfolio = () => {
@@ -96,7 +96,7 @@ const ProviderPortfolio = () => {
         setAvailability(availabilityRes.status === 'fulfilled' ? toArray(availabilityRes.value) : []);
         setCertifications(certificationsRes.status === 'fulfilled' ? toArray(certificationsRes.value) : []);
       } catch (err) {
-        setError(err.message || 'Failed to load provider portfolio');
+        setError(err.message || t('providerPortfolio.loadError'));
       } finally {
         setLoading(false);
       }
@@ -105,7 +105,7 @@ const ProviderPortfolio = () => {
     if (providerId) {
       loadPortfolio();
     }
-  }, [providerId]);
+  }, [providerId, t]);
 
   const profile = provider?.providerProfile || {};
   const equipmentItems = normalizeList(firstNonEmpty(profile.equipments, profile.equipment));
@@ -113,64 +113,64 @@ const ProviderPortfolio = () => {
   const turnoverValue = firstNonEmpty(profile.chiffrement, profile.turnover);
   const mergedCertificationItems = [
     ...certifications,
-    ...(profile.license ? [{ _id: 'license', name: 'Licence', authority: profile.license }] : []),
-    ...(profile.insurance ? [{ _id: 'insurance', name: 'Assurance', authority: profile.insurance }] : []),
+    ...(profile.license ? [{ _id: 'license', name: t('providerPortfolio.license'), authority: profile.license }] : []),
+    ...(profile.insurance ? [{ _id: 'insurance', name: t('providerPortfolio.insurance'), authority: profile.insurance }] : []),
   ];
 
   return (
     <section className="mx-auto max-w-7xl px-4 pb-12 pt-28 sm:px-6 lg:px-8">
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">{provider?.name || 'Provider Portfolio'}</h1>
-          <p className="mt-2 text-sm text-slate-600">Provider ID: {providerId}</p>
+          <h1 className="text-3xl font-bold text-slate-900">{provider?.name || t('providerPortfolio.title')}</h1>
+          <p className="mt-2 text-sm text-slate-600">{t('providerPortfolio.providerId')}: {providerId}</p>
         </div>
         <Link to="/providers" className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-          Back to providers
+          {t('providerPortfolio.backToProviders')}
         </Link>
       </div>
 
-      {loading && <p className="text-slate-700">Loading portfolio...</p>}
+      {loading && <p className="text-slate-700">{t('providerPortfolio.loading')}</p>}
       {error && <p className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-rose-700">{error}</p>}
 
       {!loading && !error && (
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-xl font-semibold text-slate-900">Info Artisant</h2>
+            <h2 className="text-xl font-semibold text-slate-900">{t('providerPortfolio.profileTitle')}</h2>
             <div className="mt-4 space-y-2 text-sm text-slate-700">
-              <p><span className="font-semibold text-slate-900">Nom:</span> {provider?.name || '-'}</p>
-              <p><span className="font-semibold text-slate-900">Entreprise:</span> {profile.companyName || '-'}</p>
-              <p><span className="font-semibold text-slate-900">Email:</span> {provider?.email || '-'}</p>
-              <p><span className="font-semibold text-slate-900">Téléphone:</span> {provider?.phone || '-'}</p>
-              <p><span className="font-semibold text-slate-900">Expérience:</span> {profile.experienceYears || 0} ans</p>
-              <p><span className="font-semibold text-slate-900">Statut:</span> {profile.verificationStatus || 'PENDING'}</p>
+              <p><span className="font-semibold text-slate-900">{t('providerPortfolio.name')}:</span> {provider?.name || '-'}</p>
+              <p><span className="font-semibold text-slate-900">{t('providerPortfolio.company')}:</span> {profile.companyName || '-'}</p>
+              <p><span className="font-semibold text-slate-900">{t('providerPortfolio.email')}:</span> {provider?.email || '-'}</p>
+              <p><span className="font-semibold text-slate-900">{t('providerPortfolio.phone')}:</span> {provider?.phone || '-'}</p>
+              <p><span className="font-semibold text-slate-900">{t('providerPortfolio.experience')}:</span> {t('providerPortfolio.years', { count: profile.experienceYears || 0 })}</p>
+              <p><span className="font-semibold text-slate-900">{t('providerPortfolio.status')}:</span> {profile.verificationStatus || 'PENDING'}</p>
             </div>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-xl font-semibold text-slate-900">Mes réalisations</h2>
+            <h2 className="text-xl font-semibold text-slate-900">{t('providerPortfolio.workTitle')}</h2>
             <div className="mt-4 space-y-3">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Services</h3>
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t('providerPortfolio.services')}</h3>
               {services.map((service) => (
                 <article key={service._id} className="rounded-xl border border-slate-200 p-3">
                   <h3 className="font-semibold text-slate-900">{resolveServiceName(t, service.name, 'Service')}</h3>
-                  <p className="text-sm text-slate-600">Category: {service.category || '-'}</p>
-                  <p className="text-sm text-slate-600">Price: {service.priceMin ?? '-'} {service.currency || ''}</p>
-                  <p className="text-sm text-slate-600">Duration: {service.duration ?? '-'} min</p>
+                  <p className="text-sm text-slate-600">{t('providerPortfolio.category')}: {service.category || '-'}</p>
+                  <p className="text-sm text-slate-600">{t('providerPortfolio.price')}: {service.priceMin ?? '-'} {service.currency || ''}</p>
+                  <p className="text-sm text-slate-600">{t('providerPortfolio.duration')}: {t('providerPortfolio.minutes', { count: service.duration ?? 0 })}</p>
                 </article>
               ))}
-              {!services.length && <p className="text-sm text-slate-600">No services found for this provider.</p>}
+              {!services.length && <p className="text-sm text-slate-600">{t('providerPortfolio.noServices')}</p>}
 
-              <h3 className="pt-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Portfolio</h3>
+              <h3 className="pt-2 text-sm font-semibold uppercase tracking-wide text-slate-500">{t('providerPortfolio.portfolio')}</h3>
               {portfolios.map((portfolio) => (
                 <article key={portfolio._id} className="rounded-xl border border-slate-200 p-3">
-                  <h3 className="font-semibold text-slate-900">{portfolio.title || 'Réalisation sans titre'}</h3>
-                  <p className="text-sm text-slate-600">{portfolio.description || 'Pas de description'}</p>
+                  <h3 className="font-semibold text-slate-900">{portfolio.title || t('providerPortfolio.untitledWork')}</h3>
+                  <p className="text-sm text-slate-600">{portfolio.description || t('providerPortfolio.noDescription')}</p>
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     {(Array.isArray(portfolio.images) ? portfolio.images : []).filter(Boolean).map((imageUrl, index) => (
                       <img
                         key={`${portfolio._id}-${index}`}
                         src={imageUrl}
-                        alt="Portfolio"
+                        alt={t('providerPortfolio.portfolioImageAlt')}
                         className="h-24 w-full rounded-lg border border-slate-200 object-cover"
                         loading="lazy"
                       />
@@ -178,67 +178,67 @@ const ProviderPortfolio = () => {
                   </div>
                 </article>
               ))}
-              {!portfolios.length && <p className="text-sm text-slate-600">Aucune réalisation trouvée pour ce prestataire.</p>}
+              {!portfolios.length && <p className="text-sm text-slate-600">{t('providerPortfolio.noPortfolio')}</p>}
             </div>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-xl font-semibold text-slate-900">Localisation</h2>
+            <h2 className="text-xl font-semibold text-slate-900">{t('providerPortfolio.locationTitle')}</h2>
             <div className="mt-4 space-y-2 text-sm text-slate-700">
-              <p><span className="font-semibold text-slate-900">Adresse:</span> {formatLocation(provider)}</p>
-              <p><span className="font-semibold text-slate-900">Rayon d'intervention:</span> {profile.serviceRadius || 0} km</p>
+              <p><span className="font-semibold text-slate-900">{t('providerPortfolio.address')}:</span> {formatLocation(provider, t)}</p>
+              <p><span className="font-semibold text-slate-900">{t('providerPortfolio.serviceRadius')}:</span> {profile.serviceRadius || 0} km</p>
             </div>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-xl font-semibold text-slate-900">Mon équipe</h2>
+            <h2 className="text-xl font-semibold text-slate-900">{t('providerPortfolio.teamTitle')}</h2>
             <div className="mt-4 space-y-2 text-sm text-slate-700">
               {teamItems.map((item) => (
                 <p key={`team-${item}`} className="rounded-lg bg-slate-50 px-3 py-2">{item}</p>
               ))}
-              {!teamItems.length && <p>Non renseigné</p>}
+              {!teamItems.length && <p>{t('providerPortfolio.notProvided')}</p>}
             </div>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-xl font-semibold text-slate-900">Mes équipements</h2>
+            <h2 className="text-xl font-semibold text-slate-900">{t('providerPortfolio.equipmentTitle')}</h2>
             <div className="mt-4 space-y-2 text-sm text-slate-700">
               {equipmentItems.map((item) => (
                 <p key={`equipment-${item}`} className="rounded-lg bg-slate-50 px-3 py-2">{item}</p>
               ))}
-              {!equipmentItems.length && <p>Non renseigné</p>}
+              {!equipmentItems.length && <p>{t('providerPortfolio.notProvided')}</p>}
             </div>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-xl font-semibold text-slate-900">Mes certificats</h2>
+            <h2 className="text-xl font-semibold text-slate-900">{t('providerPortfolio.certificatesTitle')}</h2>
             <div className="mt-4 space-y-2 text-sm text-slate-700">
               {mergedCertificationItems.map((certification, index) => (
                 <article key={certification._id || `cert-${index}`} className="rounded-lg border border-slate-200 px-3 py-2">
-                  <p className="font-semibold text-slate-900">{certification.name || 'Certificat'}</p>
-                  <p>{certification.authority || 'Autorité non renseignée'}</p>
-                  {certification.expiresAt && <p>Expire le: {new Date(certification.expiresAt).toLocaleDateString('fr-FR')}</p>}
+                  <p className="font-semibold text-slate-900">{certification.name || t('providerPortfolio.certificateFallback')}</p>
+                  <p>{certification.authority || t('providerPortfolio.unknownAuthority')}</p>
+                  {certification.expiresAt && <p>{t('providerPortfolio.expiresOn')}: {new Date(certification.expiresAt).toLocaleDateString()}</p>}
                 </article>
               ))}
-              {!mergedCertificationItems.length && <p>Aucun certificat disponible</p>}
+              {!mergedCertificationItems.length && <p>{t('providerPortfolio.noCertificates')}</p>}
             </div>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-xl font-semibold text-slate-900">Chiffrement</h2>
-            <p className="mt-4 text-sm text-slate-700">{turnoverValue || 'Non renseigné'}</p>
+            <h2 className="text-xl font-semibold text-slate-900">{t('providerPortfolio.turnoverTitle')}</h2>
+            <p className="mt-4 text-sm text-slate-700">{turnoverValue || t('providerPortfolio.notProvided')}</p>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
-            <h2 className="text-xl font-semibold text-slate-900">Disponibilités (horaire)</h2>
+            <h2 className="text-xl font-semibold text-slate-900">{t('providerPortfolio.availabilityTitle')}</h2>
             <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {availability.map((slot) => (
                 <article key={slot._id} className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700">
-                  <p className="font-semibold text-slate-900">{formatAvailabilityDay(slot.day)}</p>
+                  <p className="font-semibold text-slate-900">{formatAvailabilityDay(slot.day, t)}</p>
                   <p>{slot.start || '--:--'} - {slot.end || '--:--'}</p>
                 </article>
               ))}
-              {!availability.length && <p className="text-sm text-slate-700">Aucune disponibilité renseignée</p>}
+              {!availability.length && <p className="text-sm text-slate-700">{t('providerPortfolio.noAvailability')}</p>}
             </div>
           </div>
         </div>
