@@ -27,7 +27,7 @@ services:
       - key: PYTHON_AI_RETRY_BASE_DELAY_MS
         value: 2000
       - key: PYTHON_AI_HEALTH_TIMEOUT_MS
-        value: 8000
+        value: 15000
       - key: PYTHON_AI_HEALTH_RETRIES
         value: 2
 

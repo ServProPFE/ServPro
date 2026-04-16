@@ -3,16 +3,16 @@ const { Service } = require("../models/Service");
 const { asyncHandler } = require("../utils/asyncHandler");
 
 const normalizeServiceUrl = (url) => (url || '').trim().replace(/\/$/, '');
+const isProduction = process.env.NODE_ENV === 'production';
 
 const configuredPythonAIService = (process.env.PYTHON_AI_SERVICE || '')
   .split(',')
   .map(normalizeServiceUrl)
   .filter(Boolean);
 
-const defaultPythonAIServices = [
-  'https://chatbot-ai-smpu.onrender.com',
-  'http://localhost:5000'
-];
+const defaultPythonAIServices = isProduction
+  ? ['https://chatbot-ai-smpu.onrender.com']
+  : ['https://chatbot-ai-smpu.onrender.com', 'http://localhost:5000'];
 
 const PYTHON_AI_SERVICES = Array.from(
   new Set([...configuredPythonAIService, ...defaultPythonAIServices.map(normalizeServiceUrl)]),
@@ -23,9 +23,12 @@ const toPositiveInt = (value, fallback) => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 };
 
-const AI_REQUEST_TIMEOUT_MS = toPositiveInt(process.env.PYTHON_AI_TIMEOUT_MS, 12000);
-const AI_MAX_RETRIES = toPositiveInt(process.env.PYTHON_AI_RETRIES, 2);
-const AI_RETRY_BASE_DELAY_MS = toPositiveInt(process.env.PYTHON_AI_RETRY_BASE_DELAY_MS, 1500);
+const AI_REQUEST_TIMEOUT_MS = toPositiveInt(process.env.PYTHON_AI_TIMEOUT_MS, 20000);
+const AI_MAX_RETRIES = toPositiveInt(process.env.PYTHON_AI_RETRIES, 3);
+const AI_RETRY_BASE_DELAY_MS = toPositiveInt(process.env.PYTHON_AI_RETRY_BASE_DELAY_MS, 2000);
+
+const AI_HEALTH_TIMEOUT_MS = toPositiveInt(process.env.PYTHON_AI_HEALTH_TIMEOUT_MS, 15000);
+const AI_HEALTH_RETRIES = toPositiveInt(process.env.PYTHON_AI_HEALTH_RETRIES, 2);
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -57,7 +60,7 @@ const requestPythonAI = async ({ method = 'get', endpoint, data, timeoutMs = AI_
   for (const serviceUrl of PYTHON_AI_SERVICES) {
     for (let attempt = 0; attempt <= retries; attempt += 1) {
       try {
-        const effectiveTimeout = timeoutMs + (attempt * 3000);
+        const effectiveTimeout = timeoutMs + (attempt * 5000);
 
         const response = await axios({
           method,
@@ -248,8 +251,8 @@ const checkAIHealth = asyncHandler(async (req, res) => {
     const healthResponse = await requestPythonAI({
       method: 'get',
       endpoint: '/health',
-      timeoutMs: toPositiveInt(process.env.PYTHON_AI_HEALTH_TIMEOUT_MS, 5000),
-      retries: toPositiveInt(process.env.PYTHON_AI_HEALTH_RETRIES, 1)
+      timeoutMs: AI_HEALTH_TIMEOUT_MS,
+      retries: AI_HEALTH_RETRIES
     });
     
     res.json({
