@@ -196,11 +196,6 @@ const ProviderPortfolio = () => {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-xl font-semibold text-slate-900">{t('providerPortfolio.turnoverTitle')}</h2>
-            <p className="mt-4 text-sm text-slate-700">{turnoverValue || t('providerPortfolio.notProvided')}</p>
-          </div>
-
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
             <h2 className="text-xl font-semibold text-slate-900">{t('providerPortfolio.availabilityTitle')}</h2>
             <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
