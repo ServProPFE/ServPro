@@ -1,0 +1,30 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - 00-namespace.yaml
+  - 01-configmap.yaml
+  - 02-secret.yaml
+  - 03-mongodb.yaml
+  - 04-python-ai.yaml
+  - 05-backend.yaml
+  - 06-frontend.yaml
+  - 07-dashboard.yaml
+  - 08-ingress.yaml
+  - 09-mobile.yaml
+
+images:
+  - name: servpro-python-ai
+    newName: docker.io/hechmi10/servpro-python-ai
+    newTag: v1
+  - name: servpro-backend
+    newName: docker.io/hechmi10/servpro-backend
+    newTag: v1
+  - name: servpro-frontend
+    newName: docker.io/hechmi10/servpro-frontend
+    newTag: v1
+  - name: servpro-dashboard
+    newName: docker.io/hechmi10/servpro-dashboard
+    newTag: v1
+  - name: servpro-mobile
+    newName: docker.io/hechmi10/servpro-mobile
+    newTag: v1

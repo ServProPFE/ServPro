@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dashboard
+  namespace: servpro
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dashboard
+  template:
+    metadata:
+      labels:
+        app: dashboard
+    spec:
+      containers:
+        - name: dashboard
+          image: servpro-dashboard:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5174
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: VITE_API_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: servpro-config
+                  key: VITE_API_BASE_URL
+          readinessProbe:
+            tcpSocket:
+              port: 5174
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            tcpSocket:
+              port: 5174
+            initialDelaySeconds: 60
+            timeoutSeconds: 5
+            periodSeconds: 20
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dashboard
+  namespace: servpro
+spec:
+  selector:
+    app: dashboard
+  ports:
+    - name: http
+      port: 5174
+      targetPort: 5174

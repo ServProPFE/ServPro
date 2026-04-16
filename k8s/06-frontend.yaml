@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: servpro
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: servpro-frontend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5173
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: VITE_API_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: servpro-config
+                  key: VITE_API_BASE_URL
+          readinessProbe:
+            tcpSocket:
+              port: 5173
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            tcpSocket:
+              port: 5173
+            initialDelaySeconds: 60
+            timeoutSeconds: 5
+            periodSeconds: 20
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: servpro
+spec:
+  selector:
+    app: frontend
+  ports:
+    - name: http
+      port: 5173
+      targetPort: 5173

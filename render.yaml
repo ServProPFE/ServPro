@@ -1,0 +1,44 @@
+services:
+  - type: web
+    runtime: docker
+    name: servpro-backend
+    rootDir: ServProBackend
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: CORS_ORIGINS
+        sync: false
+      - key: PYTHON_AI_SERVICE
+        value: https://chatbot-ai-smpu.onrender.com
+      - key: PYTHON_AI_TIMEOUT_MS
+        value: 20000
+      - key: PYTHON_AI_RETRIES
+        value: 3
+      - key: PYTHON_AI_RETRY_BASE_DELAY_MS
+        value: 2000
+      - key: PYTHON_AI_HEALTH_TIMEOUT_MS
+        value: 20000
+      - key: PYTHON_AI_HEALTH_RETRIES
+        value: 3
+
+  - type: web
+    runtime: docker
+    name: servpro-python-ai
+    rootDir: python_ai
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
