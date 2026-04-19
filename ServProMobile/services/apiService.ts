@@ -50,6 +50,10 @@ class ApiService {
   post<T>(url: string, body: unknown) {
     return this.request<T>(url, { method: 'POST', body });
   }
+
+  patch<T>(url: string, body?: unknown) {
+    return this.request<T>(url, { method: 'PATCH', body });
+  }
 }
 
 export const apiService = new ApiService();

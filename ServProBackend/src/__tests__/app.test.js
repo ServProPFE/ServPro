@@ -32,6 +32,7 @@ jest.mock("../routes/certifications", () => "certifications-routes");
 jest.mock("../routes/availability", () => "availability-routes");
 jest.mock("../routes/notations", () => "notations-routes");
 jest.mock("../routes/transactions", () => "transactions-routes");
+jest.mock("../routes/notifications", () => "notifications-routes");
 jest.mock("../routes/chatbot", () => "chatbot-routes");
 
 describe("app configuration", () => {
@@ -71,7 +72,8 @@ describe("app configuration", () => {
     expect(mockUse).toHaveBeenNthCalledWith(18, "/availability", "availability-routes");
     expect(mockUse).toHaveBeenNthCalledWith(19, "/notations", "notations-routes");
     expect(mockUse).toHaveBeenNthCalledWith(20, "/transactions", "transactions-routes");
-    expect(mockUse).toHaveBeenNthCalledWith(21, "/chatbot", "chatbot-routes");
-    expect(mockUse).toHaveBeenNthCalledWith(22, "error-handler-middleware");
+    expect(mockUse).toHaveBeenNthCalledWith(21, "/notifications", "notifications-routes");
+    expect(mockUse).toHaveBeenNthCalledWith(22, "/chatbot", "chatbot-routes");
+    expect(mockUse).toHaveBeenNthCalledWith(23, "error-handler-middleware");
   });
 });

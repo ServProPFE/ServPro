@@ -62,6 +62,7 @@ const Sidebar = () => {
     { to: '/transactions', icon: '💳', label: 'nav.transactions' },
     { to: '/packages', icon: '📦', label: 'nav.packages' },
     { to: '/notations', icon: '🧮', label: 'nav.notations' },
+    { to: '/notifications', icon: '🔔', label: 'nav.notifications' },
   ];
 
   const baseLink = 'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition';

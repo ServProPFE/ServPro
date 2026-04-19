@@ -83,6 +83,9 @@ const Navbar = () => {
                 <li>
                   <Link to="/my-transactions" className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/10" onClick={closeMenu}>{t('nav.myTransactions')}</Link>
                 </li>
+                <li>
+                  <Link to="/notifications" className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/10" onClick={closeMenu}>{t('nav.notifications', { defaultValue: 'Notifications' })}</Link>
+                </li>
               </>
             )}
           </ul>

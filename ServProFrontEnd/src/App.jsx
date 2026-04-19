@@ -15,6 +15,7 @@ import MyBookings from './pages/MyBookings';
 import MyTransactions from './pages/MyTransactions';
 import Providers from './pages/Providers';
 import ProviderPortfolio from './pages/ProviderPortfolio';
+import Notifications from './pages/Notifications';
 
 function App() {
   const { i18n } = useTranslation();
@@ -56,6 +57,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <MyTransactions />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/notifications"
+                element={
+                  <ProtectedRoute>
+                    <Notifications />
                   </ProtectedRoute>
                 }
               />

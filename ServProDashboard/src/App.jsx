@@ -22,6 +22,7 @@ import CertificationsManagement from './pages/CertificationsManagement';
 import TrackingManagement from './pages/TrackingManagement';
 import PackagesManagement from './pages/PackagesManagement';
 import NotationsManagement from './pages/NotationsManagement';
+import NotificationsManagement from './pages/NotificationsManagement';
 
 function App() {
   const { i18n } = useTranslation();
@@ -67,6 +68,7 @@ function App() {
                       <Route path="/tracking" element={<TrackingManagement />} />
                       <Route path="/packages" element={<PackagesManagement />} />
                       <Route path="/notations" element={<NotationsManagement />} />
+                      <Route path="/notifications" element={<NotificationsManagement />} />
                     </Routes>
                   </main>
                 </div>

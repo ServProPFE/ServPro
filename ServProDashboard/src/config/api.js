@@ -1,7 +1,7 @@
 // API Configuration for Dashboard
 const isLocalBrowser =
-  typeof window !== 'undefined' &&
-  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  globalThis.window &&
+  (globalThis.window.location.hostname === 'localhost' || globalThis.window.location.hostname === '127.0.0.1');
 
 const API_BASE_URL = isLocalBrowser
   ? 'http://localhost:4000'
@@ -62,6 +62,11 @@ export const API_ENDPOINTS = {
   // Transactions
   TRANSACTIONS: `${API_BASE_URL}/transactions`,
   TRANSACTION_BY_ID: (id) => `${API_BASE_URL}/transactions/${id}`,
+
+  // Notifications
+  NOTIFICATIONS: `${API_BASE_URL}/notifications`,
+  NOTIFICATION_READ: (id) => `${API_BASE_URL}/notifications/${id}/read`,
+  NOTIFICATIONS_READ_ALL: `${API_BASE_URL}/notifications/read-all`,
   
   // Tracking
   TRACKING: `${API_BASE_URL}/tracking`,

@@ -4,6 +4,10 @@ const { Transaction } = require("../models/Transaction");
 const { Invoice } = require("../models/Invoice");
 const { Service } = require("../models/Service");
 const { Offer } = require("../models/Offer");
+const {
+  createBookingNotifications,
+  createTransactionNotifications,
+} = require("../services/notificationService");
 const { asyncHandler } = require("../utils/asyncHandler");
 
 const roundTo2 = (value) => Math.round((value + Number.EPSILON) * 100) / 100;
@@ -88,16 +92,30 @@ const createBooking = asyncHandler(async (req, res) => {
     tracking,
   });
 
+  try {
+    await createBookingNotifications(booking, "BOOKING_CREATED");
+  } catch (notificationError) {
+    console.error("Failed to create booking notifications:", notificationError);
+  }
+
   // Automatically create a transaction if booking is created as CONFIRMED
   if (status === 'CONFIRMED') {
     try {
-      await Transaction.create({
+      const transaction = await Transaction.create({
         booking: booking._id,
         amount: booking.totalPrice,
         currency: booking.currency || 'TND',
         method: 'CASH', // Default payment method
         status: 'PENDING',
       });
+
+      await createTransactionNotifications({
+        _id: transaction._id,
+        booking,
+        amount: transaction.amount,
+        currency: transaction.currency,
+        status: transaction.status,
+      }, "TRANSACTION_CREATED");
     } catch (transactionError) {
       // Log error but don't fail the booking creation
       console.error('Failed to create transaction:', transactionError);
@@ -132,6 +150,12 @@ const updateBookingStatus = asyncHandler(async (req, res) => {
 
   await booking.save();
 
+  try {
+    await createBookingNotifications(booking, "BOOKING_STATUS_UPDATED");
+  } catch (notificationError) {
+    console.error("Failed to create booking status notifications:", notificationError);
+  }
+
   // Automatically create a transaction when booking is confirmed
   if (status === 'CONFIRMED' && oldStatus !== 'CONFIRMED') {
     try {
@@ -139,13 +163,21 @@ const updateBookingStatus = asyncHandler(async (req, res) => {
       
       // Only create if no transaction exists for this booking
       if (!existingTransaction) {
-        await Transaction.create({
+        const transaction = await Transaction.create({
           booking: booking._id,
           amount: booking.totalPrice,
           currency: booking.currency || 'TND',
           method: 'CASH', // Default payment method
           status: 'PENDING',
         });
+
+        await createTransactionNotifications({
+          _id: transaction._id,
+          booking,
+          amount: transaction.amount,
+          currency: transaction.currency,
+          status: transaction.status,
+        }, "TRANSACTION_CREATED");
       }
     } catch (transactionError) {
       // Log error but don't fail the booking status update

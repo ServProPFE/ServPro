@@ -1,6 +1,6 @@
 // API Configuration
 const isLocalBrowser =
-  globalThis.window !== undefined &&
+  globalThis.window &&
   (globalThis.window.location.hostname === 'localhost' || globalThis.window.location.hostname === '127.0.0.1');
 
 const API_BASE_URL = isLocalBrowser
@@ -59,6 +59,11 @@ export const API_ENDPOINTS = {
   // Transactions
   TRANSACTIONS: `${API_BASE_URL}/transactions`,
   TRANSACTION_BY_ID: (id) => `${API_BASE_URL}/transactions/${id}`,
+
+  // Notifications
+  NOTIFICATIONS: `${API_BASE_URL}/notifications`,
+  NOTIFICATION_READ: (id) => `${API_BASE_URL}/notifications/${id}/read`,
+  NOTIFICATIONS_READ_ALL: `${API_BASE_URL}/notifications/read-all`,
 
   // Chatbot
   CHATBOT: `${API_BASE_URL}/chatbot`,

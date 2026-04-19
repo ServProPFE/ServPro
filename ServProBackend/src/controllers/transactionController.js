@@ -1,6 +1,7 @@
 const{Transaction} = require("../models/Transaction");
 const { Booking } = require("../models/Booking");
 const { Commission } = require("../models/Commission");
+const { createTransactionNotifications } = require("../services/notificationService");
 const { asyncHandler } = require("../utils/asyncHandler");
 
 const roundTo2 = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
@@ -64,9 +65,21 @@ const createTransaction = asyncHandler(async (req, res) => {
     status,
   });
 
+  try {
+    await createTransactionNotifications(transaction, "TRANSACTION_CREATED");
+  } catch (notificationError) {
+    console.error("Failed to create transaction notifications:", notificationError);
+  }
+
   if (transaction.status === "SUCCESS") {
     await settleTransactionForProvider(transaction);
     await transaction.save();
+
+    try {
+      await createTransactionNotifications(transaction, "TRANSACTION_STATUS_UPDATED");
+    } catch (notificationError) {
+      console.error("Failed to create transaction success notifications:", notificationError);
+    }
   }
 
   const populatedTransaction = await Transaction.findById(transaction._id)
@@ -118,6 +131,13 @@ const updateTransactionStatus = asyncHandler(async (req, res) => {
   }
 
   await transaction.save();
+
+  try {
+    await createTransactionNotifications(transaction, "TRANSACTION_STATUS_UPDATED");
+  } catch (notificationError) {
+    console.error("Failed to create transaction status notifications:", notificationError);
+  }
+
   const updatedTransaction = await Transaction.findById(req.params.id)
     .populate({
       path: 'booking',
