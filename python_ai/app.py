@@ -70,6 +70,7 @@ DEEP_BLEND_ALPHA = min(max(get_env_float('DEEP_BLEND_ALPHA', 0.25), 0.0), 1.0)
 DEEP_LEARNING_RATE = get_env_float('DEEP_LEARNING_RATE', 0.03)
 DEEP_EPOCHS = max(1, get_env_int('DEEP_EPOCHS', 18))
 DEEP_STATE_PATH = os.environ.get('DEEP_STATE_PATH', 'deep_model_state.json')
+DEEP_BOOTSTRAP_ON_START = get_env_bool('DEEP_BOOTSTRAP_ON_START', False)
 
 MONGODB_URI = os.environ.get('MONGODB_URI', '').strip()
 MONGODB_DB_NAME = os.environ.get('MONGODB_DB_NAME', 'servpro_ai').strip() or 'servpro_ai'
@@ -765,19 +766,20 @@ class DeepServiceClassifier:
 
 
 def deep_nlp_classify(user_input):
+    classifier = get_deep_classifier()
     deep_result = {
-        'enabled': bool(DEEP_ENABLED and deep_classifier and deep_classifier.is_ready),
+        'enabled': bool(DEEP_ENABLED and classifier and classifier.is_ready),
         'used': False,
         'detected_service': None,
         'confidence': 0.0,
         'service_scores': {}
     }
 
-    if not DEEP_ENABLED or not deep_classifier or not deep_classifier.is_ready:
+    if not DEEP_ENABLED or not classifier or not classifier.is_ready:
         return deep_result
 
     try:
-        label, confidence, scores = deep_classifier.predict(user_input)
+        label, confidence, scores = classifier.predict(user_input)
         deep_result['used'] = True
         deep_result['service_scores'] = scores
         if label and confidence >= DEEP_MIN_CONFIDENCE:
@@ -957,16 +959,31 @@ class ServiceRecommender:
 
 # Initialize recommender
 recommender = ServiceRecommender()
-try:
-    deep_classifier = DeepServiceClassifier(
-        SERVICES_DB,
-        state_path=DEEP_STATE_PATH,
-        mongo_models_collection=MONGO_MODELS_COLLECTION,
-        mongo_feedback_collection=MONGO_FEEDBACK_COLLECTION
-    )
-except Exception as exc:
-    deep_classifier = None
-    print(f"⚠️ Deep classifier initialization failed, continuing without deep model: {exc}")
+deep_classifier = None
+
+
+def get_deep_classifier():
+    global deep_classifier
+
+    if deep_classifier is not None:
+        return deep_classifier
+
+    try:
+        deep_classifier = DeepServiceClassifier(
+            SERVICES_DB,
+            state_path=DEEP_STATE_PATH,
+            mongo_models_collection=MONGO_MODELS_COLLECTION,
+            mongo_feedback_collection=MONGO_FEEDBACK_COLLECTION
+        )
+    except Exception as exc:
+        deep_classifier = None
+        print(f"⚠️ Deep classifier initialization failed, continuing without deep model: {exc}")
+
+    return deep_classifier
+
+
+if DEEP_BOOTSTRAP_ON_START:
+    get_deep_classifier()
 
 @app.route('/health', methods=['GET'])
 def health():
@@ -1191,10 +1208,11 @@ def feedback():
         if expected_service not in SERVICES_DB:
             return jsonify({'error': 'Invalid expected_service', 'allowed': list(SERVICES_DB.keys())}), 400
 
-        if not DEEP_ENABLED or not deep_classifier:
+        classifier = get_deep_classifier()
+        if not DEEP_ENABLED or not classifier:
             return jsonify({'error': 'Deep model is disabled'}), 400
 
-        trained = deep_classifier.train_online(
+        trained = classifier.train_online(
             text=user_input,
             expected_service=expected_service,
             epochs=max(1, min(20, epochs)),
@@ -1217,7 +1235,7 @@ def feedback():
             except Exception as exc:
                 print(f"⚠️ Could not store feedback sample: {exc}")
 
-        predicted_service, confidence, scores = deep_classifier.predict(user_input)
+        predicted_service, confidence, scores = classifier.predict(user_input)
         return jsonify({
             'status': 'updated',
             'expected_service': expected_service,
