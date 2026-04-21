@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
 
-const BookingDetailsModal = ({ booking, onClose, onUpdate }) => {
+const BookingDetailsModal = ({ booking, onClose }) => {
   const { t } = useTranslation();
   if (!booking) return null;
 
@@ -112,7 +112,6 @@ BookingDetailsModal.propTypes = {
     }),
   }).isRequired,
   onClose: PropTypes.func.isRequired,
-  onUpdate: PropTypes.func,
 };
 
 export default BookingDetailsModal;

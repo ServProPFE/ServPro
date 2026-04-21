@@ -13,10 +13,6 @@ const Sidebar = () => {
   const canManageProviderResources = isProvider || isAdmin;
 
   useEffect(() => {
-    setMenuOpen(false);
-  }, [location.pathname]);
-
-  useEffect(() => {
     if (!menuOpen) {
       document.body.style.overflow = '';
       return;
@@ -37,6 +33,10 @@ const Sidebar = () => {
       window.removeEventListener('resize', handleResize);
     };
   }, [menuOpen]);
+
+  useEffect(() => {
+    setTimeout(() => setMenuOpen(false), 0);
+  }, [location.pathname]);
 
   const handleLogout = () => {
     setMenuOpen(false);

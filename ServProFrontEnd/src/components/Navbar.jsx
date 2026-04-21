@@ -21,10 +21,6 @@ const Navbar = () => {
   const closeMenu = () => setMenuOpen(false);
 
   useEffect(() => {
-    setMenuOpen(false);
-  }, [location.pathname]);
-
-  useEffect(() => {
     if (!menuOpen) {
       document.body.style.overflow = '';
       return;
@@ -45,6 +41,10 @@ const Navbar = () => {
       window.removeEventListener('resize', handleResize);
     };
   }, [menuOpen]);
+
+  useEffect(() => {
+    setTimeout(() => setMenuOpen(false), 0);
+  }, [location.pathname]);
 
   return (
     <nav className="fixed inset-x-0 top-0 z-50 border-b border-slate-700/20 bg-slate-950/80 backdrop-blur-lg">

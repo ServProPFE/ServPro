@@ -43,7 +43,8 @@ const Register = () => {
     setLoading(true);
 
     try {
-      const { confirmPassword, ...registrationData } = formData;
+      const registrationData = { ...formData };
+      delete registrationData.confirmPassword;
       await register({
         ...registrationData,
         passwordHash: registrationData.password,

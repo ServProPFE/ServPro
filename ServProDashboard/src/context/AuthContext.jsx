@@ -1,38 +1,27 @@
-import { createContext, useState, useContext, useEffect } from 'react';
+import { createContext, useState, useContext } from 'react';
 import authService from '../services/authService';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
+  const [user, setUser] = useState(() => {
     const currentUser = authService.getCurrentUser();
-    if (currentUser && (currentUser.type === 'PROVIDER' || currentUser.type === 'ADMIN')) {
-      setUser(currentUser);
-    }
-    setLoading(false);
-  }, []);
+    return currentUser && (currentUser.type === 'PROVIDER' || currentUser.type === 'ADMIN')
+      ? currentUser
+      : null;
+  });
+  const loading = false;
 
   const login = async (email, password) => {
-    try {
-      const data = await authService.login(email, password);
-      setUser(data.user);
-      return data;
-    } catch (error) {
-      throw error;
-    }
+    const data = await authService.login(email, password);
+    setUser(data.user);
+    return data;
   };
 
   const register = async (userData) => {
-    try {
-      const data = await authService.register(userData);
-      setUser(data.user);
-      return data;
-    } catch (error) {
-      throw error;
-    }
+    const data = await authService.register(userData);
+    setUser(data.user);
+    return data;
   };
 
   const logout = () => {

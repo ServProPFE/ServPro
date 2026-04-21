@@ -141,7 +141,11 @@ const ProviderPortfolio = () => {
               <p><span className="font-semibold text-slate-900">{t('providerPortfolio.company')}:</span> {profile.companyName || '-'}</p>
               <p><span className="font-semibold text-slate-900">{t('providerPortfolio.email')}:</span> {provider?.email || '-'}</p>
               <p><span className="font-semibold text-slate-900">{t('providerPortfolio.phone')}:</span> {provider?.phone || '-'}</p>
+              <p><span className="font-semibold text-slate-900">{t('providerPortfolio.location', { defaultValue: 'Location' })}:</span> {formatLocation(provider, t)}</p>
               <p><span className="font-semibold text-slate-900">{t('providerPortfolio.experience')}:</span> {t('providerPortfolio.years', { count: profile.experienceYears || 0 })}</p>
+              <p><span className="font-semibold text-slate-900">{t('providerPortfolio.equipments', { defaultValue: 'Equipment' })}:</span> {equipmentItems.length ? equipmentItems.join(', ') : t('providerPortfolio.notProvided')}</p>
+              <p><span className="font-semibold text-slate-900">{t('providerPortfolio.team', { defaultValue: 'Team' })}:</span> {teamItems.length ? teamItems.join(', ') : t('providerPortfolio.notProvided')}</p>
+              <p><span className="font-semibold text-slate-900">{t('providerPortfolio.turnover', { defaultValue: 'Turnover' })}:</span> {turnoverValue || t('providerPortfolio.notProvided')}</p>
               <p><span className="font-semibold text-slate-900">{t('providerPortfolio.status')}:</span> {profile.verificationStatus || 'PENDING'}</p>
             </div>
           </div>
