@@ -48,7 +48,7 @@
     "validUntil": "صالح حتى {{date}}"
   },
   "services": {
-    "title": "خدماتنا",
+    "title": "خدمات",
     "allTitle": "كل الخدمات",
     "noResults": "لا توجد خدمات",
     "descriptionFallback": "خدمة احترافية بجودة عالية",

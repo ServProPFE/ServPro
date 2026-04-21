@@ -48,7 +48,7 @@
     "validUntil": "Valid until {{date}}"
   },
   "services": {
-    "title": "Our Services",
+    "title": "Services",
     "allTitle": "All services",
     "noResults": "No services found",
     "descriptionFallback": "Professional service of quality",

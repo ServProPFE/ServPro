@@ -122,7 +122,6 @@ const ProviderPortfolio = () => {
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">{provider?.name || t('providerPortfolio.title')}</h1>
-          <p className="mt-2 text-sm text-slate-600">{t('providerPortfolio.providerId')}: {providerId}</p>
         </div>
         <Link to="/providers" className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
           {t('providerPortfolio.backToProviders')}

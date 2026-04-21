@@ -5,8 +5,15 @@ import math
 import re
 import os
 import json
+import random
+from datetime import datetime
 from dotenv import load_dotenv
 import google.generativeai as genai
+
+try:
+    from pymongo import MongoClient
+except Exception:
+    MongoClient = None
 
 # Load environment variables from .env file
 load_dotenv()
@@ -42,10 +49,90 @@ def get_env_bool(name, default):
     return str(raw).strip().lower() in ('1', 'true', 'yes', 'y', 'on')
 
 
+def get_env_int(name, default):
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return default
+
+
 LLM_ENABLED = get_env_bool('LLM_ENABLED', True)
 LLM_MIN_CONFIDENCE = get_env_float('LLM_MIN_CONFIDENCE', 0.15)
 LLM_BLEND_ALPHA = min(max(get_env_float('LLM_BLEND_ALPHA', 0.6), 0.0), 1.0)
 LLM_TIMEOUT_SECONDS = get_env_float('LLM_TIMEOUT_SECONDS', 8.0)
+
+DEEP_ENABLED = get_env_bool('DEEP_ENABLED', True)
+DEEP_MIN_CONFIDENCE = get_env_float('DEEP_MIN_CONFIDENCE', 0.15)
+DEEP_BLEND_ALPHA = min(max(get_env_float('DEEP_BLEND_ALPHA', 0.25), 0.0), 1.0)
+DEEP_LEARNING_RATE = get_env_float('DEEP_LEARNING_RATE', 0.03)
+DEEP_EPOCHS = max(1, get_env_int('DEEP_EPOCHS', 18))
+DEEP_STATE_PATH = os.environ.get('DEEP_STATE_PATH', 'deep_model_state.json')
+
+MONGODB_URI = os.environ.get('MONGODB_URI', '').strip()
+MONGODB_DB_NAME = os.environ.get('MONGODB_DB_NAME', 'servpro_ai').strip() or 'servpro_ai'
+MONGODB_CONNECT_TIMEOUT_MS = max(500, get_env_int('MONGODB_CONNECT_TIMEOUT_MS', 3000))
+
+
+def init_mongo():
+    if not MONGODB_URI:
+        print("⚠️ MongoDB URI not set - using file-only persistence")
+        return {
+            'enabled': False,
+            'client': None,
+            'db': None,
+            'models': None,
+            'feedback': None
+        }
+
+    if MongoClient is None:
+        print("⚠️ pymongo is not available - using file-only persistence")
+        return {
+            'enabled': False,
+            'client': None,
+            'db': None,
+            'models': None,
+            'feedback': None
+        }
+
+    try:
+        client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=MONGODB_CONNECT_TIMEOUT_MS)
+        client.admin.command('ping')
+        db = client[MONGODB_DB_NAME]
+        models_collection = db['deep_model_states']
+        feedback_collection = db['deep_feedback']
+
+        try:
+            feedback_collection.create_index('created_at')
+            feedback_collection.create_index('expected_service')
+        except Exception:
+            pass
+
+        print(f"✅ MongoDB connected ({MONGODB_DB_NAME})")
+        return {
+            'enabled': True,
+            'client': client,
+            'db': db,
+            'models': models_collection,
+            'feedback': feedback_collection
+        }
+    except Exception as exc:
+        print(f"⚠️ MongoDB unavailable - using file-only persistence: {exc}")
+        return {
+            'enabled': False,
+            'client': None,
+            'db': None,
+            'models': None,
+            'feedback': None
+        }
+
+
+MONGO_CONTEXT = init_mongo()
+MONGO_ENABLED = bool(MONGO_CONTEXT.get('enabled'))
+MONGO_MODELS_COLLECTION = MONGO_CONTEXT.get('models')
+MONGO_FEEDBACK_COLLECTION = MONGO_CONTEXT.get('feedback')
 
 # Service keywords database
 SERVICES_DB = {
@@ -317,6 +404,424 @@ def merge_tfidf_llm_scores(tfidf_result, llm_result):
 
     return merged
 
+
+class DeepServiceClassifier:
+    """Small feed-forward neural classifier (pure Python) with online updates."""
+
+    def __init__(self, service_db, state_path='deep_model_state.json', mongo_models_collection=None, mongo_feedback_collection=None):
+        self.service_db = service_db
+        self.state_path = state_path
+        self.mongo_models_collection = mongo_models_collection
+        self.mongo_feedback_collection = mongo_feedback_collection
+        self.mongo_model_key = 'deep_service_model_v1'
+        self.labels = list(service_db.keys())
+        self.label_to_idx = {label: i for i, label in enumerate(self.labels)}
+        self.idx_to_label = {i: label for label, i in self.label_to_idx.items()}
+
+        self.vocab = {}
+        self.hidden_1 = 48
+        self.hidden_2 = 24
+        self.random = random.Random(42)
+
+        self.w1 = []
+        self.b1 = []
+        self.w2 = []
+        self.b2 = []
+        self.w3 = []
+        self.b3 = []
+
+        self.is_ready = False
+        self._bootstrap()
+
+    def _bootstrap(self):
+        if self._load_state():
+            self.is_ready = True
+            print("✅ Deep model loaded from persisted state")
+            return
+
+        training_samples = self._build_seed_training_samples()
+        training_samples.extend(self._load_feedback_samples(limit=2000))
+        if not training_samples:
+            return
+
+        self._build_vocab([text for text, _ in training_samples])
+        self._initialize_weights()
+        self._fit(training_samples, epochs=DEEP_EPOCHS, lr=DEEP_LEARNING_RATE)
+        self.is_ready = True
+        self._save_state()
+        print(f"✅ Deep model initialized with {len(training_samples)} seed samples")
+
+    def _load_feedback_samples(self, limit=2000):
+        if not self.mongo_feedback_collection:
+            return []
+
+        try:
+            cursor = self.mongo_feedback_collection.find(
+                {
+                    'text': {'$exists': True},
+                    'expected_service': {'$in': self.labels}
+                },
+                {'text': 1, 'expected_service': 1, '_id': 0}
+            ).sort('created_at', -1).limit(max(1, limit))
+
+            samples = []
+            for doc in cursor:
+                text = str(doc.get('text', '')).strip()
+                expected_service = str(doc.get('expected_service', '')).strip()
+                if text and expected_service in self.label_to_idx:
+                    samples.append((text, expected_service))
+            return samples
+        except Exception as exc:
+            print(f"⚠️ Could not load feedback samples from MongoDB: {exc}")
+            return []
+
+    def _build_seed_training_samples(self):
+        templates_en = [
+            "i need {kw}",
+            "can you help with {kw}",
+            "urgent {kw} issue",
+            "please fix {kw}",
+            "book service for {kw}"
+        ]
+        templates_ar = [
+            "أحتاج {kw}",
+            "عندي مشكلة {kw}",
+            "مطلوب خدمة {kw}",
+            "من فضلك أصلح {kw}",
+            "احجز لي {kw}"
+        ]
+
+        samples = []
+        for service_key, service_data in self.service_db.items():
+            keywords = service_data.get('keywords', [])
+            for kw in keywords:
+                cleaned_kw = str(kw).strip()
+                if not cleaned_kw:
+                    continue
+                samples.append((cleaned_kw, service_key))
+                for tpl in templates_en:
+                    samples.append((tpl.format(kw=cleaned_kw), service_key))
+                for tpl in templates_ar:
+                    samples.append((tpl.format(kw=cleaned_kw), service_key))
+
+        return samples
+
+    def _build_vocab(self, texts):
+        token_counts = Counter()
+        for text in texts:
+            tokens = normalize_tokens(text)
+            token_counts.update(tokens)
+
+        kept_tokens = [token for token, count in token_counts.items() if count >= 1]
+        self.vocab = {token: idx for idx, token in enumerate(sorted(kept_tokens))}
+
+    def _initialize_weights(self):
+        in_dim = len(self.vocab)
+        out_dim = len(self.labels)
+
+        def rand_weight(scale=0.05):
+            return self.random.uniform(-scale, scale)
+
+        self.w1 = [[rand_weight() for _ in range(in_dim)] for _ in range(self.hidden_1)]
+        self.b1 = [0.0 for _ in range(self.hidden_1)]
+
+        self.w2 = [[rand_weight() for _ in range(self.hidden_1)] for _ in range(self.hidden_2)]
+        self.b2 = [0.0 for _ in range(self.hidden_2)]
+
+        self.w3 = [[rand_weight() for _ in range(self.hidden_2)] for _ in range(out_dim)]
+        self.b3 = [0.0 for _ in range(out_dim)]
+
+    def _vectorize(self, text):
+        vector = {}
+        tokens = normalize_tokens(text)
+        for token in tokens:
+            idx = self.vocab.get(token)
+            if idx is not None:
+                vector[idx] = vector.get(idx, 0.0) + 1.0
+
+        norm = math.sqrt(sum(v * v for v in vector.values()))
+        if norm > 0:
+            for idx in list(vector.keys()):
+                vector[idx] /= norm
+        return vector
+
+    def _relu(self, values):
+        return [v if v > 0 else 0.0 for v in values]
+
+    def _softmax(self, logits):
+        if not logits:
+            return []
+        max_logit = max(logits)
+        exps = [math.exp(v - max_logit) for v in logits]
+        total = sum(exps)
+        if total <= 0:
+            return [0.0 for _ in logits]
+        return [v / total for v in exps]
+
+    def _forward(self, sparse_x):
+        z1 = []
+        for i in range(self.hidden_1):
+            value = self.b1[i]
+            row = self.w1[i]
+            for idx, x in sparse_x.items():
+                value += row[idx] * x
+            z1.append(value)
+        a1 = self._relu(z1)
+
+        z2 = []
+        for i in range(self.hidden_2):
+            value = self.b2[i]
+            row = self.w2[i]
+            for j, a in enumerate(a1):
+                value += row[j] * a
+            z2.append(value)
+        a2 = self._relu(z2)
+
+        z3 = []
+        for i in range(len(self.labels)):
+            value = self.b3[i]
+            row = self.w3[i]
+            for j, a in enumerate(a2):
+                value += row[j] * a
+            z3.append(value)
+        probs = self._softmax(z3)
+
+        cache = {
+            'x': sparse_x,
+            'z1': z1,
+            'a1': a1,
+            'z2': z2,
+            'a2': a2,
+            'probs': probs
+        }
+        return probs, cache
+
+    def _train_step(self, text, label, lr):
+        y_idx = self.label_to_idx.get(label)
+        if y_idx is None:
+            return
+
+        x = self._vectorize(text)
+        if not x:
+            return
+
+        probs, cache = self._forward(x)
+        if not probs:
+            return
+
+        a1 = cache['a1']
+        a2 = cache['a2']
+        z1 = cache['z1']
+        z2 = cache['z2']
+
+        dz3 = list(probs)
+        dz3[y_idx] -= 1.0
+
+        da2 = [0.0 for _ in range(self.hidden_2)]
+        for o in range(len(self.labels)):
+            grad = dz3[o]
+            self.b3[o] -= lr * grad
+            for j in range(self.hidden_2):
+                da2[j] += self.w3[o][j] * grad
+                self.w3[o][j] -= lr * (grad * a2[j])
+
+        dz2 = [da2[i] if z2[i] > 0 else 0.0 for i in range(self.hidden_2)]
+        da1 = [0.0 for _ in range(self.hidden_1)]
+        for i in range(self.hidden_2):
+            grad = dz2[i]
+            self.b2[i] -= lr * grad
+            for j in range(self.hidden_1):
+                da1[j] += self.w2[i][j] * grad
+                self.w2[i][j] -= lr * (grad * a1[j])
+
+        dz1 = [da1[i] if z1[i] > 0 else 0.0 for i in range(self.hidden_1)]
+        for i in range(self.hidden_1):
+            grad = dz1[i]
+            self.b1[i] -= lr * grad
+            row = self.w1[i]
+            for idx, x_val in x.items():
+                row[idx] -= lr * (grad * x_val)
+
+    def _fit(self, samples, epochs=12, lr=0.03):
+        if not samples:
+            return
+        for _ in range(max(1, epochs)):
+            self.random.shuffle(samples)
+            for text, label in samples:
+                self._train_step(text, label, lr)
+
+    def predict(self, text):
+        if not self.is_ready:
+            return None, 0.0, dict.fromkeys(self.labels, 0.0)
+
+        x = self._vectorize(text)
+        if not x:
+            return None, 0.0, dict.fromkeys(self.labels, 0.0)
+
+        probs, _ = self._forward(x)
+        if not probs:
+            return None, 0.0, dict.fromkeys(self.labels, 0.0)
+
+        best_idx = max(range(len(probs)), key=lambda i: probs[i])
+        best_label = self.idx_to_label.get(best_idx)
+        best_conf = float(probs[best_idx])
+        scores = {self.idx_to_label[i]: float(probs[i]) for i in range(len(probs))}
+        return best_label, best_conf, scores
+
+    def train_online(self, text, expected_service, epochs=4, lr=None):
+        if expected_service not in self.label_to_idx:
+            return False
+        if lr is None:
+            lr = DEEP_LEARNING_RATE
+
+        if not self.is_ready:
+            self._build_vocab([text])
+            self._initialize_weights()
+            self.is_ready = True
+
+        train_samples = [(text, expected_service) for _ in range(max(1, epochs))]
+        self._fit(train_samples, epochs=1, lr=lr)
+        self._save_state()
+        return True
+
+    def _save_state(self):
+        payload = {
+            'labels': self.labels,
+            'vocab': self.vocab,
+            'hidden_1': self.hidden_1,
+            'hidden_2': self.hidden_2,
+            'w1': self.w1,
+            'b1': self.b1,
+            'w2': self.w2,
+            'b2': self.b2,
+            'w3': self.w3,
+            'b3': self.b3
+        }
+
+        if self.mongo_models_collection is not None:
+            try:
+                self.mongo_models_collection.update_one(
+                    {'_id': self.mongo_model_key},
+                    {
+                        '$set': {
+                            'state': payload,
+                            'updated_at': datetime.utcnow()
+                        }
+                    },
+                    upsert=True
+                )
+            except Exception as exc:
+                print(f"⚠️ Could not save deep model state to MongoDB: {exc}")
+
+        try:
+            with open(self.state_path, 'w', encoding='utf-8') as f:
+                json.dump(payload, f)
+        except Exception as exc:
+            print(f"⚠️ Could not save deep model state: {exc}")
+
+    def _load_state(self):
+        if self.mongo_models_collection is not None:
+            try:
+                document = self.mongo_models_collection.find_one({'_id': self.mongo_model_key})
+                payload = document.get('state') if document else None
+                if payload and self._apply_state(payload):
+                    return True
+            except Exception as exc:
+                print(f"⚠️ Could not load deep model state from MongoDB: {exc}")
+
+        if not os.path.exists(self.state_path):
+            return False
+        try:
+            with open(self.state_path, 'r', encoding='utf-8') as f:
+                payload = json.load(f)
+
+            return self._apply_state(payload)
+        except Exception as exc:
+            print(f"⚠️ Could not load deep model state: {exc}")
+            return False
+
+    def _apply_state(self, payload):
+        try:
+            if payload.get('labels') != self.labels:
+                return False
+
+            self.vocab = payload.get('vocab', {})
+            self.hidden_1 = int(payload.get('hidden_1', self.hidden_1))
+            self.hidden_2 = int(payload.get('hidden_2', self.hidden_2))
+            self.w1 = payload.get('w1', [])
+            self.b1 = payload.get('b1', [])
+            self.w2 = payload.get('w2', [])
+            self.b2 = payload.get('b2', [])
+            self.w3 = payload.get('w3', [])
+            self.b3 = payload.get('b3', [])
+
+            if not self.vocab or not self.w1 or not self.w2 or not self.w3:
+                return False
+
+            return True
+        except Exception as exc:
+            print(f"⚠️ Could not apply deep model state: {exc}")
+            return False
+
+
+def deep_nlp_classify(user_input):
+    deep_result = {
+        'enabled': bool(DEEP_ENABLED and deep_classifier and deep_classifier.is_ready),
+        'used': False,
+        'detected_service': None,
+        'confidence': 0.0,
+        'service_scores': {}
+    }
+
+    if not DEEP_ENABLED or not deep_classifier or not deep_classifier.is_ready:
+        return deep_result
+
+    try:
+        label, confidence, scores = deep_classifier.predict(user_input)
+        deep_result['used'] = True
+        deep_result['service_scores'] = scores
+        if label and confidence >= DEEP_MIN_CONFIDENCE:
+            deep_result['detected_service'] = label
+            deep_result['confidence'] = confidence
+        return deep_result
+    except Exception as exc:
+        print(f"⚠️ Deep classification failed: {exc}")
+        return deep_result
+
+
+def merge_with_deep_scores(merged_result, deep_result):
+    if not deep_result.get('used'):
+        return merged_result
+
+    best_service = None
+    best_score = 0.0
+
+    for service_key, score_data in merged_result.get('all_scores', {}).items():
+        base_score = float(score_data.get('combined_score', score_data.get('similarity', 0.0)) or 0.0)
+        deep_score = float(deep_result.get('service_scores', {}).get(service_key, 0.0) or 0.0)
+        final_score = ((1.0 - DEEP_BLEND_ALPHA) * base_score) + (DEEP_BLEND_ALPHA * deep_score)
+
+        score_data['deep_score'] = deep_score
+        score_data['final_score'] = final_score
+
+        if final_score > best_score:
+            best_score = final_score
+            best_service = service_key
+
+    if best_service and best_score >= SERVICES_DB[best_service]['confidence_threshold']:
+        merged_result['detected_service'] = best_service
+        merged_result['confidence'] = best_score
+        merged_result['source'] = 'hybrid_tfidf_llm_deep'
+
+    deep_service = deep_result.get('detected_service')
+    deep_confidence = float(deep_result.get('confidence', 0.0) or 0.0)
+    if deep_service and deep_confidence >= DEEP_MIN_CONFIDENCE and deep_confidence > merged_result.get('confidence', 0.0):
+        merged_result['detected_service'] = deep_service
+        merged_result['confidence'] = deep_confidence
+        merged_result['source'] = 'deep'
+
+    return merged_result
+
 class SimpleVectorizer:
     """Lightweight TF-IDF vectorizer without scikit-learn dependency"""
     
@@ -452,16 +957,26 @@ class ServiceRecommender:
 
 # Initialize recommender
 recommender = ServiceRecommender()
+deep_classifier = DeepServiceClassifier(
+    SERVICES_DB,
+    state_path=DEEP_STATE_PATH,
+    mongo_models_collection=MONGO_MODELS_COLLECTION,
+    mongo_feedback_collection=MONGO_FEEDBACK_COLLECTION
+)
 
 @app.route('/health', methods=['GET'])
 def health():
     """Health check endpoint"""
     return jsonify({
         'status': 'AI Chatbot service is running',
-        'model': 'Hybrid NLP: TF-IDF + LLM (Gemini)',
-        'version': '1.1.0',
+        'model': 'Hybrid NLP: TF-IDF + LLM (Gemini) + Deep NN',
+        'version': '1.2.0',
         'llm_enabled': bool(LLM_ENABLED and gemini_model),
-        'llm_blend_alpha': LLM_BLEND_ALPHA
+        'llm_blend_alpha': LLM_BLEND_ALPHA,
+        'deep_enabled': bool(DEEP_ENABLED and deep_classifier and deep_classifier.is_ready),
+        'deep_blend_alpha': DEEP_BLEND_ALPHA,
+        'mongodb_enabled': MONGO_ENABLED,
+        'mongodb_database': MONGODB_DB_NAME if MONGO_ENABLED else None
     }), 200
 
 @app.route('/services', methods=['GET'])
@@ -542,10 +1057,12 @@ def recommend():
                 'all_scores': {}
             }), 200
         
-        # Get baseline NLP recommendation then blend with structured LLM classification.
+        # Get baseline NLP recommendation then blend with structured LLM and deep model classification.
         tfidf_result = recommender.recommend_service(user_input)
         llm_result = llm_nlp_classify(user_input, language)
         result = merge_tfidf_llm_scores(tfidf_result, llm_result)
+        deep_result = deep_nlp_classify(user_input)
+        result = merge_with_deep_scores(result, deep_result)
         
         # Prepare response
         response = {
@@ -591,6 +1108,7 @@ def recommend():
         
         response['all_scores'] = result['all_scores']
         response['llm_used'] = bool(llm_result.get('used'))
+        response['deep_used'] = bool(deep_result.get('used'))
         
         # Add source metadata
         if 'source' not in response:
@@ -626,6 +1144,8 @@ def analyze():
         tfidf_result = recommender.recommend_service(user_input)
         llm_result = llm_nlp_classify(user_input, language)
         result = merge_tfidf_llm_scores(tfidf_result, llm_result)
+        deep_result = deep_nlp_classify(user_input)
+        result = merge_with_deep_scores(result, deep_result)
         
         return jsonify({
             'user_input': user_input,
@@ -636,7 +1156,71 @@ def analyze():
                 'confidence': result['confidence']
             },
             'source': result.get('source', 'tfidf'),
-            'llm_used': bool(llm_result.get('used'))
+            'llm_used': bool(llm_result.get('used')),
+            'deep_used': bool(deep_result.get('used'))
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/feedback', methods=['POST'])
+def feedback():
+    """
+    Online learning endpoint for the deep classifier.
+    Expected JSON: {"text": "...", "expected_service": "plomberie|electricite|climatisation|nettoyage", "epochs": 4}
+    """
+    try:
+        data = request.get_json() or {}
+        user_input = str(data.get('text', '')).strip()
+        expected_service = normalize_service_label(data.get('expected_service'))
+        epochs = data.get('epochs', 4)
+
+        try:
+            epochs = int(epochs)
+        except (TypeError, ValueError):
+            epochs = 4
+
+        if not user_input:
+            return jsonify({'error': 'Empty input'}), 400
+
+        if expected_service not in SERVICES_DB:
+            return jsonify({'error': 'Invalid expected_service', 'allowed': list(SERVICES_DB.keys())}), 400
+
+        if not DEEP_ENABLED or not deep_classifier:
+            return jsonify({'error': 'Deep model is disabled'}), 400
+
+        trained = deep_classifier.train_online(
+            text=user_input,
+            expected_service=expected_service,
+            epochs=max(1, min(20, epochs)),
+            lr=DEEP_LEARNING_RATE
+        )
+
+        if not trained:
+            return jsonify({'error': 'Online training failed'}), 500
+
+        feedback_saved = False
+        if MONGO_FEEDBACK_COLLECTION is not None:
+            try:
+                MONGO_FEEDBACK_COLLECTION.insert_one({
+                    'text': user_input,
+                    'expected_service': expected_service,
+                    'epochs': max(1, min(20, epochs)),
+                    'created_at': datetime.utcnow()
+                })
+                feedback_saved = True
+            except Exception as exc:
+                print(f"⚠️ Could not store feedback sample: {exc}")
+
+        predicted_service, confidence, scores = deep_classifier.predict(user_input)
+        return jsonify({
+            'status': 'updated',
+            'expected_service': expected_service,
+            'predicted_service': predicted_service,
+            'confidence': confidence,
+            'scores': scores,
+            'feedback_saved': feedback_saved
         }), 200
 
     except Exception as e:
