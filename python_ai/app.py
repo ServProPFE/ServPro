@@ -957,12 +957,16 @@ class ServiceRecommender:
 
 # Initialize recommender
 recommender = ServiceRecommender()
-deep_classifier = DeepServiceClassifier(
-    SERVICES_DB,
-    state_path=DEEP_STATE_PATH,
-    mongo_models_collection=MONGO_MODELS_COLLECTION,
-    mongo_feedback_collection=MONGO_FEEDBACK_COLLECTION
-)
+try:
+    deep_classifier = DeepServiceClassifier(
+        SERVICES_DB,
+        state_path=DEEP_STATE_PATH,
+        mongo_models_collection=MONGO_MODELS_COLLECTION,
+        mongo_feedback_collection=MONGO_FEEDBACK_COLLECTION
+    )
+except Exception as exc:
+    deep_classifier = None
+    print(f"⚠️ Deep classifier initialization failed, continuing without deep model: {exc}")
 
 @app.route('/health', methods=['GET'])
 def health():
