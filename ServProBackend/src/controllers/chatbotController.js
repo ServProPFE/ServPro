@@ -10,9 +10,12 @@ const configuredPythonAIService = (process.env.PYTHON_AI_SERVICE || '')
   .map(normalizeServiceUrl)
   .filter(Boolean);
 
+const primaryPythonAIService = 'https://servpro-python-ai.onrender.com';
+const legacyPythonAIService = 'https://chatbot-ai-smpu.onrender.com';
+
 const defaultPythonAIServices = isProduction
-  ? ['https://chatbot-ai-smpu.onrender.com']
-  : ['https://chatbot-ai-smpu.onrender.com', 'http://localhost:5000'];
+  ? [primaryPythonAIService, legacyPythonAIService]
+  : [primaryPythonAIService, legacyPythonAIService, 'http://localhost:5000'];
 
 const PYTHON_AI_SERVICES = Array.from(
   new Set([...configuredPythonAIService, ...defaultPythonAIServices.map(normalizeServiceUrl)]),

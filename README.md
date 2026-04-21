@@ -168,7 +168,7 @@ Chaque depot a son propre `render.yaml`:
 Variables critiques backend (Render):
 
 ```env
-PYTHON_AI_SERVICE=https://chatbot-ai-smpu.onrender.com
+PYTHON_AI_SERVICE=https://servpro-python-ai.onrender.com
 PYTHON_AI_TIMEOUT_MS=20000
 PYTHON_AI_RETRIES=3
 PYTHON_AI_RETRY_BASE_DELAY_MS=2000

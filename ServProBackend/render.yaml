@@ -19,7 +19,7 @@ services:
       - key: CORS_ORIGINS
         sync: false
       - key: PYTHON_AI_SERVICE
-        value: https://chatbot-ai-smpu.onrender.com
+        value: https://servpro-python-ai.onrender.com,https://chatbot-ai-smpu.onrender.com
       - key: PYTHON_AI_TIMEOUT_MS
         value: 20000
       - key: PYTHON_AI_RETRIES
