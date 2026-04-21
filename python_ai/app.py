@@ -452,7 +452,7 @@ class DeepServiceClassifier:
         print(f"✅ Deep model initialized with {len(training_samples)} seed samples")
 
     def _load_feedback_samples(self, limit=2000):
-        if not self.mongo_feedback_collection:
+        if self.mongo_feedback_collection is None:
             return []
 
         try:

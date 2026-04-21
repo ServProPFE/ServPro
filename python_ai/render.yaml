@@ -8,6 +8,10 @@ services:
     envVars:
       - key: PYTHONUNBUFFERED
         value: "1"
+      - key: WEB_CONCURRENCY
+        value: "1"
+      - key: GUNICORN_TIMEOUT
+        value: "120"
       - key: GEMINI_API_KEY
         sync: false
       - key: MONGODB_URI
