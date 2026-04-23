@@ -18,6 +18,28 @@
     "notifications": "الإشعارات",
     "logout": "تسجيل الخروج"
   },
+  "notifications": {
+    "title": "الإشعارات",
+    "subtitle": "راقب أحداث الحجز والدفع عبر المنصة.",
+    "markAllRead": "تحديد الكل كمقروء",
+    "markRead": "تحديد كمقروء",
+    "read": "مقروء",
+    "unread": "غير مقروء",
+    "system": "النظام",
+    "empty": "لا توجد إشعارات حتى الآن.",
+    "total": "الإجمالي",
+    "typeFallback": "إشعار",
+    "titles": {
+      "BOOKING_STATUS_UPDATED": "تم استلام الحجز",
+      "BOOKING_CREATED": "تم استلام الحجز",
+      "TRANSACTION_CREATED": "تم إنشاء الدفعة"
+    },
+    "types": {
+      "BOOKING_STATUS_UPDATED": "تحديث الحجز",
+      "BOOKING_CREATED": "إنشاء حجز",
+      "TRANSACTION_CREATED": "تحديث الدفع"
+    }
+  },
   "roles": {
     "ADMIN": "مسؤول",
     "PROVIDER": "مزود خدمة",

@@ -21,7 +21,18 @@
     "read": "Read",
     "unread": "Unread",
     "system": "System",
-    "empty": "No notifications yet."
+    "empty": "No notifications yet.",
+    "typeFallback": "Notification",
+    "titles": {
+      "BOOKING_STATUS_UPDATED": "Booking received",
+      "BOOKING_CREATED": "Booking received",
+      "TRANSACTION_CREATED": "Payment created"
+    },
+    "types": {
+      "BOOKING_STATUS_UPDATED": "Booking update",
+      "BOOKING_CREATED": "Booking created",
+      "TRANSACTION_CREATED": "Payment update"
+    }
   },
   "search": {
     "placeholder": "Search for a service...",

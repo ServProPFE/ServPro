@@ -11,6 +11,29 @@
     "hello": "مرحبا، {{name}}",
     "language": "اللغة"
   },
+  "notifications": {
+    "title": "الإشعارات",
+    "subtitle": "تابع تحديثات الحجز والدفع والخدمة.",
+    "markAllRead": "تحديد الكل كمقروء",
+    "markRead": "تحديد كمقروء",
+    "read": "مقروء",
+    "unread": "غير مقروء",
+    "unreadSummary": "{{count}} إشعارات غير مقروءة",
+    "allRead": "كل شيء محدث",
+    "system": "النظام",
+    "empty": "لا توجد إشعارات حتى الآن.",
+    "typeFallback": "إشعار",
+    "titles": {
+      "BOOKING_STATUS_UPDATED": "تم استلام الحجز",
+      "BOOKING_CREATED": "تم استلام الحجز",
+      "TRANSACTION_CREATED": "تم إنشاء الدفعة"
+    },
+    "types": {
+      "BOOKING_STATUS_UPDATED": "تحديث الحجز",
+      "BOOKING_CREATED": "إنشاء حجز",
+      "TRANSACTION_CREATED": "تحديث الدفع"
+    }
+  },
   "mobile": {
     "profile": "الملف الشخصي",
     "profileSubtitle": "إدارة الحساب والتفضيلات",

@@ -33,6 +33,16 @@ const NotificationsManagement = () => {
     [notifications],
   );
 
+  const getNotificationTypeLabel = (notificationType) => {
+    if (!notificationType) {
+      return t('notifications.typeFallback', { defaultValue: 'Notification' });
+    }
+
+    return t(`notifications.types.${notificationType}`, {
+      defaultValue: notificationType.replaceAll('_', ' '),
+    });
+  };
+
   const handleMarkOneAsRead = async (notificationId) => {
     try {
       setBusyId(notificationId);
@@ -114,9 +124,13 @@ const NotificationsManagement = () => {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h2 className="text-base font-bold text-slate-900">{notification.title}</h2>
+                    <h2 className="text-base font-bold text-slate-900">
+                      {t(`notifications.titles.${notification.type}`, {
+                        defaultValue: notification.title,
+                      })}
+                    </h2>
                     <p className="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      {notification.type}
+                      {getNotificationTypeLabel(notification.type)}
                     </p>
                   </div>
                   <span className={`rounded-full px-3 py-1 text-xs font-bold ${isUnread ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>

@@ -18,6 +18,28 @@
     "notifications": "Notifications",
     "logout": "Logout"
   },
+  "notifications": {
+    "title": "Notifications",
+    "subtitle": "Monitor booking and payment events across the platform.",
+    "markAllRead": "Mark all as read",
+    "markRead": "Mark read",
+    "read": "Read",
+    "unread": "Unread",
+    "system": "System",
+    "empty": "No notifications yet.",
+    "total": "total",
+    "typeFallback": "Notification",
+    "titles": {
+      "BOOKING_STATUS_UPDATED": "Booking received",
+      "BOOKING_CREATED": "Booking received",
+      "TRANSACTION_CREATED": "Payment created"
+    },
+    "types": {
+      "BOOKING_STATUS_UPDATED": "Booking update",
+      "BOOKING_CREATED": "Booking created",
+      "TRANSACTION_CREATED": "Payment update"
+    }
+  },
   "roles": {
     "ADMIN": "Admin",
     "PROVIDER": "Provider",

@@ -64,6 +64,16 @@ export default function NotificationsScreen() {
 
   const unreadItems = useMemo(() => items.filter((item) => !item.readAt), [items]);
 
+  const getNotificationTypeLabel = (notificationType?: string) => {
+    if (!notificationType) {
+      return t('notifications.typeFallback', { defaultValue: 'Notification' });
+    }
+
+    return t(`notifications.types.${notificationType}`, {
+      defaultValue: notificationType.replaceAll('_', ' '),
+    });
+  };
+
   const handleMarkOneAsRead = async (notificationId: string) => {
     try {
       setBusyId(notificationId);
@@ -158,7 +168,9 @@ export default function NotificationsScreen() {
                   <View style={styles.cardTop}>
                     <View style={styles.cardTitleRow}>
                       <View style={[styles.dot, isUnread && styles.dotUnread]} />
-                      <Text style={styles.cardTitle}>{item.title}</Text>
+                      <Text style={styles.cardTitle}>
+                        {t(`notifications.titles.${item.type}`, { defaultValue: item.title })}
+                      </Text>
                     </View>
                     <Text style={styles.cardDate}>{timeLabel(item.createdAt)}</Text>
                   </View>
@@ -168,7 +180,7 @@ export default function NotificationsScreen() {
                   <View style={styles.cardFooter}>
                     <View style={styles.metaPill}>
                       <Ionicons name="link-outline" size={14} color="#475569" />
-                      <Text style={styles.metaText}>{item.metadata?.serviceName || item.type}</Text>
+                      <Text style={styles.metaText}>{item.metadata?.serviceName || getNotificationTypeLabel(item.type)}</Text>
                     </View>
 
                     {isUnread ? (

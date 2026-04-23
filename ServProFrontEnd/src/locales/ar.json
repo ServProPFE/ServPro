@@ -21,7 +21,18 @@
     "read": "مقروء",
     "unread": "غير مقروء",
     "system": "النظام",
-    "empty": "لا توجد إشعارات حتى الآن."
+    "empty": "لا توجد إشعارات حتى الآن.",
+    "typeFallback": "إشعار",
+    "titles": {
+      "BOOKING_STATUS_UPDATED": "تم استلام الحجز",
+      "BOOKING_CREATED": "تم استلام الحجز",
+      "TRANSACTION_CREATED": "تم إنشاء الدفعة"
+    },
+    "types": {
+      "BOOKING_STATUS_UPDATED": "تحديث الحجز",
+      "BOOKING_CREATED": "إنشاء حجز",
+      "TRANSACTION_CREATED": "تحديث الدفع"
+    }
   },
   "search": {
     "placeholder": "ابحث عن خدمة...",
