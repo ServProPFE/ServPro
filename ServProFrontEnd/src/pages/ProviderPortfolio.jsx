@@ -13,6 +13,18 @@ const toArray = (response) => {
 
 const firstNonEmpty = (...values) => values.find((value) => value !== null && value !== undefined && String(value).trim() !== '');
 
+const getCertificateFileName = (url, fallback) => {
+  if (!url) return fallback;
+
+  try {
+    const parsed = new URL(url);
+    const rawName = parsed.pathname.split('/').filter(Boolean).pop();
+    return rawName || fallback;
+  } catch {
+    return fallback;
+  }
+};
+
 const DAY_DEFINITIONS = [
   { dayIndex: 0, dayKey: 'sunday' },
   { dayIndex: 1, dayKey: 'monday' },
@@ -207,13 +219,33 @@ const ProviderPortfolio = () => {
                       </p>
                       <div className="mt-2 grid grid-cols-2 gap-2">
                         {portfolio.certificates.filter(Boolean).map((certificateUrl, index) => (
-                          <img
+                          <div
                             key={`${portfolio._id}-certificate-${index}`}
-                            src={certificateUrl}
-                            alt={t('providerPortfolio.certificateFallback')}
-                            className="h-24 w-full rounded-lg border border-slate-200 object-cover"
-                            loading="lazy"
-                          />
+                            className="flex h-24 w-full flex-col justify-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
+                          >
+                            <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">PDF</span>
+                            <span className="mt-1 line-clamp-2 font-semibold text-slate-900">
+                              {getCertificateFileName(certificateUrl, `${t('providerPortfolio.certificateFallback')} ${index + 1}`)}
+                            </span>
+
+                            <div className="mt-2 flex items-center gap-2">
+                              <a
+                                href={certificateUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-100"
+                              >
+                                {t('common.view', { defaultValue: 'Open PDF' })}
+                              </a>
+                              <a
+                                href={certificateUrl}
+                                download
+                                className="inline-flex items-center rounded-full bg-slate-900 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-slate-700"
+                              >
+                                {t('common.download', { defaultValue: 'Download PDF' })}
+                              </a>
+                            </div>
+                          </div>
                         ))}
                       </div>
                     </>

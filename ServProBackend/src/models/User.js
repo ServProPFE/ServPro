@@ -17,6 +17,8 @@ const userSchema = new mongoose.Schema(
       companyName: { type: String },
       license: { type: String },
       insurance: { type: String },
+      location: { type: String },
+      turnover: { type: String },
       experienceYears: { type: Number, default: 0 },
       serviceRadius: { type: Number, default: 0 },
       verificationStatus: {
