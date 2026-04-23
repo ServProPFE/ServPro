@@ -1,12 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import LanguageSwitcher from './LanguageSwitcher';
+import NotificationsPanel from './NotificationsPanel';
 
 const Sidebar = () => {
   const { user, logout, isProvider, isAdmin } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const notificationsRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
@@ -37,6 +40,32 @@ const Sidebar = () => {
   useEffect(() => {
     setTimeout(() => setMenuOpen(false), 0);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!notificationsOpen) {
+      return;
+    }
+
+    const handleClickOutside = (event) => {
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+        setNotificationsOpen(false);
+      }
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setNotificationsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [notificationsOpen]);
 
   const handleLogout = () => {
     setMenuOpen(false);
@@ -124,7 +153,6 @@ const Sidebar = () => {
             {renderNavLink('/bookings', '📅', 'nav.bookings')}
             {renderNavLink('/offers', '🎁', 'nav.offers')}
             {renderNavLink('/invoices', '🧾', 'nav.invoices')}
-            {renderNavLink('/notifications', '🔔', 'nav.notifications')}
           </div>
 
           {canManageProviderResources && (
@@ -143,6 +171,21 @@ const Sidebar = () => {
         </nav>
 
         <div className="mt-5 rounded-xl border border-white/10 bg-white/5 p-3">
+          <div className="relative mb-3" ref={notificationsRef}>
+            <button
+              type="button"
+              onClick={() => setNotificationsOpen((prev) => !prev)}
+              aria-label={t('nav.notifications', { defaultValue: 'Notifications' })}
+              title={t('nav.notifications', { defaultValue: 'Notifications' })}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/20 text-white transition hover:bg-white/10"
+            >
+              <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" aria-hidden="true">
+                <path d="M12 4a5 5 0 0 0-5 5v2.7c0 .7-.24 1.38-.68 1.92L5 15.3V17h14v-1.7l-1.32-1.68a3.1 3.1 0 0 1-.68-1.92V9a5 5 0 0 0-5-5Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M10 19a2 2 0 0 0 4 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+              </svg>
+            </button>
+            <NotificationsPanel open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
+          </div>
           <p className="truncate text-sm font-semibold text-white">{user?.name}</p>
           <p className="truncate text-xs text-slate-300">{user?.email}</p>
           <button

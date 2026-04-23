@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Navigate, Routes, Route } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -22,7 +22,6 @@ import CertificationsManagement from './pages/CertificationsManagement';
 import TrackingManagement from './pages/TrackingManagement';
 import PackagesManagement from './pages/PackagesManagement';
 import NotationsManagement from './pages/NotationsManagement';
-import NotificationsManagement from './pages/NotificationsManagement';
 
 function App() {
   const { i18n } = useTranslation();
@@ -68,7 +67,7 @@ function App() {
                       <Route path="/tracking" element={<TrackingManagement />} />
                       <Route path="/packages" element={<PackagesManagement />} />
                       <Route path="/notations" element={<NotationsManagement />} />
-                      <Route path="/notifications" element={<NotificationsManagement />} />
+                      <Route path="/notifications" element={<Navigate to="/" replace />} />
                     </Routes>
                   </main>
                 </div>

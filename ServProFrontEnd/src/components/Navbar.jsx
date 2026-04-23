@@ -126,9 +126,14 @@ const Navbar = () => {
                   <button
                     type="button"
                     onClick={() => setNotificationsOpen((prev) => !prev)}
-                    className="rounded-full border border-white/25 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+                    aria-label={t('nav.notifications', { defaultValue: 'Notifications' })}
+                    title={t('nav.notifications', { defaultValue: 'Notifications' })}
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/25 text-white transition hover:bg-white/10"
                   >
-                    {t('nav.notifications', { defaultValue: 'Notifications' })}
+                    <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" aria-hidden="true">
+                      <path d="M12 4a5 5 0 0 0-5 5v2.7c0 .7-.24 1.38-.68 1.92L5 15.3V17h14v-1.7l-1.32-1.68a3.1 3.1 0 0 1-.68-1.92V9a5 5 0 0 0-5-5Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M10 19a2 2 0 0 0 4 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                    </svg>
                   </button>
                   <NotificationsPanel open={notificationsOpen} onClose={closeNotifications} />
                 </div>
