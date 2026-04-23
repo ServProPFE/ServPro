@@ -5,6 +5,8 @@
     "providerList": "Providers",
     "myBookings": "My Bookings",
     "myTransactions": "My Transactions",
+    "notifications": "Notifications",
+    "chatbot": "Chatbot",
     "login": "Login",
     "register": "Register",
     "logout": "Logout",
