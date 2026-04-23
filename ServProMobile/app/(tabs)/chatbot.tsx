@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -9,6 +9,7 @@ import { AppTheme } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { API_ENDPOINTS } from '@/services/apiConfig';
 import { apiService } from '@/services/apiService';
+import { servproDataService } from '@/services/servproDataService';
 
 type ChatRole = 'user' | 'bot';
 
@@ -18,8 +19,15 @@ type ChatService = {
   name?: string;
   provider?: string | { _id?: string; id?: string; name?: string; email?: string; phone?: string };
   priceMin?: number;
+  priceMax?: number;
   currency?: string;
   duration?: number;
+};
+
+type CatalogPriceRange = {
+  min: number;
+  max: number;
+  currency: string;
 };
 
 type ChatResponse = {
@@ -82,8 +90,70 @@ export default function ChatbotScreen() {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [awaitingPreference, setAwaitingPreference] = useState(false);
   const [preferenceContextMessage, setPreferenceContextMessage] = useState('');
+  const [catalogPriceRange, setCatalogPriceRange] = useState<CatalogPriceRange | null>(null);
 
   const chatLanguage = useMemo<'en' | 'ar'>(() => (i18n.language?.startsWith('ar') ? 'ar' : 'en'), [i18n.language]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadCatalogPriceRange = async () => {
+      try {
+        const services = await servproDataService.getServices();
+        const pricedServices = services
+          .map((service) => ({
+            price: Number(service.priceMin),
+            currency: service.currency || 'TND',
+          }))
+          .filter((service) => Number.isFinite(service.price));
+
+        if (!isActive || pricedServices.length === 0) {
+          return;
+        }
+
+        const prices = pricedServices.map((service) => service.price);
+        const minPrice = Math.min(...prices);
+        const maxPrice = Math.max(...prices);
+        const currency = pricedServices.find((service) => service.price === minPrice)?.currency || 'TND';
+
+        setCatalogPriceRange({
+          min: minPrice,
+          max: maxPrice,
+          currency,
+        });
+      } catch {
+        if (isActive) {
+          setCatalogPriceRange(null);
+        }
+      }
+    };
+
+    void loadCatalogPriceRange();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  const formatServicePrice = (service?: ChatService | null) => {
+    const priceMin = Number(service?.priceMin);
+    const priceMax = Number(service?.priceMax);
+    const currency = service?.currency || catalogPriceRange?.currency || 'TND';
+
+    if (Number.isFinite(priceMin) && Number.isFinite(priceMax)) {
+      return `${priceMin} - ${priceMax} ${currency}`;
+    }
+
+    if (catalogPriceRange) {
+      return `${catalogPriceRange.min} - ${catalogPriceRange.max} ${catalogPriceRange.currency}`;
+    }
+
+    if (Number.isFinite(priceMin)) {
+      return `${priceMin} ${currency}`;
+    }
+
+    return `0 ${currency}`;
+  };
 
   const loadSuggestions = async () => {
     try {
@@ -203,7 +273,7 @@ export default function ChatbotScreen() {
                   <View style={styles.serviceCard}>
                     <Text style={styles.serviceTitle}>{message.service.name || t('services.title')}</Text>
                     <Text style={styles.serviceMeta}>{t('chatbot.by')} {resolveProviderName(message.service.provider)}</Text>
-                    <Text style={styles.serviceMeta}>{message.service.priceMin || 0} {message.service.currency || 'TND'} • {message.service.duration || 0} min</Text>
+                    <Text style={styles.serviceMeta}>{formatServicePrice(message.service)} • {message.service.duration || 0} min</Text>
 
                     <View style={styles.serviceLinks}>
                       {resolveServiceId(message.service) ? (

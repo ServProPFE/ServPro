@@ -6,6 +6,18 @@ import apiService from '../services/apiService';
 import { resolveServiceName } from '../utils/serviceName';
 import '../styles/Chatbot.css';
 
+const normalizeItems = (payload) => {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (Array.isArray(payload?.items)) {
+    return payload.items;
+  }
+
+  return [];
+};
+
 const Chatbot = () => {
   const { t, i18n } = useTranslation();
   const { isAuthenticated } = useAuth();
@@ -16,7 +28,10 @@ const Chatbot = () => {
   const [suggestions, setSuggestions] = useState([]);
   const [awaitingPreference, setAwaitingPreference] = useState(false);
   const [preferenceContextMessage, setPreferenceContextMessage] = useState('');
+  const [catalogPriceRange, setCatalogPriceRange] = useState(null);
   const messagesEndRef = useRef(null);
+
+  const createMessageId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
   const resolveServiceId = (service) => service?.id || service?._id;
 
@@ -72,12 +87,74 @@ const Chatbot = () => {
     }
   }, [isOpen, loadSuggestions]);
 
+  useEffect(() => {
+    let isActive = true;
+
+    const loadCatalogPriceRange = async () => {
+      try {
+        const data = await apiService.get(API_ENDPOINTS.SERVICES);
+        const services = normalizeItems(data)
+          .map((service) => ({
+            price: Number(service?.priceMin),
+            currency: service?.currency || 'TND',
+          }))
+          .filter((service) => Number.isFinite(service.price));
+
+        if (!isActive || services.length === 0) {
+          return;
+        }
+
+        const prices = services.map((service) => service.price);
+        const minPrice = Math.min(...prices);
+        const maxPrice = Math.max(...prices);
+        const currency = services.find((service) => service.price === minPrice)?.currency || 'TND';
+
+        setCatalogPriceRange({
+          min: minPrice,
+          max: maxPrice,
+          currency,
+        });
+      } catch {
+        if (isActive) {
+          setCatalogPriceRange(null);
+        }
+      }
+    };
+
+    void loadCatalogPriceRange();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  const formatServicePrice = (service) => {
+    const priceMin = Number(service?.priceMin);
+    const priceMax = Number(service?.priceMax);
+    const currency = service?.currency || catalogPriceRange?.currency || 'TND';
+
+    if (Number.isFinite(priceMin) && Number.isFinite(priceMax)) {
+      return `${priceMin} - ${priceMax} ${currency}`;
+    }
+
+    if (catalogPriceRange) {
+      return `${catalogPriceRange.min} - ${catalogPriceRange.max} ${catalogPriceRange.currency}`;
+    }
+
+    if (Number.isFinite(priceMin)) {
+      return `${priceMin} ${currency}`;
+    }
+
+    return `0 ${currency}`;
+  };
+
   const handleSendMessage = async (messageText = null) => {
     const message = messageText || inputMessage.trim();
     if (!message) return;
 
     if (!isAuthenticated) {
       setMessages([...messages, {
+        id: createMessageId(),
         type: 'bot',
         text: t('chatbot.loginRequired'),
         timestamp: new Date()
@@ -87,6 +164,7 @@ const Chatbot = () => {
 
     // Add user message to chat
     const userMessage = {
+      id: createMessageId(),
       type: 'user',
       text: message,
       timestamp: new Date()
@@ -118,6 +196,7 @@ const Chatbot = () => {
       }
 
       const botMessage = {
+        id: createMessageId(),
         type: 'bot',
         text: normalizeBotMessage(response?.message),
         service: response?.recommendedService || response?.service || null,
@@ -194,9 +273,9 @@ const Chatbot = () => {
                 {suggestions.length > 0 && (
                   <div className="chatbot-suggestions">
                     <p className="suggestions-label">{t('chatbot.suggestionsLabel')}</p>
-                    {suggestions.slice(0, 3).map((suggestion, index) => (
+                    {suggestions.slice(0, 3).map((suggestion) => (
                       <button
-                        key={index}
+                        key={suggestion}
                         className="suggestion-chip"
                         onClick={() => handleSuggestionClick(suggestion)}
                       >
@@ -208,12 +287,12 @@ const Chatbot = () => {
               </div>
             )}
 
-            {messages.map((msg, index) => (
-              <div key={index} className={`message ${msg.type}`}>
+            {messages.map((msg) => (
+              <div key={msg.id} className={`message ${msg.type}`}>
                 <div className="message-content">
                   <div className="message-text">
-                    {msg.text.split('\n').map((line, i) => (
-                      <p key={i}>{line}</p>
+                    {msg.text.split('\n').map((line) => (
+                      <p key={`${msg.id}-${line}`}>{line}</p>
                     ))}
                   </div>
                   {msg.service && (
@@ -221,7 +300,7 @@ const Chatbot = () => {
                       <h4>{resolveServiceName(t, msg.service.name)}</h4>
                       <p className="service-provider">{t('chatbot.by')} {getProviderDisplay(msg.service.provider)}</p>
                       <p className="service-price">
-                        {msg.service.priceMin} {msg.service.currency}
+                        {formatServicePrice(msg.service)}
                       </p>
                       <p className="service-duration">
                         {msg.service.duration} {i18n.language?.startsWith('ar') ? 'دقيقة' : 'minutes'}
@@ -262,7 +341,7 @@ const Chatbot = () => {
             <textarea
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
+              onKeyDown={handleKeyPress}
               placeholder={t('chatbot.inputPlaceholder')}
               rows="1"
               disabled={isLoading}
