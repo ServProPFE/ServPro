@@ -14,6 +14,8 @@ const Chatbot = () => {
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
+  const [awaitingPreference, setAwaitingPreference] = useState(false);
+  const [preferenceContextMessage, setPreferenceContextMessage] = useState('');
   const messagesEndRef = useRef(null);
 
   const resolveServiceId = (service) => service?.id || service?._id;
@@ -96,11 +98,24 @@ const Chatbot = () => {
     try {
       const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
       const isFirstPrompt = messages.filter((chatMessage) => chatMessage.type === 'user').length === 0;
+      const preferencePrefix = language === 'ar' ? 'الأولوية' : 'Preference';
+      const outboundMessage = awaitingPreference && preferenceContextMessage
+        ? `${preferenceContextMessage}. ${preferencePrefix}: ${message}`
+        : message;
+
       const response = await apiService.post(API_ENDPOINTS.CHATBOT, {
-        message: message,
+        message: outboundMessage,
         language: language,
         isFirstPrompt
       });
+
+      if (response?.needsPreference) {
+        setAwaitingPreference(true);
+        setPreferenceContextMessage(message);
+      } else {
+        setAwaitingPreference(false);
+        setPreferenceContextMessage('');
+      }
 
       const botMessage = {
         type: 'bot',

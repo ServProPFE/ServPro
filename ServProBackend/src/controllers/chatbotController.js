@@ -35,23 +35,6 @@ const AI_HEALTH_RETRIES = toPositiveInt(process.env.PYTHON_AI_HEALTH_RETRIES, 2)
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const hasClarificationIntent = (message) => {
-  const normalized = String(message || '').toLowerCase();
-  return [
-    /\b(cheapest|lowest\s+price|low\s+cost|affordable|budget)\b/,
-    /\b(closest|nearest|nearby|near\s+me|around\s+me)\b/,
-    /\b(fastest|quickest|soonest|urgent)\b/,
-  ].some((pattern) => pattern.test(normalized));
-};
-
-const buildClarificationMessage = (language) => {
-  if (language === 'ar') {
-    return 'هل تريد الأرخص أم الأقرب أم الأسرع؟ حدّد نوع الخدمة والأولوية أو المدينة وسأضيّق الخيارات لك.';
-  }
-
-  return 'Do you want the cheapest option, the closest provider, or the fastest response? Tell me the service type and your priority, and I will narrow it down.';
-};
-
 const buildOfflineResponse = (language) => ({
   message: language === 'ar'
     ? 'يمكنني مساعدتك في السباكة أو الكهرباء أو التكييف أو التنظيف. اكتب طلبك وسأقترح لك الخدمة المناسبة.'
@@ -63,18 +46,6 @@ const buildOfflineResponse = (language) => ({
   geminiUsed: false,
   allScores: {},
   degraded: true,
-  timestamp: new Date(),
-});
-
-const buildClarificationResponse = (language) => ({
-  message: buildClarificationMessage(language),
-  detectedService: null,
-  confidence: 0,
-  recommendedService: null,
-  aiModel: 'Clarification rule',
-  geminiUsed: false,
-  allScores: {},
-  needsClarification: true,
   timestamp: new Date(),
 });
 
@@ -197,10 +168,6 @@ const getChatbotResponse = asyncHandler(async (req, res) => {
     const error = new Error(language === 'ar' ? 'الرسالة فارغة' : 'Message cannot be empty');
     error.statusCode = 400;
     throw error;
-  }
-
-  if (hasClarificationIntent(message)) {
-    return res.json(buildClarificationResponse(language));
   }
 
   let aiAnalysis;

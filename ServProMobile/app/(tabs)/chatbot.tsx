@@ -26,6 +26,8 @@ type ChatResponse = {
   message?: string;
   recommendedService?: ChatService;
   service?: ChatService;
+  needsPreference?: boolean;
+  preferenceOptions?: string[];
 };
 
 type ChatMessage = {
@@ -78,6 +80,8 @@ export default function ChatbotScreen() {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [awaitingPreference, setAwaitingPreference] = useState(false);
+  const [preferenceContextMessage, setPreferenceContextMessage] = useState('');
 
   const chatLanguage = useMemo<'en' | 'ar'>(() => (i18n.language?.startsWith('ar') ? 'ar' : 'en'), [i18n.language]);
 
@@ -115,10 +119,25 @@ export default function ChatbotScreen() {
     setIsLoading(true);
 
     try {
+      const isFirstPrompt = messages.filter((chatMessage) => chatMessage.role === 'user').length === 0;
+      const preferencePrefix = chatLanguage === 'ar' ? 'الأولوية' : 'Preference';
+      const outboundMessage = awaitingPreference && preferenceContextMessage
+        ? `${preferenceContextMessage}. ${preferencePrefix}: ${text}`
+        : text;
+
       const response = await apiService.post<ChatResponse>(API_ENDPOINTS.CHATBOT, {
-        message: text,
+        message: outboundMessage,
         language: chatLanguage,
+        isFirstPrompt,
       });
+
+      if (response.needsPreference) {
+        setAwaitingPreference(true);
+        setPreferenceContextMessage(text);
+      } else {
+        setAwaitingPreference(false);
+        setPreferenceContextMessage('');
+      }
 
       addMessage({
         role: 'bot',
