@@ -5,29 +5,45 @@ import { useTranslation } from 'react-i18next';
 
 import { AppBackground } from '@/components/servpro/AppBackground';
 import { AppTheme } from '@/constants/theme';
+import { API_ENDPOINTS } from '@/services/apiConfig';
+import { apiService } from '@/services/apiService';
 import { useAuth } from '@/context/AuthContext';
 import type { ServiceItem } from '@/data/mockData';
 import { servproDataService } from '@/services/servproDataService';
+
+type ProviderApiItem = {
+  _id?: string;
+  id?: string;
+  name?: string;
+};
 
 export default function ServiceDetailScreen() {
   const { t } = useTranslation();
   const { isAuthenticated, user } = useAuth();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [services, setServices] = useState<ServiceItem[]>([]);
+  const [providers, setProviders] = useState<ProviderApiItem[]>([]);
 
   useEffect(() => {
     (async () => {
-      const data = await servproDataService.getServices();
-      setServices(data);
+      const [servicesData, providersData] = await Promise.all([
+        servproDataService.getServices(),
+        apiService.get<{ items?: ProviderApiItem[] } | ProviderApiItem[]>(API_ENDPOINTS.PROVIDERS),
+      ]);
+
+      setServices(servicesData);
+      setProviders(Array.isArray(providersData) ? providersData : providersData.items || []);
     })();
   }, []);
 
   const service = useMemo(() => services.find((item) => item._id === id), [id, services]);
   const providerName = useMemo(() => {
     if (!service?.provider) return '';
-    if (typeof service.provider === 'string') return service.provider;
+    if (typeof service.provider === 'string') {
+      return providers.find((provider) => provider._id === service.provider || provider.id === service.provider)?.name || '';
+    }
     return service.provider.name || '';
-  }, [service?.provider]);
+  }, [providers, service?.provider]);
   const providerId = useMemo(() => {
     if (!service?.provider) return '';
     if (typeof service.provider === 'string') return service.provider;

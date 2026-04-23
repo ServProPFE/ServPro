@@ -5,9 +5,17 @@ import { useTranslation } from 'react-i18next';
 
 import { AppBackground } from '@/components/servpro/AppBackground';
 import { AppTheme } from '@/constants/theme';
+import { API_ENDPOINTS } from '@/services/apiConfig';
+import { apiService } from '@/services/apiService';
 import type { ServiceItem } from '@/data/mockData';
 import { useAuth } from '@/context/AuthContext';
 import { servproDataService } from '@/services/servproDataService';
+
+type ProviderApiItem = {
+  _id?: string;
+  id?: string;
+  name?: string;
+};
 
 const toDateInput = (date: Date) => {
   const year = date.getFullYear();
@@ -62,6 +70,7 @@ export default function BookingScreen() {
   const normalizedServiceId = Array.isArray(serviceId) ? serviceId[0] : serviceId;
 
   const [services, setServices] = useState<ServiceItem[]>([]);
+  const [providers, setProviders] = useState<ProviderApiItem[]>([]);
   const [isLoadingServices, setIsLoadingServices] = useState(true);
   const [bookingDate, setBookingDate] = useState(toDateInput(initialDate));
   const [bookingTime, setBookingTime] = useState(toTimeInput(initialDate));
@@ -73,8 +82,13 @@ export default function BookingScreen() {
     (async () => {
       setIsLoadingServices(true);
       try {
-        const all = await servproDataService.getServices();
+        const [all, providersData] = await Promise.all([
+          servproDataService.getServices(),
+          apiService.get<{ items?: ProviderApiItem[] } | ProviderApiItem[]>(API_ENDPOINTS.PROVIDERS),
+        ]);
+
         setServices(all);
+        setProviders(Array.isArray(providersData) ? providersData : providersData.items || []);
       } finally {
         setIsLoadingServices(false);
       }
@@ -85,6 +99,13 @@ export default function BookingScreen() {
     () => services.find((item) => item._id === normalizedServiceId),
     [services, normalizedServiceId],
   );
+  const providerName = useMemo(() => {
+    if (!service?.provider) return '';
+    if (typeof service.provider === 'string') {
+      return providers.find((provider) => provider._id === service.provider || provider.id === service.provider)?.name || '';
+    }
+    return service.provider.name || '';
+  }, [providers, service?.provider]);
   const providerId = toRefId(service?.provider);
   const clientId = user?._id ?? user?.id;
 
@@ -133,10 +154,7 @@ export default function BookingScreen() {
         serviceId: service._id,
         providerId,
         serviceName: service.name,
-        providerName:
-          (typeof service.provider === 'string'
-            ? service.provider
-            : service.provider?.name) || t('providers.fallbackName', { defaultValue: 'Provider' }),
+        providerName: providerName || t('providers.fallbackName', { defaultValue: 'Provider' }),
         scheduledAt: scheduledDate.toISOString(),
         address: address.trim(),
         notes: notes.trim(),
