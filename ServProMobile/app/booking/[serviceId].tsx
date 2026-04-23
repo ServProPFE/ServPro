@@ -133,7 +133,10 @@ export default function BookingScreen() {
         serviceId: service._id,
         providerId,
         serviceName: service.name,
-        providerName: 'ServPro Provider',
+        providerName:
+          (typeof service.provider === 'string'
+            ? service.provider
+            : service.provider?.name) || t('providers.fallbackName', { defaultValue: 'Provider' }),
         scheduledAt: scheduledDate.toISOString(),
         address: address.trim(),
         notes: notes.trim(),
@@ -151,71 +154,77 @@ export default function BookingScreen() {
     }
   };
 
+  let content = null;
+
+  if (isLoadingServices) {
+    content = (
+      <View style={styles.card}>
+        <Text style={styles.subtitle}>{t('common.loading')}</Text>
+      </View>
+    );
+  } else if (service) {
+    content = (
+      <View style={styles.card}>
+        <Text style={styles.title}>{t('booking.title', { name: t(service.name, { defaultValue: service.name }) })}</Text>
+        <Text style={styles.subtitle}>{t('services.descriptionFallback')}</Text>
+
+        <View style={styles.priceRow}>
+          <Text style={styles.priceLabel}>{t('booking.totalPrice')}</Text>
+          <Text style={styles.priceValue}>{service.priceMin} {service.currency}</Text>
+        </View>
+
+        <Text style={styles.label}>{t('booking.dateTime')}</Text>
+        <View style={styles.dateTimeRow}>
+          <TextInput
+            style={[styles.input, styles.halfInput]}
+            value={bookingDate}
+            onChangeText={setBookingDate}
+            placeholder="YYYY-MM-DD"
+            placeholderTextColor="#94a3b8"
+          />
+          <TextInput
+            style={[styles.input, styles.halfInput]}
+            value={bookingTime}
+            onChangeText={setBookingTime}
+            placeholder="HH:mm"
+            placeholderTextColor="#94a3b8"
+          />
+        </View>
+
+        <Text style={styles.label}>{t('booking.address')}</Text>
+        <TextInput
+          style={styles.input}
+          value={address}
+          onChangeText={setAddress}
+          placeholder={t('booking.addressPlaceholder')}
+          placeholderTextColor="#94a3b8"
+        />
+
+        <Text style={styles.label}>{t('booking.notes')}</Text>
+        <TextInput
+          style={[styles.input, styles.textarea]}
+          value={notes}
+          onChangeText={setNotes}
+          placeholder={t('booking.notesPlaceholder')}
+          placeholderTextColor="#94a3b8"
+          multiline
+          numberOfLines={4}
+          textAlignVertical="top"
+        />
+
+        <Pressable style={styles.confirmBtn} onPress={onSubmit} disabled={submitting}>
+          <Text style={styles.confirmBtnText}>{submitting ? t('booking.booking') : t('booking.confirm')}</Text>
+        </Pressable>
+      </View>
+    );
+  } else if (!isLoadingServices) {
+    content = <Text style={styles.notFound}>{t('service.notFound')}</Text>;
+  }
+
   return (
     <AppBackground>
       <ScrollView contentContainerStyle={styles.content}>
-        {isLoadingServices ? (
-          <View style={styles.card}>
-            <Text style={styles.subtitle}>{t('common.loading')}</Text>
-          </View>
-        ) : null}
-
-        {service ? (
-          <View style={styles.card}>
-            <Text style={styles.title}>{t('booking.title', { name: t(service.name, { defaultValue: service.name }) })}</Text>
-            <Text style={styles.subtitle}>{t('services.descriptionFallback')}</Text>
-
-            <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>{t('booking.totalPrice')}</Text>
-              <Text style={styles.priceValue}>{service.priceMin} {service.currency}</Text>
-            </View>
-
-            <Text style={styles.label}>{t('booking.dateTime')}</Text>
-            <View style={styles.dateTimeRow}>
-              <TextInput
-                style={[styles.input, styles.halfInput]}
-                value={bookingDate}
-                onChangeText={setBookingDate}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor="#94a3b8"
-              />
-              <TextInput
-                style={[styles.input, styles.halfInput]}
-                value={bookingTime}
-                onChangeText={setBookingTime}
-                placeholder="HH:mm"
-                placeholderTextColor="#94a3b8"
-              />
-            </View>
-
-            <Text style={styles.label}>{t('booking.address')}</Text>
-            <TextInput
-              style={styles.input}
-              value={address}
-              onChangeText={setAddress}
-              placeholder={t('booking.addressPlaceholder')}
-              placeholderTextColor="#94a3b8"
-            />
-
-            <Text style={styles.label}>{t('booking.notes')}</Text>
-            <TextInput
-              style={[styles.input, styles.textarea]}
-              value={notes}
-              onChangeText={setNotes}
-              placeholder={t('booking.notesPlaceholder')}
-              placeholderTextColor="#94a3b8"
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
-
-            <Pressable style={styles.confirmBtn} onPress={onSubmit} disabled={submitting}>
-              <Text style={styles.confirmBtnText}>{submitting ? t('booking.booking') : t('booking.confirm')}</Text>
-            </Pressable>
-          </View>
-        ) : !isLoadingServices ? (
-          <Text style={styles.notFound}>{t('service.notFound')}</Text>
-        ) : null}
+        {content}
       </ScrollView>
     </AppBackground>
   );

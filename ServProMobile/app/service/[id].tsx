@@ -23,6 +23,11 @@ export default function ServiceDetailScreen() {
   }, []);
 
   const service = useMemo(() => services.find((item) => item._id === id), [id, services]);
+  const providerName = useMemo(() => {
+    if (!service?.provider) return '';
+    if (typeof service.provider === 'string') return service.provider;
+    return service.provider.name || '';
+  }, [service?.provider]);
   const providerId = useMemo(() => {
     if (!service?.provider) return '';
     if (typeof service.provider === 'string') return service.provider;
@@ -76,7 +81,7 @@ export default function ServiceDetailScreen() {
             <View style={styles.noteBox}>
               <Text style={styles.noteTitle}>{t('service.providerAbout')}</Text>
               <Text style={styles.noteText}>
-                {t('chatbot.welcomeMessage')}
+                {providerName || t('providers.fallbackName', { defaultValue: 'Provider' })}
               </Text>
 
               {providerId ? (
