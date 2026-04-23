@@ -72,6 +72,9 @@ DEEP_EPOCHS = max(1, get_env_int('DEEP_EPOCHS', 18))
 DEEP_STATE_PATH = os.environ.get('DEEP_STATE_PATH', 'deep_model_state.json')
 DEEP_BOOTSTRAP_ON_START = get_env_bool('DEEP_BOOTSTRAP_ON_START', False)
 
+NODE_ENV = str(os.environ.get('NODE_ENV', 'development')).strip().lower()
+MANUAL_FEEDBACK_ENABLED = get_env_bool('MANUAL_FEEDBACK_ENABLED', NODE_ENV != 'production')
+
 MONGODB_URI = os.environ.get('MONGODB_URI', '').strip()
 MONGODB_DB_NAME = os.environ.get('MONGODB_DB_NAME', 'servpro_ai').strip() or 'servpro_ai'
 MONGODB_CONNECT_TIMEOUT_MS = max(500, get_env_int('MONGODB_CONNECT_TIMEOUT_MS', 3000))
@@ -1030,6 +1033,7 @@ def health():
         'llm_blend_alpha': LLM_BLEND_ALPHA,
         'deep_enabled': bool(DEEP_ENABLED and deep_classifier and deep_classifier.is_ready),
         'deep_blend_alpha': DEEP_BLEND_ALPHA,
+        'manual_feedback_enabled': bool(MANUAL_FEEDBACK_ENABLED),
         'mongodb_enabled': MONGO_ENABLED,
         'mongodb_database': MONGODB_DB_NAME if MONGO_ENABLED else None
     }), 200
@@ -1243,6 +1247,12 @@ def feedback():
     Expected JSON: {"text": "...", "expected_service": "plomberie|electricite|climatisation|nettoyage", "epochs": 4}
     """
     try:
+        if not MANUAL_FEEDBACK_ENABLED:
+            return jsonify({
+                'error': 'Feedback endpoint disabled',
+                'message': 'Manual feedback/training submissions are disabled in this environment'
+            }), 403
+
         data = request.get_json() or {}
         user_input = str(data.get('text', '')).strip()
         expected_service = normalize_service_label(data.get('expected_service'))

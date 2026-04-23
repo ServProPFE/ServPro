@@ -101,6 +101,16 @@ The service can run without Gemini, but hybrid NLP+LLM routing is enabled when a
 
 **Note:** Without API key/config, the service still works with TF-IDF-only routing.
 
+### Production safety guard for manual submissions
+
+To prevent manual training submissions in production, use:
+
+```bash
+MANUAL_FEEDBACK_ENABLED=false
+```
+
+When disabled, `POST /feedback` returns `403` and the AI stays read-only for live traffic.
+
 ## Running the Service
 
 ### Option 1: Using Batch Script (Windows)
@@ -257,6 +267,11 @@ Get AI-powered service recommendation based on user input.
 
 ### 3. Analyze Input
 **POST** `/analyze`
+
+### 4. Feedback (online training)
+**POST** `/feedback`
+
+Used for manual deep-model online updates. In production, this endpoint should generally be disabled with `MANUAL_FEEDBACK_ENABLED=false`.
 
 Get detailed confidence scores for all service categories.
 

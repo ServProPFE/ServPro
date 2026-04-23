@@ -46,3 +46,5 @@ services:
     envVars:
       - key: PYTHONUNBUFFERED
         value: "1"
+      - key: MANUAL_FEEDBACK_ENABLED
+        value: "false"
