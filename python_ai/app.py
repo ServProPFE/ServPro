@@ -229,6 +229,40 @@ def normalize_tokens(text):
     return list(normalized)
 
 
+PREFERENCE_OPTION_KEYS = [
+    'cheapest',
+    'most_expensive',
+    'closest',
+    'farthest',
+    'fastest'
+]
+
+
+def has_preference_hint(user_input):
+    """Detect whether the user already gave a sorting priority."""
+    normalized_text = str(user_input or '').strip().lower()
+    if not normalized_text:
+        return False
+
+    preference_patterns = [
+        r'\b(cheap|cheapest|lowest\s+price|budget|affordable|low\s*cost)\b',
+        r'\b(expensive|most\s+expensive|premium|high\s*end|costliest)\b',
+        r'\b(close|closest|near|nearest|nearby|around\s+me)\b',
+        r'\b(far|farthest|furthest)\b',
+        r'\b(fast|fastest|quick|quickest|urgent|soonest)\b',
+        r'(\bارخص\b|\bالأرخص\b|\bاقل\s*سعر\b|\bاغلى\b|\bالأغلى\b|\bاقرب\b|\bالأقرب\b|\bابعد\b|\bالأبعد\b|\bاسرع\b|\bالأسرع\b)'
+    ]
+
+    return any(re.search(pattern, normalized_text) for pattern in preference_patterns)
+
+
+def build_preference_followup_message(language='en'):
+    if language == 'ar':
+        return 'ما هي أولويتك في الاختيار: الأرخص، الأغلى، الأقرب، الأبعد، أم الأسرع؟'
+
+    return 'What is your preference: cheapest, most expensive, closest, farthest, or fastest?'
+
+
 def normalize_service_label(label):
     if not label:
         return None
@@ -1030,13 +1064,18 @@ def list_services():
 def recommend():
     """
     Recommend service based on user input
-    Expected JSON: {"text": "user message", "language": "en" or "ar"}
+        Expected JSON: {
+            "text": "user message",
+            "language": "en" or "ar",
+            "is_first_prompt": true|false (optional)
+        }
     """
     language = 'en'
     try:
         data = request.get_json()
         user_input = data.get('text', '').strip()
         language = data.get('language', 'en')
+        is_first_prompt = bool(data.get('is_first_prompt', False))
         
         if not user_input:
             return jsonify({
@@ -1119,6 +1158,14 @@ def recommend():
                 'message': recommendation_message
             })
             response['message'] = response['recommendations'][0]['message']
+
+            should_ask_preference = is_first_prompt and not has_preference_hint(user_input)
+            if should_ask_preference:
+                preference_message = build_preference_followup_message(language)
+                response['message'] = preference_message
+                response['recommendations'][0]['message'] = preference_message
+                response['needs_preference'] = True
+                response['preference_options'] = PREFERENCE_OPTION_KEYS
         else:
             # Use Gemini API for fallback when confidence is too low
             gemini_response = generate_gemini_response(user_input, language, result['confidence'])
@@ -1126,6 +1173,10 @@ def recommend():
             response['suggestions'] = [s['service_name'] for s in SERVICES_DB.values()]
             response['source'] = 'gemini_fallback'
             response['fallback_used'] = True
+
+        if 'needs_preference' not in response:
+            response['needs_preference'] = False
+            response['preference_options'] = []
         
         response['all_scores'] = result['all_scores']
         response['llm_used'] = bool(llm_result.get('used'))

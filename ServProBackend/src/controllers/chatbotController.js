@@ -191,7 +191,7 @@ const requestPythonAI = async ({ method = 'get', endpoint, data, timeoutMs = AI_
 
 // Get chatbot response with Python AI analysis
 const getChatbotResponse = asyncHandler(async (req, res) => {
-  const { message, language = 'en' } = req.body;
+  const { message, language = 'en', isFirstPrompt = false } = req.body;
 
   if (!message || message.trim() === '') {
     const error = new Error(language === 'ar' ? 'الرسالة فارغة' : 'Message cannot be empty');
@@ -211,7 +211,8 @@ const getChatbotResponse = asyncHandler(async (req, res) => {
       endpoint: '/recommend',
       data: {
         text: message,
-        language: language
+        language: language,
+        is_first_prompt: Boolean(isFirstPrompt)
       }
     });
   } catch (aiError) {
@@ -221,7 +222,10 @@ const getChatbotResponse = asyncHandler(async (req, res) => {
   }
 
   const { detected_service, confidence } = aiAnalysis;
-  const recommendedService = await getRecommendedService(detected_service, confidence);
+  const needsPreference = Boolean(aiAnalysis.needs_preference);
+  const recommendedService = needsPreference
+    ? null
+    : await getRecommendedService(detected_service, confidence);
   const botMessage = getRecommendationMessage(aiAnalysis, language);
 
   const response = {
@@ -229,6 +233,8 @@ const getChatbotResponse = asyncHandler(async (req, res) => {
     detectedService: detected_service,
     confidence: confidence,
     recommendedService: buildRecommendedServicePayload(recommendedService),
+    needsPreference,
+    preferenceOptions: Array.isArray(aiAnalysis.preference_options) ? aiAnalysis.preference_options : [],
     aiModel: aiAnalysis.source === 'gemini_fallback' ? 'Gemini AI (Fallback)' : 'TF-IDF + Cosine Similarity (Python)',
     geminiUsed: aiAnalysis.fallback_used || false,
     allScores: aiAnalysis.all_scores,

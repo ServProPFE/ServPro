@@ -95,9 +95,11 @@ const Chatbot = () => {
 
     try {
       const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
+      const isFirstPrompt = messages.filter((chatMessage) => chatMessage.type === 'user').length === 0;
       const response = await apiService.post(API_ENDPOINTS.CHATBOT, {
         message: message,
-        language: language
+        language: language,
+        isFirstPrompt
       });
 
       const botMessage = {
