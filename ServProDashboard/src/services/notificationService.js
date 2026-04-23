@@ -13,9 +13,24 @@ const normalizeItems = (payload) => {
   return [];
 };
 
+const buildNotificationsUrl = ({ scope, unread } = {}) => {
+  const query = new URLSearchParams();
+
+  if (scope) {
+    query.set('scope', scope);
+  }
+
+  if (typeof unread === 'boolean') {
+    query.set('unread', String(unread));
+  }
+
+  const queryString = query.toString();
+  return queryString ? `${API_ENDPOINTS.NOTIFICATIONS}?${queryString}` : API_ENDPOINTS.NOTIFICATIONS;
+};
+
 const notificationService = {
-  async listNotifications() {
-    const data = await apiService.get(API_ENDPOINTS.NOTIFICATIONS);
+  async listNotifications(options = {}) {
+    const data = await apiService.get(buildNotificationsUrl(options));
     return {
       items: normalizeItems(data),
       unreadCount: data?.unreadCount ?? 0,

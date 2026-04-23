@@ -23,6 +23,7 @@
     "unreadSummary": "{{count}} إشعارات غير مقروءة",
     "allRead": "كل شيء محدث",
     "system": "النظام",
+    "total": "الإجمالي",
     "empty": "لا توجد إشعارات حتى الآن.",
     "typeFallback": "إشعار",
     "titles": {

@@ -48,3 +48,7 @@ services:
         value: "1"
       - key: MANUAL_FEEDBACK_ENABLED
         value: "false"
+      - key: BACKEND_CONTEXT_ENABLED
+        value: "true"
+      - key: BACKEND_CONTEXT_BASE_URL
+        sync: false

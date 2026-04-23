@@ -13,7 +13,7 @@ const NotificationsPanel = ({ open, onClose }) => {
     try {
       setLoading(true);
       setError('');
-      const data = await notificationService.listNotifications();
+      const data = await notificationService.listNotifications({ scope: 'all' });
       setNotifications(data.items || []);
     } catch (err) {
       setNotifications([]);
@@ -69,7 +69,7 @@ const NotificationsPanel = ({ open, onClose }) => {
   }
 
   return (
-    <div className="absolute right-0 top-full z-50 mt-3 w-[min(92vw,28rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/15">
+    <div className="absolute left-0 top-full z-50 mt-3 w-[min(92vw,28rem)] max-w-[calc(100vw-1rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/15">
       <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3">
         <h3 className="text-sm font-bold text-slate-900">{t('notifications.title', { defaultValue: 'Notifications' })}</h3>
         <button

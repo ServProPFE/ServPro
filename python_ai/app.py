@@ -7,6 +7,7 @@ import os
 import json
 import random
 from datetime import datetime
+from urllib.request import Request, urlopen
 from dotenv import load_dotenv
 import google.generativeai as genai
 
@@ -74,6 +75,10 @@ DEEP_BOOTSTRAP_ON_START = get_env_bool('DEEP_BOOTSTRAP_ON_START', False)
 
 NODE_ENV = str(os.environ.get('NODE_ENV', 'development')).strip().lower()
 MANUAL_FEEDBACK_ENABLED = get_env_bool('MANUAL_FEEDBACK_ENABLED', NODE_ENV != 'production')
+BACKEND_CONTEXT_ENABLED = get_env_bool('BACKEND_CONTEXT_ENABLED', True)
+BACKEND_CONTEXT_BASE_URL = os.environ.get('BACKEND_CONTEXT_BASE_URL', '').strip().rstrip('/')
+BACKEND_CONTEXT_TIMEOUT_SECONDS = max(1.0, get_env_float('BACKEND_CONTEXT_TIMEOUT_SECONDS', 4.0))
+BACKEND_CONTEXT_MAX_ITEMS = max(1, get_env_int('BACKEND_CONTEXT_MAX_ITEMS', 50))
 
 MONGODB_URI = os.environ.get('MONGODB_URI', '').strip()
 MONGODB_DB_NAME = os.environ.get('MONGODB_DB_NAME', 'servpro_ai').strip() or 'servpro_ai'
@@ -299,7 +304,88 @@ def extract_json_object(raw_text):
         return None
 
 
-def llm_nlp_classify(user_input, language='en'):
+def resolve_backend_context_base_url():
+    if BACKEND_CONTEXT_BASE_URL:
+        return BACKEND_CONTEXT_BASE_URL
+
+    try:
+        return request.host_url.rstrip('/')
+    except Exception:
+        return ''
+
+
+def fetch_backend_prompt_context(user_input):
+    """Fetch live services from backend and keep only prompt-relevant matches."""
+    context = {
+        'enabled': bool(BACKEND_CONTEXT_ENABLED),
+        'used': False,
+        'source_url': None,
+        'total_services': 0,
+        'matched_services': [],
+        'error': None
+    }
+
+    if not BACKEND_CONTEXT_ENABLED:
+        return context
+
+    base_url = resolve_backend_context_base_url()
+    if not base_url:
+        context['error'] = 'No BACKEND_CONTEXT_BASE_URL configured'
+        return context
+
+    services_url = f"{base_url}/services"
+    context['source_url'] = services_url
+
+    try:
+        request_obj = Request(services_url, method='GET')
+        with urlopen(request_obj, timeout=BACKEND_CONTEXT_TIMEOUT_SECONDS) as response_obj:
+            payload = json.loads(response_obj.read().decode('utf-8'))
+    except Exception as exc:
+        context['error'] = str(exc)
+        return context
+
+    items = payload.get('items', []) if isinstance(payload, dict) else []
+    if not isinstance(items, list):
+        items = []
+
+    context['used'] = True
+    context['total_services'] = len(items)
+
+    user_tokens = set(normalize_tokens(user_input))
+    ranked_matches = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+
+        category = str(item.get('category', '')).strip().upper()
+        name = str(item.get('name', '')).strip()
+        description = str(item.get('description', '')).strip()
+        searchable = f"{name} {category} {description}".strip()
+        if not searchable:
+            continue
+
+        item_tokens = set(normalize_tokens(searchable))
+        matched_tokens = sorted(user_tokens & item_tokens)
+        if not matched_tokens:
+            continue
+
+        ranked_matches.append({
+            'id': str(item.get('_id') or item.get('id') or ''),
+            'name': name,
+            'category': category,
+            'price_min': item.get('priceMin'),
+            'currency': item.get('currency') or 'TND',
+            'duration': item.get('duration'),
+            'matched_tokens': matched_tokens,
+            'score': len(matched_tokens)
+        })
+
+    ranked_matches.sort(key=lambda x: x.get('score', 0), reverse=True)
+    context['matched_services'] = ranked_matches[:BACKEND_CONTEXT_MAX_ITEMS]
+    return context
+
+
+def llm_nlp_classify(user_input, language='en', prompt_context=None):
     """Use Gemini to perform structured NLP classification for service routing."""
     llm_result = {
         'enabled': bool(LLM_ENABLED and gemini_model),
@@ -320,11 +406,23 @@ def llm_nlp_classify(user_input, language='en'):
     for key, data in SERVICES_DB.items():
         service_catalog.append(f"- {key}: {data['service_name']} ({data['category']})")
 
+    backend_context_lines = []
+    if prompt_context and prompt_context.get('used'):
+        matches = prompt_context.get('matched_services') or []
+        for match in matches[:5]:
+            backend_context_lines.append(
+                f"- {match.get('name')} ({match.get('category')}), priceMin={match.get('price_min')}, duration={match.get('duration')}"
+            )
+    backend_context_block = chr(10).join(backend_context_lines) if backend_context_lines else "- none"
+
     prompt = f"""You are an NLP classifier for a home services chatbot.
 Return ONLY strict JSON, no markdown.
 
 Allowed services:
 {chr(10).join(service_catalog)}
+
+Live backend context candidates:
+{backend_context_block}
 
 Input language hint: {language}
 User input: \"{user_input}\"
@@ -1121,9 +1219,11 @@ def recommend():
                 'all_scores': {}
             }), 200
         
+        prompt_context = fetch_backend_prompt_context(user_input)
+
         # Get baseline NLP recommendation then blend with structured LLM and deep model classification.
         tfidf_result = recommender.recommend_service(user_input)
-        llm_result = llm_nlp_classify(user_input, language)
+        llm_result = llm_nlp_classify(user_input, language, prompt_context=prompt_context)
         result = merge_tfidf_llm_scores(tfidf_result, llm_result)
         deep_result = deep_nlp_classify(user_input)
         result = merge_with_deep_scores(result, deep_result)
@@ -1185,6 +1285,9 @@ def recommend():
         response['all_scores'] = result['all_scores']
         response['llm_used'] = bool(llm_result.get('used'))
         response['deep_used'] = bool(deep_result.get('used'))
+        response['backend_context_used'] = bool(prompt_context.get('used'))
+        response['backend_context_match_count'] = len(prompt_context.get('matched_services') or [])
+        response['backend_context_error'] = prompt_context.get('error')
         
         # Add source metadata
         if 'source' not in response:
@@ -1217,8 +1320,9 @@ def analyze():
         if not user_input:
             return jsonify({'error': 'Empty input'}), 400
         
+        prompt_context = fetch_backend_prompt_context(user_input)
         tfidf_result = recommender.recommend_service(user_input)
-        llm_result = llm_nlp_classify(user_input, language)
+        llm_result = llm_nlp_classify(user_input, language, prompt_context=prompt_context)
         result = merge_tfidf_llm_scores(tfidf_result, llm_result)
         deep_result = deep_nlp_classify(user_input)
         result = merge_with_deep_scores(result, deep_result)
@@ -1230,6 +1334,12 @@ def analyze():
             'best_match': {
                 'service': result['detected_service'],
                 'confidence': result['confidence']
+            },
+            'backend_context': {
+                'used': bool(prompt_context.get('used')),
+                'match_count': len(prompt_context.get('matched_services') or []),
+                'matches': (prompt_context.get('matched_services') or [])[:10],
+                'error': prompt_context.get('error')
             },
             'source': result.get('source', 'tfidf'),
             'llm_used': bool(llm_result.get('used')),

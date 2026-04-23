@@ -23,6 +23,7 @@
     "unreadSummary": "{{count}} unread notifications",
     "allRead": "Everything is up to date",
     "system": "System",
+    "total": "total",
     "empty": "No notifications yet.",
     "typeFallback": "Notification",
     "titles": {

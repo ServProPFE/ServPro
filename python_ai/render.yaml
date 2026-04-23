@@ -16,6 +16,14 @@ services:
         value: "false"
       - key: MANUAL_FEEDBACK_ENABLED
         value: "false"
+      - key: BACKEND_CONTEXT_ENABLED
+        value: "true"
+      - key: BACKEND_CONTEXT_BASE_URL
+        sync: false
+      - key: BACKEND_CONTEXT_TIMEOUT_SECONDS
+        value: "4"
+      - key: BACKEND_CONTEXT_MAX_ITEMS
+        value: "50"
       - key: GEMINI_API_KEY
         sync: false
       - key: MONGODB_URI

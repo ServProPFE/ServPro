@@ -21,9 +21,8 @@ const timeLabel = (value?: string) => {
 
 export default function NotificationsScreen() {
   const { t } = useTranslation();
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [items, setItems] = useState<NotificationItem[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -31,7 +30,6 @@ export default function NotificationsScreen() {
   const loadNotifications = useCallback(async () => {
     if (!isAuthenticated) {
       setItems([]);
-      setUnreadCount(0);
       setLoading(false);
       return;
     }
@@ -41,12 +39,10 @@ export default function NotificationsScreen() {
       setError(null);
       const result = await notificationService.getNotifications();
       setItems(result.items);
-      setUnreadCount(result.unreadCount);
     } catch (loadError) {
       const message = loadError instanceof Error ? loadError.message : 'Failed to load notifications';
       setError(message);
       setItems([]);
-      setUnreadCount(0);
     } finally {
       setLoading(false);
     }
@@ -62,7 +58,8 @@ export default function NotificationsScreen() {
     }, [loadNotifications]),
   );
 
-  const unreadItems = useMemo(() => items.filter((item) => !item.readAt), [items]);
+  const unreadCount = useMemo(() => items.filter((item) => !item.readAt).length, [items]);
+  const totalCount = items.length;
 
   const getNotificationTypeLabel = (notificationType?: string) => {
     if (!notificationType) {
@@ -106,6 +103,31 @@ export default function NotificationsScreen() {
     );
   }
 
+  let stateContent = null;
+
+  if (loading) {
+    stateContent = (
+      <View style={styles.stateCard}>
+        <ActivityIndicator color={AppTheme.colors.primary} />
+        <Text style={styles.stateText}>{t('common.loading')}</Text>
+      </View>
+    );
+  } else if (error) {
+    stateContent = (
+      <View style={styles.stateCard}>
+        <Ionicons name="warning-outline" size={24} color="#dc2626" />
+        <Text style={styles.stateText}>{error}</Text>
+      </View>
+    );
+  } else if (items.length === 0) {
+    stateContent = (
+      <View style={styles.stateCard}>
+        <Ionicons name="notifications-off-outline" size={26} color={AppTheme.colors.primary} />
+        <Text style={styles.stateText}>{t('notifications.empty', { defaultValue: 'No notifications yet' })}</Text>
+      </View>
+    );
+  }
+
   return (
     <AppBackground>
       <ScrollView contentContainerStyle={styles.content}>
@@ -114,9 +136,8 @@ export default function NotificationsScreen() {
             <View>
               <Text style={styles.headerTitle}>{t('nav.notifications', { defaultValue: 'Notifications' })}</Text>
               <Text style={styles.headerSubtitle}>
-                {unreadCount > 0
-                  ? t('notifications.unreadSummary', { defaultValue: `${unreadCount} unread notifications` })
-                  : t('notifications.allRead', { defaultValue: 'Everything is up to date' })}
+                {t('notifications.subtitle', { defaultValue: 'Keep track of booking, payment, and service updates.' })}
+                {user?.name ? ` ${t('nav.hello', { name: user.name })}` : ''}
               </Text>
             </View>
             <View style={styles.iconWrap}>
@@ -141,24 +162,22 @@ export default function NotificationsScreen() {
               )}
             </Pressable>
           </View>
+
+          <View style={styles.summaryRow}>
+            <View style={styles.summaryPillUnread}>
+              <Text style={styles.summaryPillText}>
+                {unreadCount} {t('notifications.unread', { defaultValue: 'Unread' })}
+              </Text>
+            </View>
+            <View style={styles.summaryPillTotal}>
+              <Text style={styles.summaryPillText}>
+                {totalCount} {t('notifications.total', { defaultValue: 'total' })}
+              </Text>
+            </View>
+          </View>
         </View>
 
-        {loading ? (
-          <View style={styles.stateCard}>
-            <ActivityIndicator color={AppTheme.colors.primary} />
-            <Text style={styles.stateText}>{t('common.loading')}</Text>
-          </View>
-        ) : error ? (
-          <View style={styles.stateCard}>
-            <Ionicons name="warning-outline" size={24} color="#dc2626" />
-            <Text style={styles.stateText}>{error}</Text>
-          </View>
-        ) : items.length === 0 ? (
-          <View style={styles.stateCard}>
-            <Ionicons name="notifications-off-outline" size={26} color={AppTheme.colors.primary} />
-            <Text style={styles.stateText}>{t('notifications.empty', { defaultValue: 'No notifications yet' })}</Text>
-          </View>
-        ) : (
+        {stateContent ?? (
           <View style={styles.list}>
             {items.map((item) => {
               const isUnread = !item.readAt;
@@ -179,8 +198,18 @@ export default function NotificationsScreen() {
 
                   <View style={styles.cardFooter}>
                     <View style={styles.metaPill}>
+                      <Ionicons name="time-outline" size={14} color="#475569" />
+                      <Text style={styles.metaText}>{timeLabel(item.createdAt) || '--'}</Text>
+                    </View>
+
+                    <View style={styles.metaPill}>
+                      <Ionicons name="person-outline" size={14} color="#475569" />
+                      <Text style={styles.metaText}>{item.actor?.name || t('notifications.system', { defaultValue: 'System' })}</Text>
+                    </View>
+
+                    <View style={styles.metaPill}>
                       <Ionicons name="link-outline" size={14} color="#475569" />
-                      <Text style={styles.metaText}>{item.metadata?.serviceName || getNotificationTypeLabel(item.type)}</Text>
+                      <Text style={styles.metaText}>{item.metadata?.serviceName || item.destination || getNotificationTypeLabel(item.type)}</Text>
                     </View>
 
                     {isUnread ? (
@@ -248,6 +277,29 @@ const styles = StyleSheet.create({
     marginTop: 6,
     color: '#cbd5e1',
     lineHeight: 20,
+  },
+  summaryRow: {
+    marginTop: 14,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  summaryPillUnread: {
+    borderRadius: 999,
+    backgroundColor: '#ecfeff',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  summaryPillTotal: {
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  summaryPillText: {
+    color: '#0f172a',
+    fontSize: 12,
+    fontWeight: '800',
   },
   actionsRow: {
     marginTop: 14,

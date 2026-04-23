@@ -13,7 +13,7 @@ const NotificationsManagement = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await notificationService.listNotifications();
+      const data = await notificationService.listNotifications({ scope: 'all' });
       setNotifications(data.items);
     } catch (err) {
       console.error('Error fetching notifications:', err);

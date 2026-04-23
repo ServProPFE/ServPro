@@ -111,6 +111,19 @@ MANUAL_FEEDBACK_ENABLED=false
 
 When disabled, `POST /feedback` returns `403` and the AI stays read-only for live traffic.
 
+### Fetch backend context per prompt
+
+The AI can fetch live backend services for each prompt and use them as context during classification.
+
+```bash
+BACKEND_CONTEXT_ENABLED=true
+BACKEND_CONTEXT_BASE_URL=https://your-backend-url
+BACKEND_CONTEXT_TIMEOUT_SECONDS=4
+BACKEND_CONTEXT_MAX_ITEMS=50
+```
+
+If `BACKEND_CONTEXT_BASE_URL` is not set, the AI tries the same host as the incoming request.
+
 ## Running the Service
 
 ### Option 1: Using Batch Script (Windows)

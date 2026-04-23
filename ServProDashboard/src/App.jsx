@@ -1,9 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BrowserRouter as Router, Navigate, Routes, Route } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Sidebar from './components/Sidebar';
+import NotificationsPanel from './components/NotificationsPanel';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -25,12 +26,40 @@ import NotationsManagement from './pages/NotationsManagement';
 
 function App() {
   const { i18n } = useTranslation();
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const notificationsRef = useRef(null);
 
   useEffect(() => {
     const isArabic = i18n.language?.startsWith('ar');
     document.documentElement.lang = isArabic ? 'ar' : 'en';
     document.documentElement.dir = isArabic ? 'rtl' : 'ltr';
   }, [i18n.language]);
+
+  useEffect(() => {
+    if (!notificationsOpen) {
+      return;
+    }
+
+    const handleClickOutside = (event) => {
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+        setNotificationsOpen(false);
+      }
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setNotificationsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [notificationsOpen]);
 
   return (
     <Router>
@@ -49,6 +78,23 @@ function App() {
                   </div>
                   <Sidebar />
                   <main className="min-h-screen flex-1 p-4 sm:p-6 lg:p-8">
+                    <div className="mb-4 flex justify-start">
+                      <div className="relative" ref={notificationsRef}>
+                        <button
+                          type="button"
+                          onClick={() => setNotificationsOpen((prev) => !prev)}
+                          aria-label="Notifications"
+                          title="Notifications"
+                          className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 shadow-md transition hover:bg-slate-50"
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" aria-hidden="true">
+                            <path d="M12 4a5 5 0 0 0-5 5v2.7c0 .7-.24 1.38-.68 1.92L5 15.3V17h14v-1.7l-1.32-1.68a3.1 3.1 0 0 1-.68-1.92V9a5 5 0 0 0-5-5Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                            <path d="M10 19a2 2 0 0 0 4 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                          </svg>
+                        </button>
+                        <NotificationsPanel open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
+                      </div>
+                    </div>
                     <Routes>
                       <Route path="/" element={<Dashboard />} />
                       <Route path="/services" element={<ServicesManagement />} />
