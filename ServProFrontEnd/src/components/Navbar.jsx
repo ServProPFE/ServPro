@@ -1,13 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import LanguageSwitcher from './LanguageSwitcher';
 import ProviderListNavLink from './ProviderListNavLink';
+import NotificationsPanel from './NotificationsPanel';
 
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const notificationsRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
@@ -19,6 +22,8 @@ const Navbar = () => {
   };
 
   const closeMenu = () => setMenuOpen(false);
+
+  const closeNotifications = () => setNotificationsOpen(false);
 
   useEffect(() => {
     if (!menuOpen) {
@@ -45,6 +50,32 @@ const Navbar = () => {
   useEffect(() => {
     setTimeout(() => setMenuOpen(false), 0);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!notificationsOpen) {
+      return;
+    }
+
+    const handleClickOutside = (event) => {
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+        closeNotifications();
+      }
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        closeNotifications();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [notificationsOpen]);
 
   return (
     <nav className="fixed inset-x-0 top-0 z-50 border-b border-slate-700/20 bg-slate-950/80 backdrop-blur-lg">
@@ -83,9 +114,6 @@ const Navbar = () => {
                 <li>
                   <Link to="/my-transactions" className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/10" onClick={closeMenu}>{t('nav.myTransactions')}</Link>
                 </li>
-                <li>
-                  <Link to="/notifications" className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/10" onClick={closeMenu}>{t('nav.notifications', { defaultValue: 'Notifications' })}</Link>
-                </li>
               </>
             )}
           </ul>
@@ -94,6 +122,16 @@ const Navbar = () => {
             <LanguageSwitcher />
             {isAuthenticated ? (
               <>
+                <div className="relative" ref={notificationsRef}>
+                  <button
+                    type="button"
+                    onClick={() => setNotificationsOpen((prev) => !prev)}
+                    className="rounded-full border border-white/25 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+                  >
+                    {t('nav.notifications', { defaultValue: 'Notifications' })}
+                  </button>
+                  <NotificationsPanel open={notificationsOpen} onClose={closeNotifications} />
+                </div>
                 <span className="text-sm font-medium text-slate-100">{t('nav.hello', { name: user?.name })}</span>
                 <button
                   onClick={handleLogout}

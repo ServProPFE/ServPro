@@ -35,6 +35,106 @@ const AI_HEALTH_RETRIES = toPositiveInt(process.env.PYTHON_AI_HEALTH_RETRIES, 2)
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const hasClarificationIntent = (message) => {
+  const normalized = String(message || '').toLowerCase();
+  return [
+    /\b(cheapest|lowest\s+price|low\s+cost|affordable|budget)\b/,
+    /\b(closest|nearest|nearby|near\s+me|around\s+me)\b/,
+    /\b(fastest|quickest|soonest|urgent)\b/,
+  ].some((pattern) => pattern.test(normalized));
+};
+
+const buildClarificationMessage = (language) => {
+  if (language === 'ar') {
+    return 'هل تريد الأرخص أم الأقرب أم الأسرع؟ حدّد نوع الخدمة والأولوية أو المدينة وسأضيّق الخيارات لك.';
+  }
+
+  return 'Do you want the cheapest option, the closest provider, or the fastest response? Tell me the service type and your priority, and I will narrow it down.';
+};
+
+const buildOfflineResponse = (language) => ({
+  message: language === 'ar'
+    ? 'يمكنني مساعدتك في السباكة أو الكهرباء أو التكييف أو التنظيف. اكتب طلبك وسأقترح لك الخدمة المناسبة.'
+    : 'I can help with plumbing, electrical, HVAC, or cleaning. Send your request and I will suggest the right service.',
+  detectedService: null,
+  confidence: 0,
+  recommendedService: null,
+  aiModel: 'Fallback (AI offline)',
+  geminiUsed: false,
+  allScores: {},
+  degraded: true,
+  timestamp: new Date(),
+});
+
+const buildClarificationResponse = (language) => ({
+  message: buildClarificationMessage(language),
+  detectedService: null,
+  confidence: 0,
+  recommendedService: null,
+  aiModel: 'Clarification rule',
+  geminiUsed: false,
+  allScores: {},
+  needsClarification: true,
+  timestamp: new Date(),
+});
+
+const getRecommendationMessage = (aiAnalysis, language) => {
+  if (aiAnalysis.recommendations && aiAnalysis.recommendations.length > 0) {
+    return aiAnalysis.recommendations[0].message;
+  }
+
+  if (aiAnalysis.message) {
+    return aiAnalysis.message;
+  }
+
+  return language === 'ar'
+    ? 'عذراً، لم أتمكن من فهم طلبك. يرجى تحديد الخدمة المطلوبة: السباكة، الكهرباء، التكييف، أو التنظيف.'
+    : 'Sorry, I couldn\'t understand your request. Please specify: plumbing, electrical, AC, or cleaning services.';
+};
+
+const getRecommendedService = async (detectedService, confidence) => {
+  if (!detectedService || confidence < 0.08) {
+    return null;
+  }
+
+  const categoryMap = {
+    plomberie: 'PLOMBERIE',
+    electricite: 'ELECTRICITE',
+    climatisation: 'CLIMATISATION',
+    nettoyage: 'NETTOYAGE',
+  };
+
+  const category = categoryMap[detectedService];
+  if (!category) {
+    return null;
+  }
+
+  return Service.findOne({ category })
+    .populate('provider', 'name email phone')
+    .lean();
+};
+
+const buildRecommendedServicePayload = (recommendedService) => {
+  if (!recommendedService) {
+    return null;
+  }
+
+  return {
+    id: recommendedService._id,
+    name: recommendedService.name,
+    category: recommendedService.category,
+    priceMin: recommendedService.priceMin,
+    duration: recommendedService.duration,
+    provider: {
+      _id: recommendedService.provider._id,
+      name: recommendedService.provider.name,
+      email: recommendedService.provider.email,
+      phone: recommendedService.provider.phone,
+    },
+    currency: recommendedService.currency || 'TND',
+  };
+};
+
 const isRetriableAiError = (error) => {
   const networkCodes = new Set([
     'ECONNABORTED',
@@ -99,6 +199,10 @@ const getChatbotResponse = asyncHandler(async (req, res) => {
     throw error;
   }
 
+  if (hasClarificationIntent(message)) {
+    return res.json(buildClarificationResponse(language));
+  }
+
   let aiAnalysis;
   try {
     // Call Python AI service for NLP analysis
@@ -113,75 +217,18 @@ const getChatbotResponse = asyncHandler(async (req, res) => {
   } catch (aiError) {
     console.error('Python AI service error:', aiError.message);
 
-    const fallbackMessage = language === 'ar'
-      ? 'يمكنني مساعدتك في السباكة أو الكهرباء أو التكييف أو التنظيف. اكتب طلبك وسأقترح لك الخدمة المناسبة.'
-      : 'I can help with plumbing, electrical, HVAC, or cleaning. Send your request and I will suggest the right service.';
-
-    return res.json({
-      message: fallbackMessage,
-      detectedService: null,
-      confidence: 0,
-      recommendedService: null,
-      aiModel: 'Fallback (AI offline)',
-      geminiUsed: false,
-      allScores: {},
-      degraded: true,
-      timestamp: new Date()
-    });
+    return res.json(buildOfflineResponse(language));
   }
 
-  const { detected_service, confidence, recommendations } = aiAnalysis;
-
-  // If service detected, fetch actual service from DB
-  let recommendedService = null;
-  if (detected_service && confidence >= 0.08) {
-    // Map detected service to category
-    const categoryMap = {
-      'plomberie': 'PLOMBERIE',
-      'electricite': 'ELECTRICITE',
-      'climatisation': 'CLIMATISATION',
-      'nettoyage': 'NETTOYAGE'
-    };
-
-    const category = categoryMap[detected_service];
-    if (category) {
-      recommendedService = await Service.findOne({ category })
-        .populate('provider', 'name email phone')
-        .lean();
-    }
-  }
-
-  // Generate bot message
-  let botMessage = '';
-  if (recommendations && recommendations.length > 0) {
-    botMessage = recommendations[0].message;
-  } else if (aiAnalysis.message) {
-    // Use the message from Python AI (Gemini fallback or error message)
-    botMessage = aiAnalysis.message;
-  } else {
-    botMessage = language === 'ar' 
-      ? 'عذراً، لم أتمكن من فهم طلبك. يرجى تحديد الخدمة المطلوبة: السباكة، الكهرباء، التكييف، أو التنظيف.' 
-      : 'Sorry, I couldn\'t understand your request. Please specify: plumbing, electrical, AC, or cleaning services.';
-  }
+  const { detected_service, confidence } = aiAnalysis;
+  const recommendedService = await getRecommendedService(detected_service, confidence);
+  const botMessage = getRecommendationMessage(aiAnalysis, language);
 
   const response = {
     message: botMessage,
     detectedService: detected_service,
     confidence: confidence,
-    recommendedService: recommendedService ? {
-      id: recommendedService._id,
-      name: recommendedService.name,
-      category: recommendedService.category,
-      priceMin: recommendedService.priceMin,
-      duration: recommendedService.duration,
-      provider: {
-        _id: recommendedService.provider._id,
-        name: recommendedService.provider.name,
-        email: recommendedService.provider.email,
-        phone: recommendedService.provider.phone
-      },
-      currency: recommendedService.currency || 'TND'
-    } : null,
+    recommendedService: buildRecommendedServicePayload(recommendedService),
     aiModel: aiAnalysis.source === 'gemini_fallback' ? 'Gemini AI (Fallback)' : 'TF-IDF + Cosine Similarity (Python)',
     geminiUsed: aiAnalysis.fallback_used || false,
     allScores: aiAnalysis.all_scores,

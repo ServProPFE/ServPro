@@ -37,7 +37,10 @@
   "search": {
     "placeholder": "Search for a service...",
     "categoryAll": "All categories",
-    "button": "Search"
+    "button": "Search",
+    "tipLabel": "Search tips",
+    "scopeHint": "Search by service name, category, price, or duration.",
+    "clear": "Clear filters"
   },
   "hero": {
     "title": "Find the right professional",
@@ -229,6 +232,8 @@
   "providers": {
     "title": "Providers",
     "subtitle": "Browse all users with provider role and open their portfolios.",
+    "businessesTitle": "Businesses",
+    "businessesSubtitle": "Find local service businesses, compare their profile details, and open directions quickly.",
     "searchPlaceholder": "Search providers...",
     "loading": "Loading providers...",
     "loadError": "Failed to load providers",
@@ -236,6 +241,7 @@
     "fallbackName": "Provider",
     "noEmail": "No email",
     "noPhone": "No phone",
+    "contact": "Contact",
     "location": "Location",
     "noLocation": "No location",
     "company": "Company",
@@ -243,6 +249,11 @@
     "servicesCount": "Services",
     "portfoliosCount": "Portfolios",
     "openPortfolio": "Open Portfolio",
+    "viewProfile": "View profile",
+    "directions": "Directions",
+    "mapTitle": "Map view",
+    "mapSubtitle": "Browse the current selection on the map and open directions instantly.",
+    "openInMaps": "Open in Maps",
     "noResults": "No providers found.",
     "apiLabel": "API"
   },
@@ -284,6 +295,8 @@
     "noCertificates": "No certificates available",
     "turnoverTitle": "Turnover",
     "availabilityTitle": "Availability (schedule)",
+    "calendarTitle": "Calendar view",
+    "calendarSubtitle": "Weekly schedule shown as a calendar-style grid.",
     "noAvailability": "No availability provided",
     "notProvided": "Not provided",
     "license": "License",

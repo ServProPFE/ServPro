@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Navigate, Routes, Route } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/Navbar';
@@ -15,7 +15,6 @@ import MyBookings from './pages/MyBookings';
 import MyTransactions from './pages/MyTransactions';
 import Providers from './pages/Providers';
 import ProviderPortfolio from './pages/ProviderPortfolio';
-import Notifications from './pages/Notifications';
 
 function App() {
   const { i18n } = useTranslation();
@@ -60,14 +59,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/notifications"
-                element={
-                  <ProtectedRoute>
-                    <Notifications />
-                  </ProtectedRoute>
-                }
-              />
+              <Route path="/notifications" element={<Navigate to="/" replace />} />
             </Routes>
           </main>
           <Footer />

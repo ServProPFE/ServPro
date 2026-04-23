@@ -13,26 +13,15 @@ const toArray = (response) => {
 
 const firstNonEmpty = (...values) => values.find((value) => value !== null && value !== undefined && String(value).trim() !== '');
 
-const normalizeList = (value) => {
-  if (Array.isArray(value)) {
-    return value
-      .map((item) => {
-        if (typeof item === 'string') return item.trim();
-        if (item && typeof item === 'object') return String(item.name || item.label || item.title || '').trim();
-        return '';
-      })
-      .filter(Boolean);
-  }
-
-  if (typeof value === 'string') {
-    return value
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean);
-  }
-
-  return [];
-};
+const DAY_DEFINITIONS = [
+  { dayIndex: 0, dayKey: 'sunday' },
+  { dayIndex: 1, dayKey: 'monday' },
+  { dayIndex: 2, dayKey: 'tuesday' },
+  { dayIndex: 3, dayKey: 'wednesday' },
+  { dayIndex: 4, dayKey: 'thursday' },
+  { dayIndex: 5, dayKey: 'friday' },
+  { dayIndex: 6, dayKey: 'saturday' },
+];
 
 const formatLocation = (provider, t) => {
   const profile = provider?.providerProfile || {};
@@ -48,13 +37,6 @@ const formatLocation = (provider, t) => {
   }
 
   return t('providerPortfolio.notProvided');
-};
-
-const formatAvailabilityDay = (day, t) => {
-  const dayNumber = Number(day);
-  return Number.isInteger(dayNumber) && dayNumber >= 0 && dayNumber <= 6
-    ? t(`providerPortfolio.days.${dayNumber}`)
-    : t('providerPortfolio.unknownDay');
 };
 
 const ProviderPortfolio = () => {
@@ -108,8 +90,6 @@ const ProviderPortfolio = () => {
   }, [providerId, t]);
 
   const profile = provider?.providerProfile || {};
-  const equipmentItems = normalizeList(firstNonEmpty(profile.equipments, profile.equipment));
-  const teamItems = normalizeList(firstNonEmpty(profile.teamMembers, profile.team, profile.staff));
   const turnoverValue = firstNonEmpty(profile.chiffrement, profile.turnover);
   const mergedCertificationItems = [
     ...certifications,
@@ -117,13 +97,21 @@ const ProviderPortfolio = () => {
     ...(profile.insurance ? [{ _id: 'insurance', name: t('providerPortfolio.insurance'), authority: profile.insurance }] : []),
   ];
 
+  const availabilityByDay = DAY_DEFINITIONS.map((day) => ({
+    ...day,
+    slots: availability.filter((slot) => Number(slot.day) === day.dayIndex),
+  }));
+
+  const profileInitial = (provider?.name || t('providerPortfolio.title') || 'P').slice(0, 1).toUpperCase();
+
   return (
     <section className="mx-auto max-w-7xl px-4 pb-12 pt-28 sm:px-6 lg:px-8">
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">{provider?.name || t('providerPortfolio.title')}</h1>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600">ServPro</p>
+          <h1 className="display-title mt-2 text-3xl font-extrabold text-slate-900 sm:text-4xl">{t('providerPortfolio.profileTitle')}</h1>
         </div>
-        <Link to="/providers" className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+        <Link to="/providers" className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
           {t('providerPortfolio.backToProviders')}
         </Link>
       </div>
@@ -132,17 +120,52 @@ const ProviderPortfolio = () => {
       {error && <p className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-rose-700">{error}</p>}
 
       {!loading && !error && (
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-xl font-semibold text-slate-900">{t('providerPortfolio.profileTitle')}</h2>
-            <div className="mt-4 space-y-2 text-sm text-slate-700">
-              <p><span className="font-semibold text-slate-900">{t('providerPortfolio.name')}:</span> {provider?.name || '-'}</p>
-              <p><span className="font-semibold text-slate-900">{t('providerPortfolio.company')}:</span> {profile.companyName || '-'}</p>
-              <p><span className="font-semibold text-slate-900">{t('providerPortfolio.email')}:</span> {provider?.email || '-'}</p>
-              <p><span className="font-semibold text-slate-900">{t('providerPortfolio.phone')}:</span> {provider?.phone || '-'}</p>
-              <p><span className="font-semibold text-slate-900">{t('providerPortfolio.location', { defaultValue: 'Location' })}:</span> {formatLocation(provider, t)}</p>
-              <p><span className="font-semibold text-slate-900">{t('providerPortfolio.experience')}:</span> {t('providerPortfolio.years', { count: profile.experienceYears || 0 })}</p>
-              <p><span className="font-semibold text-slate-900">{t('providerPortfolio.status')}:</span> {profile.verificationStatus || 'PENDING'}</p>
+        <div className="grid gap-6">
+          <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-xl shadow-slate-900/5">
+            <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-teal-900 px-6 py-6 text-white sm:px-8">
+              <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-20 w-20 items-center justify-center rounded-[1.5rem] bg-white/10 text-2xl font-black uppercase text-white ring-1 ring-white/20">
+                    {profileInitial}
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-200">{t('providerPortfolio.profileTitle')}</p>
+                    <h2 className="mt-2 text-3xl font-extrabold sm:text-4xl">{provider?.name || t('providerPortfolio.title')}</h2>
+                    <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+                      {profile.companyName || t('providerPortfolio.company')}
+                      {provider?.email ? ` · ${provider.email}` : ''}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2 md:justify-end">
+                  <span className="rounded-full bg-white/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-teal-100 ring-1 ring-white/15">
+                    {profile.verificationStatus || 'PENDING'}
+                  </span>
+                  <span className="rounded-full bg-white/10 px-3 py-2 text-xs font-semibold text-white/90 ring-1 ring-white/15">
+                    {t('providerPortfolio.years', { count: profile.experienceYears || 0 })}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/10">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">{t('providerPortfolio.email')}</p>
+                  <p className="mt-2 text-sm font-medium text-white">{provider?.email || '-'}</p>
+                </div>
+                <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/10">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">{t('providerPortfolio.phone')}</p>
+                  <p className="mt-2 text-sm font-medium text-white">{provider?.phone || '-'}</p>
+                </div>
+                <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/10">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">{t('providerPortfolio.locationTitle')}</p>
+                  <p className="mt-2 text-sm font-medium text-white">{formatLocation(provider, t)}</p>
+                </div>
+                <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/10">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">{t('providerPortfolio.turnoverTitle')}</p>
+                  <p className="mt-2 text-sm font-medium text-white">{turnoverValue || t('providerPortfolio.notProvided')}</p>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -197,15 +220,37 @@ const ProviderPortfolio = () => {
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
-            <h2 className="text-xl font-semibold text-slate-900">{t('providerPortfolio.availabilityTitle')}</h2>
-            <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {availability.map((slot) => (
-                <article key={slot._id} className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700">
-                  <p className="font-semibold text-slate-900">{formatAvailabilityDay(slot.day, t)}</p>
-                  <p>{slot.start || '--:--'} - {slot.end || '--:--'}</p>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600">{t('providerPortfolio.availabilityTitle')}</p>
+                <h2 className="mt-1 text-xl font-semibold text-slate-900">{t('providerPortfolio.calendarTitle', { defaultValue: 'Calendar view' })}</h2>
+              </div>
+              <p className="text-sm text-slate-500">{t('providerPortfolio.calendarSubtitle', { defaultValue: 'Weekly schedule shown as a calendar-style grid.' })}</p>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-7">
+              {availabilityByDay.map(({ dayIndex, dayKey, slots }) => (
+                <article key={dayKey} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-slate-900">{t(`providerPortfolio.days.${dayIndex}`)}</p>
+                    <span className="rounded-full bg-white px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                      {slots.length}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 space-y-2">
+                    {slots.length > 0 ? slots.map((slot) => (
+                      <div key={slot._id} className="rounded-xl bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">
+                        <p className="font-semibold text-slate-900">{slot.start || '--:--'} - {slot.end || '--:--'}</p>
+                      </div>
+                    )) : (
+                      <p className="rounded-xl border border-dashed border-slate-200 bg-white px-3 py-5 text-center text-sm text-slate-500">
+                        {t('providerPortfolio.noAvailability')}
+                      </p>
+                    )}
+                  </div>
                 </article>
               ))}
-              {!availability.length && <p className="text-sm text-slate-700">{t('providerPortfolio.noAvailability')}</p>}
             </div>
           </div>
         </div>

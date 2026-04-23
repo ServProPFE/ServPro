@@ -4,6 +4,11 @@ import { useTranslation } from 'react-i18next';
 import apiService from '../services/apiService';
 import API_BASE_URL, { API_ENDPOINTS } from '../config/api';
 
+const buildMapsSearchUrl = (...parts) => {
+  const query = parts.filter(Boolean).join(' ').trim();
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query || 'ServPro')}`;
+};
+
 const Providers = () => {
   const { t } = useTranslation();
   const [providers, setProviders] = useState([]);
@@ -129,54 +134,142 @@ const Providers = () => {
     });
   }, [providers, search]);
 
+  const featuredProvider = filteredProviders[0] || providers[0] || null;
+  const featuredMapUrl = buildMapsSearchUrl(
+    featuredProvider?.name,
+    featuredProvider?.companyName,
+    featuredProvider?.location,
+  );
+  const embeddedMapUrl = `https://www.google.com/maps?q=${encodeURIComponent(
+    [featuredProvider?.name, featuredProvider?.location].filter(Boolean).join(' ') || 'ServPro',
+  )}&output=embed`;
+
   return (
-    <section className="mx-auto max-w-7xl px-4 pb-12 pt-28 sm:px-6 lg:px-8">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-slate-900">{t('providers.title')}</h1>
-        <p className="mt-2 text-sm text-slate-600">{t('providers.subtitle')}</p>
+    <section className="mx-auto max-w-7xl px-4 pb-16 pt-28 sm:px-6 lg:px-8">
+      <div className="mb-6 flex flex-col gap-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600">ServPro</p>
+        <h1 className="display-title text-3xl font-extrabold text-slate-900 sm:text-4xl">
+          {t('providers.businessesTitle', { defaultValue: 'Businesses' })}
+        </h1>
+        <p className="max-w-3xl text-sm leading-6 text-slate-600">{t('providers.businessesSubtitle', { defaultValue: t('providers.subtitle') })}</p>
       </div>
 
-      <div className="mb-6">
-        <input
-          type="search"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder={t('providers.searchPlaceholder')}
-          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-teal-400 focus:outline-none"
-        />
-      </div>
-
-      {loading && <p className="text-slate-700">{t('providers.loading')}</p>}
-      {error && <p className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-rose-700">{error}</p>}
-
-      {!loading && !error && (
-        <>
-          <p className="mb-4 text-sm text-slate-600">{t('providers.shownCount', { count: filteredProviders.length })}</p>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredProviders.map((provider) => (
-              <article key={provider.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <h2 className="text-lg font-semibold text-slate-900">{provider.name}</h2>
-                <p className="mt-1 text-sm text-slate-600">{provider.email || t('providers.noEmail')}</p>
-                <p className="text-sm text-slate-600">{provider.phone || t('providers.noPhone')}</p>
-                <p className="text-sm text-slate-600">{t('providers.location')}: {provider.location}</p>
-                <p className="mt-2 text-sm text-slate-700">{t('providers.company')}: {provider.companyName || '-'}</p>
-                <p className="text-sm text-slate-700">{t('providers.verification')}: {provider.verificationStatus || '-'}</p>
-                <p className="text-sm text-slate-700">{t('providers.servicesCount')}: {provider.servicesCount}</p>
-                <p className="text-sm text-slate-700">{t('providers.portfoliosCount')}: {provider.portfoliosCount}</p>
-                <Link
-                  to={`/providers/${provider.id}`}
-                  className="mt-4 inline-flex rounded-lg bg-teal-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-teal-600"
-                >
-                  {t('providers.openPortfolio')}
-                </Link>
-              </article>
-            ))}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(380px,0.95fr)]">
+        <div className="space-y-4">
+          <div className="rounded-[2rem] border border-slate-200/80 bg-white/90 p-5 shadow-xl shadow-slate-900/5">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{t('providers.searchPlaceholder')}</p>
+                <p className="mt-1 text-sm text-slate-600">{t('providers.shownCount', { count: filteredProviders.length })}</p>
+              </div>
+              <div className="w-full md:max-w-sm">
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder={t('providers.searchPlaceholder')}
+                  className="w-full rounded-full border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-200"
+                />
+              </div>
+            </div>
           </div>
-          {!filteredProviders.length && <p className="text-slate-600">{t('providers.noResults')}</p>}
-        </>
-      )}
 
-      <p className="mt-8 text-xs text-slate-500">{t('providers.apiLabel')}: {API_BASE_URL}</p>
+          {loading && <p className="text-slate-700">{t('providers.loading')}</p>}
+          {error && <p className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-700">{error}</p>}
+
+          {!loading && !error && (
+            <>
+              <div className="space-y-4">
+                {filteredProviders.map((provider) => {
+                  const mapsUrl = buildMapsSearchUrl(provider.name, provider.companyName, provider.location);
+
+                  return (
+                    <article key={provider.id} className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-lg shadow-slate-900/5 transition hover:-translate-y-0.5 hover:shadow-xl">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-sm font-black text-teal-700">
+                              {provider.name?.slice(0, 1)?.toUpperCase() || 'P'}
+                            </div>
+                            <div className="min-w-0">
+                              <h2 className="truncate text-lg font-bold text-slate-900">{provider.name}</h2>
+                              <p className="truncate text-sm text-slate-600">{provider.companyName || t('providers.company')}</p>
+                            </div>
+                          </div>
+
+                          <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
+                            <span className="rounded-full bg-slate-100 px-3 py-1">{t('providers.location')}: {provider.location}</span>
+                            <span className="rounded-full bg-slate-100 px-3 py-1">{t('providers.servicesCount')}: {provider.servicesCount}</span>
+                            <span className="rounded-full bg-slate-100 px-3 py-1">{t('providers.portfoliosCount')}: {provider.portfoliosCount}</span>
+                            <span className="rounded-full bg-slate-100 px-3 py-1">{provider.verificationStatus || t('providers.verification')}</span>
+                          </div>
+
+                          <div className="mt-4 grid gap-1 text-sm text-slate-600 sm:grid-cols-2">
+                            <p>{provider.email || t('providers.noEmail')}</p>
+                            <p>{provider.phone || t('providers.noPhone')}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex shrink-0 flex-wrap gap-3 sm:flex-col sm:items-end">
+                          <a
+                            href={mapsUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center justify-center rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+                          >
+                            {t('providers.directions', { defaultValue: 'Directions' })}
+                          </a>
+                          <Link
+                            to={`/providers/${provider.id}`}
+                            className="inline-flex items-center justify-center rounded-full border border-teal-200 bg-teal-50 px-4 py-2 text-sm font-semibold text-teal-700 transition hover:border-teal-300 hover:bg-teal-100"
+                          >
+                            {t('providers.viewProfile', { defaultValue: 'View profile' })}
+                          </Link>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+              {!filteredProviders.length && <p className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-600">{t('providers.noResults')}</p>}
+            </>
+          )}
+
+          <p className="text-xs text-slate-500">{t('providers.apiLabel')}: {API_BASE_URL}</p>
+        </div>
+
+        <aside className="lg:sticky lg:top-28">
+          <div className="overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white/95 shadow-xl shadow-slate-900/5">
+            <div className="flex items-start justify-between gap-4 p-5 pb-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-600">{t('providers.mapTitle', { defaultValue: 'Map view' })}</p>
+                <h2 className="mt-1 text-2xl font-extrabold text-slate-900">{featuredProvider?.name || t('providers.title')}</h2>
+                <p className="mt-1 text-sm leading-6 text-slate-600">{t('providers.mapSubtitle', { defaultValue: 'Browse the current selection on the map and open directions instantly.' })}</p>
+              </div>
+              <a
+                href={featuredMapUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="shrink-0 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+              >
+                {t('providers.openInMaps', { defaultValue: 'Open in Maps' })}
+              </a>
+            </div>
+
+            <div className="px-5 pb-5">
+              <div className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-slate-100">
+                <iframe
+                  title={t('providers.mapTitle', { defaultValue: 'Map view' })}
+                  src={embeddedMapUrl}
+                  className="h-[560px] w-full"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
     </section>
   );
 };

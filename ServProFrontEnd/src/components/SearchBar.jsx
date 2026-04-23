@@ -50,20 +50,25 @@ const SearchBar = ({ onSearch }) => {
         </button>
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center justify-between gap-2 px-1">
-        <p className="text-xs font-medium text-slate-100/85">
-          {t('search.scopeHint', {
-            defaultValue: 'Search by service name, category, price, or duration.',
-          })}
+      <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+          {t('search.tipLabel', { defaultValue: 'Search tips' })}
         </p>
+        <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm leading-6 text-slate-700">
+            {t('search.scopeHint', {
+              defaultValue: 'Search by service name, category, price, or duration.',
+            })}
+          </p>
 
-        <button
-          type="button"
-          className="text-xs font-semibold text-slate-100 underline-offset-2 transition hover:text-white hover:underline"
-          onClick={handleClear}
-        >
-          {t('search.clear', { defaultValue: 'Clear filters' })}
-        </button>
+          <button
+            type="button"
+            className="text-sm font-semibold text-teal-700 underline-offset-4 transition hover:text-teal-800 hover:underline"
+            onClick={handleClear}
+          >
+            {t('search.clear', { defaultValue: 'Clear filters' })}
+          </button>
+        </div>
       </div>
     </form>
   );

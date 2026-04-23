@@ -37,7 +37,10 @@
   "search": {
     "placeholder": "ابحث عن خدمة...",
     "categoryAll": "كل الفئات",
-    "button": "بحث"
+    "button": "بحث",
+    "tipLabel": "نصائح البحث",
+    "scopeHint": "ابحث باسم الخدمة أو الفئة أو السعر أو المدة.",
+    "clear": "مسح الفلاتر"
   },
   "hero": {
     "title": "اعثر على المهني المناسب",
@@ -229,6 +232,8 @@
   "providers": {
     "title": "المزوّدون",
     "subtitle": "تصفّح جميع المستخدمين بدور مزوّد وافتح ملفات أعمالهم.",
+    "businessesTitle": "الأعمال",
+    "businessesSubtitle": "اعثر على الشركات المحلية للخدمات، وقارن تفاصيل ملفاتها، وافتح الاتجاهات بسرعة.",
     "searchPlaceholder": "ابحث عن مزوّد...",
     "loading": "جارٍ تحميل المزوّدين...",
     "loadError": "فشل في تحميل المزوّدين",
@@ -236,6 +241,7 @@
     "fallbackName": "مزوّد",
     "noEmail": "لا يوجد بريد إلكتروني",
     "noPhone": "لا يوجد رقم هاتف",
+    "contact": "التواصل",
     "location": "الموقع",
     "noLocation": "لا يوجد موقع",
     "company": "الشركة",
@@ -243,6 +249,11 @@
     "servicesCount": "الخدمات",
     "portfoliosCount": "الملفات",
     "openPortfolio": "فتح الملف",
+    "viewProfile": "عرض الملف",
+    "directions": "الاتجاهات",
+    "mapTitle": "عرض الخريطة",
+    "mapSubtitle": "تصفح المجموعة الحالية على الخريطة وافتح الاتجاهات فورًا.",
+    "openInMaps": "فتح في خرائط Google",
     "noResults": "لم يتم العثور على مزوّدين.",
     "apiLabel": "واجهة API"
   },
@@ -284,6 +295,8 @@
     "noCertificates": "لا توجد شهادات متاحة",
     "turnoverTitle": "حجم الأعمال",
     "availabilityTitle": "التوفر (الجدول)",
+    "calendarTitle": "عرض التقويم",
+    "calendarSubtitle": "يتم عرض الجدول الأسبوعي في شكل شبكة تقويم.",
     "noAvailability": "لا توجد أوقات متاحة",
     "notProvided": "غير متوفر",
     "license": "الرخصة",
