@@ -13,6 +13,16 @@
     "hello": "Hello, {{name}}",
     "language": "Language"
   },
+  "notifications": {
+    "title": "Notifications",
+    "subtitle": "Keep track of booking, payment, and service updates.",
+    "markAllRead": "Mark all as read",
+    "markRead": "Mark read",
+    "read": "Read",
+    "unread": "Unread",
+    "system": "System",
+    "empty": "No notifications yet."
+  },
   "search": {
     "placeholder": "Search for a service...",
     "categoryAll": "All categories",

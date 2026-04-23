@@ -13,6 +13,16 @@
     "hello": "مرحبا، {{name}}",
     "language": "اللغة"
   },
+  "notifications": {
+    "title": "الإشعارات",
+    "subtitle": "تابع تحديثات الحجز والدفع والخدمة.",
+    "markAllRead": "تحديد الكل كمقروء",
+    "markRead": "تحديد كمقروء",
+    "read": "مقروء",
+    "unread": "غير مقروء",
+    "system": "النظام",
+    "empty": "لا توجد إشعارات حتى الآن."
+  },
   "search": {
     "placeholder": "ابحث عن خدمة...",
     "categoryAll": "كل الفئات",
