@@ -31,6 +31,10 @@ services:
         value: 20000
       - key: PYTHON_AI_HEALTH_RETRIES
         value: 3
+      - key: PRODUCTION_AUTO_SEED
+        value: "true"
+      - key: PRODUCTION_SEED_DEFAULT_PASSWORD
+        sync: false
 
   - type: web
     runtime: docker

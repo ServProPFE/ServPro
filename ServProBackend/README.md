@@ -137,6 +137,8 @@ PYTHON_AI_RETRIES=3
 PYTHON_AI_RETRY_BASE_DELAY_MS=2000
 PYTHON_AI_HEALTH_TIMEOUT_MS=20000
 PYTHON_AI_HEALTH_RETRIES=3
+PRODUCTION_AUTO_SEED=true
+PRODUCTION_SEED_DEFAULT_PASSWORD=replace_with_strong_password
 ```
 
 ### Environment Variables
@@ -155,6 +157,15 @@ PYTHON_AI_HEALTH_RETRIES=3
 | `PYTHON_AI_RETRY_BASE_DELAY_MS` | Exponential backoff base delay (ms) | `1500` |
 | `PYTHON_AI_HEALTH_TIMEOUT_MS` | Timeout for `/chatbot/health` probe (ms) | `5000` |
 | `PYTHON_AI_HEALTH_RETRIES` | Retry attempts for health probe | `1` |
+| `PRODUCTION_AUTO_SEED` | Auto-create baseline users/services at startup in production | `true` in production if unset |
+| `PRODUCTION_SEED_DEFAULT_PASSWORD` | Default password used for seeded accounts on first creation | `ChangeMe123!` |
+
+### Production auto-seed behavior
+
+- Runs only when `NODE_ENV=production` and `PRODUCTION_AUTO_SEED` is truthy (or unset).
+- Idempotent: creates only missing baseline records, does not delete existing data.
+- Seeds baseline provider/admin accounts and starter service catalog so manual bootstrapping is not required.
+- Recommended: set `PRODUCTION_SEED_DEFAULT_PASSWORD` to a strong secret in your deployment platform.
 
 ### AI health diagnostics
 

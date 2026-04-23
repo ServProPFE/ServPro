@@ -1,6 +1,7 @@
 //Importer les modules nécessaires
 require("dotenv").config();
 const axios = require("axios");
+const { ensureProductionSeedData } = require("./scripts/productionSeed");
 
 //Importer l'application Express et la fonction de connexion à la base de données
 const { app } = require("./app");
@@ -44,6 +45,7 @@ const startServer = async () => {
   }
 
   await connectDb(mongoUri);
+  await ensureProductionSeedData();
   await warmupPythonAI();
 
   app.listen(port, () => {
