@@ -199,6 +199,25 @@ const ProviderPortfolio = () => {
                       />
                     ))}
                   </div>
+
+                  {Array.isArray(portfolio.certificates) && portfolio.certificates.length > 0 ? (
+                    <>
+                      <p className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                        {t('providerPortfolio.certificatesTitle')}
+                      </p>
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        {portfolio.certificates.filter(Boolean).map((certificateUrl, index) => (
+                          <img
+                            key={`${portfolio._id}-certificate-${index}`}
+                            src={certificateUrl}
+                            alt={t('providerPortfolio.certificateFallback')}
+                            className="h-24 w-full rounded-lg border border-slate-200 object-cover"
+                            loading="lazy"
+                          />
+                        ))}
+                      </div>
+                    </>
+                  ) : null}
                 </article>
               ))}
               {!portfolios.length && <p className="text-sm text-slate-600">{t('providerPortfolio.noPortfolio')}</p>}

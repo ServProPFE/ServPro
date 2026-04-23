@@ -29,9 +29,9 @@ const getPortfolioById = asyncHandler(async (req, res) => {
 
 //Créer un portfolio
 const createPortfolio = asyncHandler(async (req, res) => {
-  const { title, images, description, provider } = req.body;
+  const { title, images, certificates, description, provider } = req.body;
 
-  const portfolio = await Portfolio.create({ title, images, description, provider });
+  const portfolio = await Portfolio.create({ title, images, certificates, description, provider });
 
   res.status(201).json(portfolio);
 });
@@ -49,14 +49,14 @@ const deletePortfolio = asyncHandler(async (req, res) => {
 
 //Mettre à jour un portfolio
 const updatePortfolio = asyncHandler(async (req, res) => {
-  const { title, images, description } = req.body;
+  const { title, images, certificates, description } = req.body;
     const portfolio = await Portfolio.findById(req.params.id);
     if (!portfolio) {
     const error = new Error("Portfolio not found");
     error.statusCode = 404;
     throw error;
   }
-    Object.assign(portfolio, { title, images, description });
+    Object.assign(portfolio, { title, images, certificates, description });
     await portfolio.save();
     res.json(portfolio);
 });

@@ -317,6 +317,9 @@ const seedData = async () => {
           "https://images.unsplash.com/photo-1581578731548-c64695cc6952",
           "https://images.unsplash.com/photo-1621905252472-e8f0fcf8f1b5",
         ],
+        certificates: [
+          "https://images.unsplash.com/photo-1584697964192-8f24c9d4a5c8",
+        ],
         description: "Full replacement of damaged kitchen piping with leak-proof fittings.",
         provider: providers[0]._id,
       },
@@ -324,6 +327,9 @@ const seedData = async () => {
         title: "Apartment Electrical Panel Upgrade",
         images: [
           "https://images.unsplash.com/photo-1621905251918-48416bd8575a",
+        ],
+        certificates: [
+          "https://images.unsplash.com/photo-1516321318423-f06f85e504b3",
         ],
         description: "Modernized circuit breakers and rewiring for improved electrical safety.",
         provider: providers[1]._id,
@@ -333,6 +339,9 @@ const seedData = async () => {
         images: [
           "https://images.unsplash.com/photo-1581579186986-5a1863af95aa",
         ],
+        certificates: [
+          "https://images.unsplash.com/photo-1521737604893-d14cc237f11d",
+        ],
         description: "Installed and calibrated split AC unit with optimized airflow routing.",
         provider: providers[2]._id,
       },
@@ -340,6 +349,9 @@ const seedData = async () => {
         title: "Post-Renovation Deep Cleaning",
         images: [
           "https://images.unsplash.com/photo-1585421514738-01798e348b17",
+        ],
+        certificates: [
+          "https://images.unsplash.com/photo-1450101499163-c8848c66ca85",
         ],
         description: "Detailed dust extraction, floor sanitization, and glass polishing.",
         provider: providers[3]._id,

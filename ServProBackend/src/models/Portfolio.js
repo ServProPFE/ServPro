@@ -6,6 +6,7 @@ const portfolioSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
     images: [{ type: String }],
+    certificates: [{ type: String }],
     description: { type: String },
     provider: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   },

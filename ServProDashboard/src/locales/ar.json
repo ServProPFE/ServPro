@@ -208,16 +208,20 @@
   },
   "portfolio": {
     "title": "المعرض",
-    "newProject": "مشروع جديد",    "add": "إضافة",    "fields": {
+    "newProject": "مشروع جديد",
+    "add": "إضافة",
+    "fields": {
       "title": "العنوان",
       "description": "الوصف",
-      "images": "الصور (عناوين URL مفصولة بفاصلة)"
+      "photos": "الصور (عناوين URL مفصولة بفاصلة)",
+      "certificates": "الشهادات (عناوين URL مفصولة بفاصلة)"
     },
     "myProjects": "مشاريعي",
     "table": {
       "title": "العنوان",
       "description": "الوصف",
-      "images": "الصور",
+      "photos": "الصور",
+      "certificates": "الشهادات",
       "actions": "الإجراءات"
     },
     "noData": "لا توجد مشاريع",

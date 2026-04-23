@@ -15,6 +15,7 @@ const PortfolioManagement = () => {
     title: '',
     description: '',
     images: '',
+    certificates: '',
   });
   const [saving, setSaving] = useState(false);
 
@@ -64,15 +65,20 @@ const PortfolioManagement = () => {
         .split(',')
         .map((url) => url.trim())
         .filter(Boolean);
+      const certificatesArray = formData.certificates
+        .split(',')
+        .map((url) => url.trim())
+        .filter(Boolean);
 
       await apiService.post(API_ENDPOINTS.PORTFOLIOS, {
         title: formData.title,
         description: formData.description,
         images: imagesArray,
+        certificates: certificatesArray,
         provider: providerId,
       });
 
-      setFormData({ title: '', description: '', images: '' });
+      setFormData({ title: '', description: '', images: '', certificates: '' });
       fetchPortfolios();
     } catch (err) {
       console.error('Error creating portfolio:', err);
@@ -137,12 +143,24 @@ const PortfolioManagement = () => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="images">{t('portfolio.fields.images')}</label>
+            <label htmlFor="images">{t('portfolio.fields.photos')}</label>
             <textarea
               id="images"
               name="images"
               rows="3"
               value={formData.images}
+              onChange={handleChange}
+              placeholder="https://... , https://..."
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="certificates">{t('portfolio.fields.certificates')}</label>
+            <textarea
+              id="certificates"
+              name="certificates"
+              rows="3"
+              value={formData.certificates}
               onChange={handleChange}
               placeholder="https://... , https://..."
             />
@@ -167,7 +185,8 @@ const PortfolioManagement = () => {
                 <tr>
                   <th>{t('portfolio.table.title')}</th>
                   <th>{t('portfolio.table.description')}</th>
-                  <th>{t('portfolio.table.images')}</th>
+                  <th>{t('portfolio.table.photos')}</th>
+                  <th>{t('portfolio.table.certificates')}</th>
                   <th>{t('portfolio.table.actions')}</th>
                 </tr>
               </thead>
@@ -177,6 +196,7 @@ const PortfolioManagement = () => {
                     <td>{item.title}</td>
                     <td>{item.description || '-'}</td>
                     <td>{item.images?.length || 0}</td>
+                    <td>{item.certificates?.length || 0}</td>
                     <td>
                       <button
                         className="btn-delete"
