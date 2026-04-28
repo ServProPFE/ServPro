@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 
 import { AppBackground } from '@/components/servpro/AppBackground';
@@ -25,7 +25,6 @@ export default function NotificationsScreen() {
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
 
   const loadNotifications = useCallback(async () => {
     if (!isAuthenticated) {
@@ -60,41 +59,51 @@ export default function NotificationsScreen() {
 
   const unreadCount = useMemo(() => items.filter((item) => !item.readAt).length, [items]);
   const totalCount = items.length;
+  const recentItems = useMemo(() => items.slice(0, 3), [items]);
+  let previewContent = null;
 
-  const getNotificationTypeLabel = (notificationType?: string) => {
-    if (!notificationType) {
-      return t('notifications.typeFallback', { defaultValue: 'Notification' });
-    }
-
-    return t(`notifications.types.${notificationType}`, {
-      defaultValue: notificationType.replaceAll('_', ' '),
-    });
-  };
-
-  const handleMarkOneAsRead = async (notificationId: string) => {
-    try {
-      setBusyId(notificationId);
-      await notificationService.markAsRead(notificationId);
-      await loadNotifications();
-    } finally {
-      setBusyId(null);
-    }
-  };
-
-  const handleMarkAllAsRead = async () => {
-    try {
-      setBusyId('all');
-      await notificationService.markAllAsRead();
-      await loadNotifications();
-    } finally {
-      setBusyId(null);
-    }
-  };
+  if (loading) {
+    previewContent = (
+      <View style={styles.stateCard}>
+        <ActivityIndicator color={AppTheme.colors.primary} />
+        <Text style={styles.stateText}>{t('common.loading')}</Text>
+      </View>
+    );
+  } else if (error) {
+    previewContent = (
+      <View style={styles.stateCard}>
+        <Ionicons name="warning-outline" size={24} color="#dc2626" />
+        <Text style={styles.stateText}>{error}</Text>
+      </View>
+    );
+  } else if (recentItems.length > 0) {
+    previewContent = (
+      <View style={styles.previewList}>
+        {recentItems.map((item) => (
+          <View key={item._id} style={styles.previewItem}>
+            <View style={styles.previewDot} />
+            <View style={styles.previewTextWrap}>
+              <Text style={styles.previewItemTitle}>{t(`notifications.titles.${item.type}`, { defaultValue: item.title })}</Text>
+              <Text style={styles.previewItemMeta}>{timeLabel(item.createdAt) || t('notifications.system', { defaultValue: 'System' })}</Text>
+            </View>
+          </View>
+        ))}
+      </View>
+    );
+  } else {
+    previewContent = (
+      <View style={styles.stateCard}>
+        <Ionicons name="notifications-off-outline" size={26} color={AppTheme.colors.primary} />
+        <Text style={styles.stateText}>{t('notifications.empty', { defaultValue: 'No notifications yet' })}</Text>
+      </View>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
       <AppBackground>
         <View style={styles.centeredCard}>
+          <Ionicons name="notifications-outline" size={28} color={AppTheme.colors.primary} />
           <Text style={styles.title}>{t('nav.notifications', { defaultValue: 'Notifications' })}</Text>
           <Text style={styles.subtitle}>{t('chatbot.loginRequired')}</Text>
           <Link href={'/auth/login' as never} style={styles.loginLink}>{t('nav.login')}</Link>
@@ -103,140 +112,45 @@ export default function NotificationsScreen() {
     );
   }
 
-  let stateContent = null;
-
-  if (loading) {
-    stateContent = (
-      <View style={styles.stateCard}>
-        <ActivityIndicator color={AppTheme.colors.primary} />
-        <Text style={styles.stateText}>{t('common.loading')}</Text>
-      </View>
-    );
-  } else if (error) {
-    stateContent = (
-      <View style={styles.stateCard}>
-        <Ionicons name="warning-outline" size={24} color="#dc2626" />
-        <Text style={styles.stateText}>{error}</Text>
-      </View>
-    );
-  } else if (items.length === 0) {
-    stateContent = (
-      <View style={styles.stateCard}>
-        <Ionicons name="notifications-off-outline" size={26} color={AppTheme.colors.primary} />
-        <Text style={styles.stateText}>{t('notifications.empty', { defaultValue: 'No notifications yet' })}</Text>
-      </View>
-    );
-  }
-
   return (
     <AppBackground>
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.headerCard}>
+        <View style={styles.card}>
           <View style={styles.headerRow}>
-            <View>
-              <Text style={styles.headerTitle}>{t('nav.notifications', { defaultValue: 'Notifications' })}</Text>
-              <Text style={styles.headerSubtitle}>
+            <View style={styles.iconWrap}>
+              <Ionicons name="notifications-outline" size={24} color="#fff" />
+            </View>
+            <View style={styles.headerCopy}>
+              <Text style={styles.title}>{t('nav.notifications', { defaultValue: 'Notifications' })}</Text>
+              <Text style={styles.heroSubtitle}>
                 {t('notifications.subtitle', { defaultValue: 'Keep track of booking, payment, and service updates.' })}
                 {user?.name ? ` ${t('nav.hello', { name: user.name })}` : ''}
               </Text>
             </View>
-            <View style={styles.iconWrap}>
-              <Ionicons name="notifications-outline" size={24} color="#fff" />
-            </View>
-          </View>
-
-          <View style={styles.actionsRow}>
-            <Pressable
-              onPress={handleMarkAllAsRead}
-              disabled={busyId === 'all' || unreadCount === 0}
-              style={({ pressed }) => [
-                styles.actionButton,
-                (busyId === 'all' || unreadCount === 0) && styles.actionButtonDisabled,
-                pressed && styles.actionButtonPressed,
-              ]}
-            >
-              {busyId === 'all' ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.actionButtonText}>{t('notifications.markAllRead', { defaultValue: 'Mark all read' })}</Text>
-              )}
-            </Pressable>
           </View>
 
           <View style={styles.summaryRow}>
             <View style={styles.summaryPillUnread}>
-              <Text style={styles.summaryPillText}>
-                {unreadCount} {t('notifications.unread', { defaultValue: 'Unread' })}
-              </Text>
+              <Text style={styles.summaryPillText}>{unreadCount} {t('notifications.unread', { defaultValue: 'Unread' })}</Text>
             </View>
             <View style={styles.summaryPillTotal}>
-              <Text style={styles.summaryPillText}>
-                {totalCount} {t('notifications.total', { defaultValue: 'total' })}
-              </Text>
+              <Text style={[styles.summaryPillText, styles.summaryPillTextLight]}>{totalCount} {t('notifications.total', { defaultValue: 'total' })}</Text>
             </View>
+          </View>
+
+          <View style={styles.actionsRow}>
+            <Link href={'/modal' as never} asChild>
+              <Pressable style={({ pressed }) => [styles.openButton, pressed && styles.buttonPressed]}>
+                <Text style={styles.openButtonText}>{t('notifications.openCenter', { defaultValue: 'Open notification center' })}</Text>
+              </Pressable>
+            </Link>
           </View>
         </View>
 
-        {stateContent ?? (
-          <View style={styles.list}>
-            {items.map((item) => {
-              const isUnread = !item.readAt;
-
-              return (
-                <View key={item._id} style={[styles.card, isUnread && styles.cardUnread]}>
-                  <View style={styles.cardTop}>
-                    <View style={styles.cardTitleRow}>
-                      <View style={[styles.dot, isUnread && styles.dotUnread]} />
-                      <Text style={styles.cardTitle}>
-                        {t(`notifications.titles.${item.type}`, { defaultValue: item.title })}
-                      </Text>
-                    </View>
-                    <Text style={styles.cardDate}>{timeLabel(item.createdAt)}</Text>
-                  </View>
-
-                  <Text style={styles.cardContent}>{item.content}</Text>
-
-                  <View style={styles.cardFooter}>
-                    <View style={styles.metaPill}>
-                      <Ionicons name="time-outline" size={14} color="#475569" />
-                      <Text style={styles.metaText}>{timeLabel(item.createdAt) || '--'}</Text>
-                    </View>
-
-                    <View style={styles.metaPill}>
-                      <Ionicons name="person-outline" size={14} color="#475569" />
-                      <Text style={styles.metaText}>{item.actor?.name || t('notifications.system', { defaultValue: 'System' })}</Text>
-                    </View>
-
-                    <View style={styles.metaPill}>
-                      <Ionicons name="link-outline" size={14} color="#475569" />
-                      <Text style={styles.metaText}>{item.metadata?.serviceName || item.destination || getNotificationTypeLabel(item.type)}</Text>
-                    </View>
-
-                    {isUnread ? (
-                      <Pressable
-                        onPress={() => handleMarkOneAsRead(item._id)}
-                        disabled={busyId === item._id}
-                        style={({ pressed }) => [
-                          styles.readButton,
-                          busyId === item._id && styles.actionButtonDisabled,
-                          pressed && styles.actionButtonPressed,
-                        ]}
-                      >
-                        <Text style={styles.readButtonText}>
-                          {busyId === item._id ? t('common.loading') : t('notifications.markRead', { defaultValue: 'Mark read' })}
-                        </Text>
-                      </Pressable>
-                    ) : (
-                      <View style={styles.readBadge}>
-                        <Text style={styles.readBadgeText}>{t('notifications.read', { defaultValue: 'Read' })}</Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-        )}
+        <View style={styles.previewCard}>
+          <Text style={styles.previewTitle}>{t('notifications.recentTitle', { defaultValue: 'Recent updates' })}</Text>
+          {previewContent}
+        </View>
       </ScrollView>
     </AppBackground>
   );
@@ -247,9 +161,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 28,
-    gap: 16,
+    gap: 14,
   },
-  headerCard: {
+  card: {
     borderRadius: AppTheme.radius.xl,
     backgroundColor: '#0f172a',
     padding: 18,
@@ -257,8 +171,8 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     gap: 12,
+    alignItems: 'flex-start',
   },
   iconWrap: {
     width: 46,
@@ -268,12 +182,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.12)',
   },
-  headerTitle: {
+  headerCopy: {
+    flex: 1,
+  },
+  title: {
     color: '#fff',
     fontSize: 24,
     fontWeight: '900',
   },
-  headerSubtitle: {
+  heroSubtitle: {
     marginTop: 6,
     color: '#cbd5e1',
     lineHeight: 20,
@@ -301,26 +218,71 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
   },
-  actionsRow: {
-    marginTop: 14,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+  summaryPillTextLight: {
+    color: '#fff',
   },
-  actionButton: {
+  actionsRow: {
+    marginTop: 16,
+    alignItems: 'flex-start',
+  },
+  openButton: {
     borderRadius: 999,
     backgroundColor: AppTheme.colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
-  actionButtonDisabled: {
-    opacity: 0.55,
-  },
-  actionButtonPressed: {
-    transform: [{ scale: 0.98 }],
-  },
-  actionButtonText: {
+  openButtonText: {
     color: '#fff',
     fontWeight: '800',
+  },
+  buttonPressed: {
+    transform: [{ scale: 0.98 }],
+  },
+  previewCard: {
+    borderRadius: AppTheme.radius.xl,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    backgroundColor: '#ffffff',
+    padding: 16,
+    ...AppTheme.shadow.card,
+  },
+  previewTitle: {
+    color: AppTheme.colors.text,
+    fontSize: 18,
+    fontWeight: '900',
+    marginBottom: 10,
+  },
+  previewList: {
+    gap: 10,
+  },
+  previewItem: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'flex-start',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    backgroundColor: '#f8fafc',
+    padding: 12,
+  },
+  previewDot: {
+    width: 10,
+    height: 10,
+    marginTop: 5,
+    borderRadius: 999,
+    backgroundColor: AppTheme.colors.primary,
+  },
+  previewTextWrap: {
+    flex: 1,
+  },
+  previewItemTitle: {
+    color: AppTheme.colors.text,
+    fontWeight: '800',
+  },
+  previewItemMeta: {
+    color: '#64748b',
+    marginTop: 2,
+    fontSize: 12,
   },
   stateCard: {
     alignItems: 'center',
@@ -337,103 +299,6 @@ const styles = StyleSheet.create({
     color: AppTheme.colors.mutedText,
     lineHeight: 20,
   },
-  list: {
-    gap: 12,
-  },
-  card: {
-    borderRadius: AppTheme.radius.lg,
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    padding: 16,
-    ...AppTheme.shadow.card,
-  },
-  cardUnread: {
-    borderColor: '#93c5fd',
-    backgroundColor: '#eff6ff',
-  },
-  cardTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  cardTitleRow: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 999,
-    backgroundColor: '#cbd5e1',
-  },
-  dotUnread: {
-    backgroundColor: AppTheme.colors.primary,
-  },
-  cardTitle: {
-    flex: 1,
-    color: AppTheme.colors.text,
-    fontWeight: '900',
-    fontSize: 16,
-  },
-  cardDate: {
-    color: '#64748b',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  cardContent: {
-    marginTop: 10,
-    color: '#334155',
-    lineHeight: 20,
-  },
-  cardFooter: {
-    marginTop: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-    flexWrap: 'wrap',
-  },
-  metaPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderRadius: 999,
-    backgroundColor: '#f8fafc',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  metaText: {
-    color: '#475569',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  readButton: {
-    borderRadius: 999,
-    backgroundColor: '#0f766e',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  readButtonText: {
-    color: '#fff',
-    fontWeight: '800',
-    fontSize: 12,
-  },
-  readBadge: {
-    borderRadius: 999,
-    backgroundColor: '#e2e8f0',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  readBadgeText: {
-    color: '#475569',
-    fontWeight: '800',
-    fontSize: 12,
-  },
   centeredCard: {
     margin: 16,
     borderRadius: AppTheme.radius.xl,
@@ -443,11 +308,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e2e8f0',
     ...AppTheme.shadow.card,
-  },
-  title: {
-    color: AppTheme.colors.text,
-    fontSize: 24,
-    fontWeight: '900',
   },
   subtitle: {
     marginTop: 8,

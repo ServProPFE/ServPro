@@ -21,6 +21,7 @@ export default function RootLayout() {
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: false }} />
           <Stack.Screen name="auth/login" options={{ title: t('auth.loginTitle') }} />
           <Stack.Screen name="auth/register" options={{ title: t('auth.registerTitle') }} />
           <Stack.Screen name="booking/[serviceId]" options={{ title: t('booking.bookNow') }} />
