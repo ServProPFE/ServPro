@@ -1,6 +1,13 @@
 const axios = require('axios');
 const { Service } = require("../models/Service");
+const { Booking } = require("../models/Booking");
+const { Notation } = require("../models/Notation");
 const { asyncHandler } = require("../utils/asyncHandler");
+const {
+  buildDynamicSuggestions,
+  buildLocalChatbotResponse,
+  buildRecommendationPayload,
+} = require("../utils/chatbotEngine");
 
 const normalizeServiceUrl = (url) => (url || '').trim().replace(/\/$/, '');
 const isProduction = process.env.NODE_ENV === 'production';
@@ -35,20 +42,6 @@ const AI_HEALTH_RETRIES = toPositiveInt(process.env.PYTHON_AI_HEALTH_RETRIES, 2)
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const buildOfflineResponse = (language) => ({
-  message: language === 'ar'
-    ? 'يمكنني مساعدتك في السباكة أو الكهرباء أو التكييف أو التنظيف. اكتب طلبك وسأقترح لك الخدمة المناسبة.'
-    : 'I can help with plumbing, electrical, HVAC, or cleaning. Send your request and I will suggest the right service.',
-  detectedService: null,
-  confidence: 0,
-  recommendedService: null,
-  aiModel: 'Fallback (AI offline)',
-  geminiUsed: false,
-  allScores: {},
-  degraded: true,
-  timestamp: new Date(),
-});
-
 const getRecommendationMessage = (aiAnalysis, language) => {
   if (aiAnalysis.recommendations && aiAnalysis.recommendations.length > 0) {
     return aiAnalysis.recommendations[0].message;
@@ -61,49 +54,6 @@ const getRecommendationMessage = (aiAnalysis, language) => {
   return language === 'ar'
     ? 'عذراً، لم أتمكن من فهم طلبك. يرجى تحديد الخدمة المطلوبة: السباكة، الكهرباء، التكييف، أو التنظيف.'
     : 'Sorry, I couldn\'t understand your request. Please specify: plumbing, electrical, AC, or cleaning services.';
-};
-
-const getRecommendedService = async (detectedService, confidence) => {
-  if (!detectedService || confidence < 0.08) {
-    return null;
-  }
-
-  const categoryMap = {
-    plomberie: 'PLOMBERIE',
-    electricite: 'ELECTRICITE',
-    climatisation: 'CLIMATISATION',
-    nettoyage: 'NETTOYAGE',
-  };
-
-  const category = categoryMap[detectedService];
-  if (!category) {
-    return null;
-  }
-
-  return Service.findOne({ category })
-    .populate('provider', 'name email phone')
-    .lean();
-};
-
-const buildRecommendedServicePayload = (recommendedService) => {
-  if (!recommendedService) {
-    return null;
-  }
-
-  return {
-    id: recommendedService._id,
-    name: recommendedService.name,
-    category: recommendedService.category,
-    priceMin: recommendedService.priceMin,
-    duration: recommendedService.duration,
-    provider: {
-      _id: recommendedService.provider._id,
-      name: recommendedService.provider.name,
-      email: recommendedService.provider.email,
-      phone: recommendedService.provider.phone,
-    },
-    currency: recommendedService.currency || 'TND',
-  };
 };
 
 const isRetriableAiError = (error) => {
@@ -160,6 +110,48 @@ const requestPythonAI = async ({ method = 'get', endpoint, data, timeoutMs = AI_
   throw lastError;
 };
 
+const loadServiceAnalytics = async () => {
+  const [services, bookings, ratings] = await Promise.all([
+    Service.find({})
+      .populate('provider', 'name email phone providerProfile.companyName providerProfile.location providerProfile.experienceYears')
+      .lean(),
+    Booking.aggregate([
+      { $match: { status: { $ne: 'CANCELLED' } } },
+      { $group: { _id: '$service', total: { $sum: 1 } } },
+    ]),
+    Notation.find({}).lean(),
+  ]);
+
+  const bookingCounts = new Map(bookings.map((item) => [String(item._id), Number(item.total || 0)]));
+  const providerRatings = new Map(ratings.map((item) => [String(item.provider), item]));
+
+  return {
+    services,
+    bookingCounts,
+    providerRatings,
+  };
+};
+
+const getCategoryFallbackService = async (detectedService) => {
+  const categoryMap = {
+    plomberie: 'PLOMBERIE',
+    electricite: 'ELECTRICITE',
+    climatisation: 'CLIMATISATION',
+    nettoyage: 'NETTOYAGE',
+  };
+
+  const category = categoryMap[detectedService];
+  if (!category) {
+    return null;
+  }
+
+  const service = await Service.findOne({ category })
+    .populate('provider', 'name email phone')
+    .lean();
+
+  return buildRecommendationPayload(service);
+};
+
 // Get chatbot response with Python AI analysis
 const getChatbotResponse = asyncHandler(async (req, res) => {
   const { message, language = 'en', isFirstPrompt = false } = req.body;
@@ -170,6 +162,7 @@ const getChatbotResponse = asyncHandler(async (req, res) => {
     throw error;
   }
 
+  const analytics = await loadServiceAnalytics();
   let aiAnalysis;
   try {
     // Call Python AI service for NLP analysis
@@ -185,24 +178,48 @@ const getChatbotResponse = asyncHandler(async (req, res) => {
   } catch (aiError) {
     console.error('Python AI service error:', aiError.message);
 
-    return res.json(buildOfflineResponse(language));
+    const localResponse = buildLocalChatbotResponse({
+      message,
+      language,
+      services: analytics.services,
+      providerRatings: analytics.providerRatings,
+      bookingCounts: analytics.bookingCounts,
+    });
+
+    return res.json({
+      ...localResponse,
+      aiModel: 'Local TF-IDF + popularity ranking',
+      geminiUsed: false,
+      degraded: true,
+      timestamp: new Date(),
+    });
   }
 
   const { detected_service, confidence } = aiAnalysis;
   const needsPreference = Boolean(aiAnalysis.needs_preference);
-  const recommendedService = needsPreference
-    ? null
-    : await getRecommendedService(detected_service, confidence);
+  const localResponse = buildLocalChatbotResponse({
+    message,
+    language,
+    services: analytics.services,
+    providerRatings: analytics.providerRatings,
+    bookingCounts: analytics.bookingCounts,
+  });
+  const categoryFallbackService = await getCategoryFallbackService(detected_service);
+  const recommendedService = localResponse.recommendedService || categoryFallbackService;
   const botMessage = getRecommendationMessage(aiAnalysis, language);
 
   const response = {
     message: botMessage,
     detectedService: detected_service,
     confidence: confidence,
-    recommendedService: buildRecommendedServicePayload(recommendedService),
-    needsPreference,
-    preferenceOptions: Array.isArray(aiAnalysis.preference_options) ? aiAnalysis.preference_options : [],
-    aiModel: aiAnalysis.source === 'gemini_fallback' ? 'Gemini AI (Fallback)' : 'TF-IDF + Cosine Similarity (Python)',
+    recommendedService: recommendedService,
+    needsPreference: needsPreference || localResponse.needsPreference,
+    preferenceOptions: Array.isArray(aiAnalysis.preference_options) && aiAnalysis.preference_options.length > 0
+      ? aiAnalysis.preference_options
+      : localResponse.preferenceOptions,
+    aiModel: aiAnalysis.source === 'gemini_fallback'
+      ? 'Gemini AI (Fallback) + local reranker'
+      : 'TF-IDF + Cosine Similarity (Python) + local reranker',
     geminiUsed: aiAnalysis.fallback_used || false,
     allScores: aiAnalysis.all_scores,
     timestamp: new Date()
@@ -244,26 +261,16 @@ const analyzeChatbotInput = asyncHandler(async (req, res) => {
 // Get chatbot suggestions based on service category
 const getChatbotSuggestions = asyncHandler(async (req, res) => {
   const { language = 'en' } = req.query;
-
-  const suggestions = {
-    en: [
-      "I need a plumber for a leaky faucet",
-      "My air conditioning is not working",
-      "I need an electrician for wiring",
-      "Looking for cleaning services",
-      "Need help with home repairs"
-    ],
-    ar: [
-      "أحتاج سباك لحنفية تسرب",
-      "جهاز التكييف لا يعمل",
-      "أحتاج كهربائي للأسلاك",
-      "أبحث عن خدمات التنظيف",
-      "أحتاج مساعدة في إصلاحات المنزل"
-    ]
-  };
+  const analytics = await loadServiceAnalytics();
+  const suggestions = buildDynamicSuggestions({
+    services: analytics.services,
+    providerRatings: analytics.providerRatings,
+    bookingCounts: analytics.bookingCounts,
+    language: language || 'en',
+  });
 
   res.json({
-    suggestions: suggestions[language] || suggestions['en'],
+    suggestions,
     language: language || 'en'
   });
 });
