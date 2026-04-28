@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "servpro",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
     },
@@ -16,7 +16,7 @@
         "backgroundColor": "#ffffff",
         "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
-      "package": "com.hechmi10.ServPro"
+      "package": "com.hechmi10.servpro"
     },
     "web": {
       "output": "static",
