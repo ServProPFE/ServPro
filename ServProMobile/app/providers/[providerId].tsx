@@ -162,63 +162,90 @@ export default function ProviderPortfolioScreen() {
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
         {!loading && !error ? (
-          <>
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>{t('providers.infoTitle')}</Text>
-              <Text style={styles.infoLine}>{t('providers.company')}: {profile?.companyName || '-'}</Text>
-              <Text style={styles.infoLine}>{t('auth.email')}: {provider?.email || '-'}</Text>
-              <Text style={styles.infoLine}>{t('auth.phone')}: {provider?.phone || '-'}</Text>
-              <Text style={styles.infoLine}>{t('service.experience')}: {profile?.experienceYears || 0}</Text>
-              <Text style={styles.infoLine}>{t('providers.verification')}: {profile?.verificationStatus || 'PENDING'}</Text>
-              <Text style={styles.infoLine}>{t('providers.location')}: {formatLocation(provider, t('providers.noLocation'))}</Text>
-            </View>
+          <View style={styles.profileCard}>
+            {/* Header Section */}
+            <View style={styles.headerSection}>
+              <Text style={styles.profileName}>{provider?.name || t('providers.portfolioTitle')}</Text>
+              <Text style={styles.profileCompany}>{profile?.companyName || t('providers.company')}</Text>
+              
+              <View style={styles.badgeContainer}>
+                <Text style={styles.badge}>{profile?.verificationStatus || 'PENDING'}</Text>
+                <Text style={styles.badge}>{profile?.experienceYears || 0} {t('service.experience')}</Text>
+              </View>
 
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>{t('providers.services')}</Text>
-              {services.map((service) => (
-                <View key={service._id || service.id} style={styles.rowCard}>
-                  <Text style={styles.rowTitle}>{service.name || t('services.title')}</Text>
-                  <Text style={styles.rowSub}>{service.category || '-'}</Text>
-                  <Text style={styles.rowSub}>{service.priceMin || 0} {service.currency || 'TND'} • {service.duration || 0} min</Text>
+              <View style={styles.infoGrid}>
+                <View style={styles.infoItem}>
+                  <Text style={styles.infoLabel}>{t('auth.email')}</Text>
+                  <Text style={styles.infoValue}>{provider?.email || '-'}</Text>
                 </View>
-              ))}
-              {services.length === 0 ? <Text style={styles.muted}>{t('providers.emptyServices')}</Text> : null}
+                <View style={styles.infoItem}>
+                  <Text style={styles.infoLabel}>{t('auth.phone')}</Text>
+                  <Text style={styles.infoValue}>{provider?.phone || '-'}</Text>
+                </View>
+                <View style={styles.infoItem}>
+                  <Text style={styles.infoLabel}>{t('providers.location')}</Text>
+                  <Text style={styles.infoValue}>{formatLocation(provider, t('providers.noLocation'))}</Text>
+                </View>
+                <View style={styles.infoItem}>
+                  <Text style={styles.infoLabel}>{t('providers.turnover')}</Text>
+                  <Text style={styles.infoValue}>{profile?.turnover || profile?.chiffrement || '-'}</Text>
+                </View>
+              </View>
             </View>
 
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>{t('providers.portfolios')}</Text>
-              {portfolio.map((entry) => (
-                <View key={entry._id || entry.id} style={styles.rowCard}>
-                  <Text style={styles.rowTitle}>{entry.title || t('providers.portfolioFallbackTitle')}</Text>
-                  <Text style={styles.rowSub}>{entry.description || t('providers.portfolioFallbackDescription')}</Text>
+            {/* Services & Portfolio Section */}
+            {(services.length > 0 || portfolio.length > 0) && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>{t('providers.workTitle', { defaultValue: 'Work & Services' })}</Text>
 
-                  <View style={styles.imagesGrid}>
-                    {(entry.images || []).filter(Boolean).slice(0, 4).map((image, index) => (
-                      <Image key={`${entry._id || entry.id}-${index}`} source={{ uri: image }} style={styles.image} resizeMode="cover" />
+                {services.length > 0 && (
+                  <View>
+                    <Text style={styles.subsectionTitle}>{t('providers.services')}</Text>
+                    {services.map((service) => (
+                      <View key={service._id || service.id} style={styles.rowCard}>
+                        <Text style={styles.rowTitle}>{service.name || t('services.title')}</Text>
+                        <Text style={styles.rowSub}>{service.category || '-'}</Text>
+                        <Text style={styles.rowSub}>{service.priceMin || 0} {service.currency || 'TND'} • {service.duration || 0} min</Text>
+                      </View>
                     ))}
                   </View>
-                </View>
-              ))}
-              {portfolio.length === 0 ? <Text style={styles.muted}>{t('providers.emptyPortfolio')}</Text> : null}
-            </View>
+                )}
 
+                {portfolio.length > 0 && (
+                  <View style={services.length > 0 ? { marginTop: 12 } : undefined}>
+                    <Text style={styles.subsectionTitle}>{t('providers.portfolios')}</Text>
+                    {portfolio.map((entry) => (
+                      <View key={entry._id || entry.id} style={styles.rowCard}>
+                        <Text style={styles.rowTitle}>{entry.title || t('providers.portfolioFallbackTitle')}</Text>
+                        <Text style={styles.rowSub}>{entry.description || t('providers.portfolioFallbackDescription')}</Text>
 
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>{t('providers.availability')}</Text>
-              {availability.map((slot) => (
-                <View key={slot._id} style={styles.rowCard}>
-                  <Text style={styles.rowTitle}>{dayLabels[slot.day || 0] || '-'}</Text>
-                  <Text style={styles.rowSub}>{slot.start || '--:--'} - {slot.end || '--:--'}</Text>
-                </View>
-              ))}
-              {availability.length === 0 ? <Text style={styles.muted}>{t('providers.emptyAvailability')}</Text> : null}
-            </View>
+                        {(entry.images || []).filter(Boolean).length > 0 && (
+                          <View style={styles.imagesGrid}>
+                            {(entry.images || []).filter(Boolean).slice(0, 4).map((image, index) => (
+                              <Image key={`${entry._id || entry.id}-${index}`} source={{ uri: image }} style={styles.image} resizeMode="cover" />
+                            ))}
+                          </View>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            )}
 
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>{t('providers.turnover')}</Text>
-              <Text style={styles.infoLine}>{profile?.turnover || profile?.chiffrement || '-'}</Text>
-            </View>
-          </>
+            {/* Availability Section */}
+            {availability.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>{t('providers.availability')}</Text>
+                {availability.map((slot) => (
+                  <View key={slot._id} style={styles.rowCard}>
+                    <Text style={styles.rowTitle}>{dayLabels[slot.day || 0] || '-'}</Text>
+                    <Text style={styles.rowSub}>{slot.start || '--:--'} - {slot.end || '--:--'}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
         ) : null}
 
         <Link href={'/providers' as never} style={styles.backLink}>{t('providers.backToList')}</Link>
@@ -251,6 +278,87 @@ const styles = StyleSheet.create({
     color: AppTheme.colors.mutedText,
     marginTop: 6,
     lineHeight: 20,
+  },
+  profileCard: {
+    borderRadius: AppTheme.radius.xl,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    backgroundColor: '#ffffff',
+    overflow: 'hidden',
+    ...AppTheme.shadow.card,
+  },
+  headerSection: {
+    backgroundColor: '#1e293b',
+    padding: 16,
+    paddingBottom: 20,
+  },
+  profileName: {
+    color: '#ffffff',
+    fontSize: 24,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+  profileCompany: {
+    color: '#cbd5e1',
+    fontSize: 14,
+    marginBottom: 12,
+  },
+  badgeContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+    flexWrap: 'wrap',
+  },
+  badge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    color: '#e0f2fe',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    fontSize: 12,
+    fontWeight: '700',
+    overflow: 'hidden',
+  },
+  infoGrid: {
+    gap: 10,
+  },
+  infoItem: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  infoLabel: {
+    color: '#cbd5e1',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  infoValue: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  section: {
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+    padding: 16,
+  },
+  sectionTitle: {
+    color: AppTheme.colors.text,
+    fontWeight: '900',
+    fontSize: 17,
+    marginBottom: 10,
+  },
+  subsectionTitle: {
+    color: '#64748b',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+    marginTop: 10,
   },
   card: {
     borderRadius: AppTheme.radius.lg,
