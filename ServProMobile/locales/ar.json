@@ -247,7 +247,8 @@
     "emptyAvailability": "لا يوجد توفر.",
     "portfolioFallbackTitle": "عمل بدون عنوان",
     "portfolioFallbackDescription": "لا يوجد وصف",
-    "backToList": "العودة إلى المزوّدين"
+    "backToList": "العودة إلى المزوّدين",
+    "workTitle": "الأعمال"
   },
   "common": {
     "loading": "جارٍ التحميل...",

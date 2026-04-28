@@ -247,7 +247,8 @@
     "emptyAvailability": "No availability found.",
     "portfolioFallbackTitle": "Untitled work",
     "portfolioFallbackDescription": "No description",
-    "backToList": "Back to providers"
+    "backToList": "Back to providers",
+    "workTitle": "Works"
   },
   "common": {
     "loading": "Loading...",

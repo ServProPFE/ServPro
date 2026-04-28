@@ -70,6 +70,38 @@ const normalizeList = (value: string[] | string | undefined) => {
   return [];
 };
 
+const humanizeServiceKey = (key: string) => {
+  const withoutPrefix = key.replace(/^services?Names\./, '');
+  const withSpaces = withoutPrefix
+    .replaceAll(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replaceAll('_', ' ')
+    .replaceAll('.', ' ')
+    .replaceAll('-', ' ')
+    .trim();
+
+  if (!withSpaces) {
+    return 'Service';
+  }
+
+  return withSpaces.charAt(0).toUpperCase() + withSpaces.slice(1);
+};
+
+const resolveServiceName = (rawName: string | undefined, fallback: string) => {
+  if (!rawName || typeof rawName !== 'string') {
+    return fallback;
+  }
+
+  const normalizedName = rawName.startsWith('servicesNames.')
+    ? rawName.replace(/^servicesNames\./, 'serviceNames.')
+    : rawName;
+
+  if (/^services?Names\./.test(rawName)) {
+    return humanizeServiceKey(normalizedName);
+  }
+
+  return rawName;
+};
+
 const hasValue = (value: unknown) => {
   if (value === null || value === undefined) return false;
   if (typeof value === 'string') return value.trim().length > 0;
@@ -203,7 +235,7 @@ export default function ProviderPortfolioScreen() {
                     <Text style={styles.subsectionTitle}>{t('providers.services')}</Text>
                     {services.map((service) => (
                       <View key={service._id || service.id} style={styles.rowCard}>
-                        <Text style={styles.rowTitle}>{service.name || t('services.title')}</Text>
+                        <Text style={styles.rowTitle}>{resolveServiceName(service.name, t('services.title'))}</Text>
                         <Text style={styles.rowSub}>{service.category || '-'}</Text>
                         <Text style={styles.rowSub}>{service.priceMin || 0} {service.currency || 'TND'} • {service.duration || 0} min</Text>
                       </View>
