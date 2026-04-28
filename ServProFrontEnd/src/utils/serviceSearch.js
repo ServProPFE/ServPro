@@ -53,12 +53,41 @@ const buildServiceSearchText = (service, t) => {
   return normalizeText(fields.filter(Boolean).join(' '));
 };
 
+const scoreServiceSearchMatch = (service, searchTokens, normalizedSearch, t) => {
+  if (searchTokens.length === 0) {
+    return 0;
+  }
+
+  const haystack = buildServiceSearchText(service, t);
+  let score = 0;
+
+  if (haystack.startsWith(normalizedSearch)) {
+    score += 4;
+  }
+
+  if (haystack.includes(normalizedSearch)) {
+    score += 3;
+  }
+
+  const matchedTokens = searchTokens.filter((token) => haystack.includes(token)).length;
+  score += matchedTokens * 2;
+
+  if (matchedTokens === searchTokens.length) {
+    score += 2;
+  }
+
+  score += Number(service?.priceMin || 0) > 0 ? 0.25 : 0;
+  score += Number(service?.duration || 0) > 0 ? 0.25 : 0;
+
+  return score;
+};
+
 export const filterServicesBySearch = ({ services, searchTerm, category = 'ALL', t }) => {
   const normalizedCategory = category || 'ALL';
   const normalizedSearch = normalizeText(searchTerm);
   const searchTokens = normalizedSearch ? normalizedSearch.split(/\s+/).filter(Boolean) : [];
 
-  return (services || []).filter((service) => {
+  const matchedServices = (services || []).filter((service) => {
     if (normalizedCategory !== 'ALL' && service?.category !== normalizedCategory) {
       return false;
     }
@@ -70,4 +99,16 @@ export const filterServicesBySearch = ({ services, searchTerm, category = 'ALL',
     const haystack = buildServiceSearchText(service, t);
     return searchTokens.every((token) => haystack.includes(token));
   });
+
+  if (searchTokens.length === 0) {
+    return matchedServices;
+  }
+
+  return matchedServices
+    .map((service) => ({
+      service,
+      score: scoreServiceSearchMatch(service, searchTokens, normalizedSearch, t),
+    }))
+    .sort((left, right) => right.score - left.score)
+    .map(({ service }) => service);
 };

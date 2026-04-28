@@ -10,16 +10,18 @@ Customer-facing web app for browsing services, viewing details, and booking prov
 
 ## Features
 - 🌍 **Bilingual Support**: Full Arabic & English interface with RTL (Right-to-Left) layout
-- 🔍 Service discovery and filtering
+- 🔍 Service discovery and filtering with relevance-ranked search
 - 📅 Online booking system
 - 📈 Booking history with status tracking
 - ⭐ Customer reviews and ratings
 - 👤 User profile management
 - 💳 **Transaction history** (new)
 - 🤖 **AI Chatbot Assistant**: Detects service intent and returns actionable recommendations in EN/AR
+- 💡 **Smart suggestions**: Home page suggestions loaded from the chatbot endpoint and used to refine search instantly
 - 🌙 Auto language detection with localStorage persistence
 - 🧑‍🔧 **Providers directory** with portfolio browsing
 - 🧾 **Provider portfolio sections**: info artisant, realisations, localisation, equipe, equipements, certificats, chiffrement, disponibilites
+- 📊 **Provider insights**: quick filters and summary metrics for verified, active, and portfolio-rich providers
 - 🛟 Safe service-name rendering fallback for unknown i18n keys (example: `serviceNames.apartmentCleaning`)
 
 ## Requirements
@@ -66,6 +68,7 @@ Default dev URL: `http://localhost:5173`
 - Frontend calls `POST /chatbot` on the backend (which delegates NLP to the separately deployed Python AI service).
 - Chatbot responses include `message`, `confidence`, and optional `recommendedService`.
 - `recommendedService.provider` is an object (`_id`, `name`, `email`, `phone`) and should be rendered using text fields (e.g., provider name), not as a raw object.
+- The home page also calls `GET /chatbot/suggestions` to present quick search prompts that users can tap to filter services.
 
 If you are testing production, verify the backend first:
 
@@ -100,11 +103,18 @@ Located in `src/locales/`:
 - Reservation details are created via `POST /reservation-details` before booking.
 - Transactions created automatically when booking is CONFIRMED.
 - Chatbot endpoint: `POST /chatbot` with `{ message, language }`.
+- Chatbot suggestions endpoint: `GET /chatbot/suggestions?language=en|ar`.
 - Provider portfolio page reads:
 	- `GET /services?providerId=...`
 	- `GET /portfolios?providerId=...`
 	- `GET /availability?providerId=...` (auth required)
 	- `GET /certifications?providerId=...` (auth required)
+
+## Discovery UX
+
+- Search across services uses a ranking helper that scores better matches higher instead of returning a flat alphabetical list.
+- The providers page includes quick filters and analytics cards to highlight verified, active, and portfolio-rich providers.
+- Provider map/direction links remain available for fast location-based exploration.
 
 ## Common Issues
 - 404 or HTML response: confirm `VITE_API_BASE_URL` is set to the backend port.

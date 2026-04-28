@@ -48,6 +48,18 @@
   "dashboard": {
     "title": "Dashboard",
     "welcome": "Welcome, {{name}}",
+    "insightsTitle": "AI insights",
+    "insightsSubtitle": "Operational recommendations from live data",
+    "insightsDescription": "Use these signals to prioritize confirmations, service growth, and revenue planning.",
+    "recommendationTitle": "Recommended action",
+    "recommendationHeading": "What to do next",
+    "kpiTitle": "Live KPI",
+    "topCategory": "Top category",
+    "completionRate": "Completion rate",
+    "averageRevenue": "Avg. revenue per completed booking",
+    "recommendationPending": "Prioritize booking confirmations and follow-ups.",
+    "recommendationCategory": "Promote the highest-demand service category.",
+    "recommendationCatalog": "Grow the catalog to expand reach.",
     "stats": {
       "totalBookings": "Total Bookings",
       "pending": "Pending",

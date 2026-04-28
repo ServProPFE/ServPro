@@ -56,6 +56,12 @@
     "title": "Find the right professional",
     "subtitle": "Quality services for all your needs"
   },
+  "home": {
+    "smartTitle": "Smart suggestions",
+    "smartSubtitle": "Tap a suggestion to refine your search instantly",
+    "smartLoading": "Loading smart suggestions...",
+    "smartFallback": "Suggestions based on popular service requests"
+  },
   "offers": {
     "title": "Deals of the moment",
     "discount": "{{value}}% off",
@@ -227,7 +233,15 @@
     "company": "Company",
     "verification": "Verification",
     "services": "Services",
-    "portfolios": "Portfolios",
+    "analyticsTitle": "Provider insights",
+    "analyticsSubtitle": "Track activity and surface the strongest profiles",
+    "filterAll": "All",
+    "filterVerified": "Verified",
+    "filterActive": "High activity",
+    "filterPortfolio": "Portfolio rich",
+    "topProvider": "Top provider",
+    "avgServices": "Avg. services",
+    "portfolios": "Realisations",
     "openPortfolio": "Open Portfolio",
     "openDirectory": "Browse Providers",
     "fallbackName": "Provider",

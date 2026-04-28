@@ -56,6 +56,12 @@
     "title": "اعثر على المهني المناسب",
     "subtitle": "خدمات عالية الجودة لكل احتياجاتك"
   },
+  "home": {
+    "smartTitle": "اقتراحات ذكية",
+    "smartSubtitle": "اضغط على اقتراح لتضييق البحث فورًا",
+    "smartLoading": "جارٍ تحميل الاقتراحات الذكية...",
+    "smartFallback": "اقتراحات مبنية على أكثر طلبات الخدمات شيوعًا"
+  },
   "offers": {
     "title": "عروض اللحظة",
     "discount": "خصم {{value}}%",
@@ -227,7 +233,15 @@
     "company": "الشركة",
     "verification": "التحقق",
     "services": "الخدمات",
-    "portfolios": "الملفات",
+    "analyticsTitle": "رؤى المزوّدين",
+    "analyticsSubtitle": "تابع النشاط وحدد أفضل الملفات أداءً",
+    "filterAll": "الكل",
+    "filterVerified": "موثّق",
+    "filterActive": "نشاط مرتفع",
+    "filterPortfolio": "ملف غني",
+    "topProvider": "أفضل مزوّد",
+    "avgServices": "متوسط الخدمات",
+    "portfolios": "الأعمال",
     "openPortfolio": "فتح الملف",
     "openDirectory": "تصفح المزوّدين",
     "fallbackName": "مزوّد",

@@ -10,15 +10,15 @@ It follows the same visual direction as the web frontend:
 
 ## Features
 
-- Home feed with hero banner, active offers, and highlighted services
-- Service catalog with search and category filters
+- Home feed with hero banner, active offers, highlighted services, and AI-driven smart search suggestions
+- Service catalog with search, category filters, and relevance-ranked results
 - Service details screen
 - Authentication screens (login/register)
 - Profile management and session persistence
 - Logout actions in profile (header and quick actions)
 - Bookings view with status badges
-- AI chatbot screen (mobile tab)
-- Providers directory and provider portfolio screens
+- AI chatbot screen (mobile tab) with backend-provided recommendations and quick suggestions
+- Providers directory and provider portfolio screens with quick filters and provider insight metrics
 - Localization with English/Arabic resources aligned with the frontend app
 - API integration with fallback mock data for offline/demo usage
 
@@ -106,12 +106,21 @@ If chatbot displays the fallback message about AI availability, check:
 
 For containerized/Kubernetes runs, ensure the backend DNS/URL is reachable from the mobile runtime environment. The mobile app does not talk to the AI service directly; it only talks to the backend.
 
+The mobile app now also consumes `GET /chatbot/suggestions` to show quick AI search prompts on the home screen and in the chatbot tab.
+
 ## Localization
 
 - Mobile i18n bootstrap file: `i18n.ts`
 - Locale resources: `locales/en.json` and `locales/ar.json`
 - Resources mirror frontend i18n keys for consistency across web and mobile
 - Selected language is persisted in AsyncStorage and can be switched from Profile (EN/AR)
+
+## Discovery and AI UX
+
+- Home screen smart suggestion chips are loaded from the chatbot suggestion endpoint and can be used to refine service search instantly.
+- Service search uses relevance ranking rather than only plain substring filtering, so matches that better fit the query surface first.
+- The chatbot returns a recommended service payload when the backend has a confident match, and the UI renders the provider and service link directly.
+- The providers screen includes quick filters and lightweight analytics for verified, active, and portfolio-rich providers.
 
 ## Key Folders
 

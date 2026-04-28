@@ -18,11 +18,13 @@ Langues supportees: anglais et arabe (RTL).
 
 2. `ServProFrontEnd`
 - Application client (React + Vite)
-- Recherche, reservation, suivi, historique des transactions, chatbot
+- Recherche intelligente, reservation, suivi, historique des transactions, chatbot
+- Suggestions IA sur la page d'accueil, recherche a score, et annuaire prestataires avec filtres/insights
 
 3. `ServProDashboard`
 - Back-office prestataire/admin (React + Vite)
 - Gestion services, reservations, offres, disponibilites, transactions, factures
+- Tableau de bord enrichi avec des insights operationnels bases sur les donnees live
 
 4. `python_ai`
 - Microservice Flask sur `:5000`
@@ -189,6 +191,9 @@ Si `chatbot/health` retourne `degraded`, verifier en priorite la variable `PYTHO
 - Flux reservation: `PENDING -> CONFIRMED -> IN_PROGRESS -> DONE`
 - Transactions creees automatiquement a la confirmation
 - Chatbot bilingue avec suggestion de service et details prestataire
+- Suggestions rapides reutilisees entre mobile, front web, et chatbot
+- Recherche de services et de prestataires avec classement par pertinence
+- Insights prestataire/admin pour suivre les categories fortes, la qualite des profils et les tendances de performance
 - i18n EN/AR avec RTL cote frontend et dashboard
 - Annuaire prestataires: routes frontend `/providers` et `/providers/:providerId`
 - Endpoint public backend `GET /auth/providers` pour lister les utilisateurs `PROVIDER`

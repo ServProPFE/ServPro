@@ -48,6 +48,18 @@
   "dashboard": {
     "title": "لوحة التحكم",
     "welcome": "مرحبا، {{name}}",
+    "insightsTitle": "رؤى الذكاء الاصطناعي",
+    "insightsSubtitle": "توصيات تشغيلية من البيانات الحية",
+    "insightsDescription": "استخدم هذه الإشارات لتحديد أولويات التأكيدات ونمو الخدمات وتخطيط الإيرادات.",
+    "recommendationTitle": "الإجراء الموصى به",
+    "recommendationHeading": "ما الخطوة التالية؟",
+    "kpiTitle": "مؤشر أداء مباشر",
+    "topCategory": "أكثر فئة طلبًا",
+    "completionRate": "معدل الإكمال",
+    "averageRevenue": "متوسط الإيراد لكل حجز مكتمل",
+    "recommendationPending": "أعطِ أولوية لتأكيد الحجوزات والمتابعة معها.",
+    "recommendationCategory": "روّج لفئة الخدمات الأعلى طلبًا.",
+    "recommendationCatalog": "وسّع كتالوج الخدمات لزيادة الوصول.",
     "stats": {
       "totalBookings": "إجمالي الحجوزات",
       "pending": "قيد الانتظار",

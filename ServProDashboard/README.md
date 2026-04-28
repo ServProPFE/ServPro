@@ -10,7 +10,7 @@ Back-office web app for providers and admins to manage services, bookings, offer
 
 ## Features
 - 🌍 **Bilingual Support**: Full Arabic & English interface with RTL (Right-to-Left) layout
-- 📊 Dashboard with key metrics
+- 📊 Dashboard with key metrics and AI-style operational insights
 - 📋 Service management
 - 📅 Booking management with status updates
 - 💰 **Transaction management** (Admin)
@@ -122,6 +122,12 @@ The new transactions management system allows admins to:
 - Transactions endpoint: `GET/PUT/DELETE /transactions`
 - Transactions auto-created when booking status changes to CONFIRMED
 - Chatbot endpoints are proxied by the backend to the standalone Python AI service
+
+## Operations Insights
+
+- The dashboard surfaces a quick AI-style summary built from bookings and services data.
+- It highlights the top service category, completion rate, average revenue per completed booking, and a recommended next action.
+- These insights are intended to help providers/admins prioritize confirmations, promote high-demand services, and plan catalog growth.
 
 ## Common Issues
 - Access denied: Check user role matches the page requirements

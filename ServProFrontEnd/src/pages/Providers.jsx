@@ -9,10 +9,60 @@ const buildMapsSearchUrl = (...parts) => {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query || 'ServPro')}`;
 };
 
+const normalizeText = (value) => {
+  if (value === null || value === undefined) {
+    return '';
+  }
+
+  return String(value)
+    .normalize('NFD')
+    .replaceAll(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+};
+
+const scoreProvider = (provider, query) => {
+  const normalizedQuery = normalizeText(query);
+  const haystack = normalizeText([
+    provider.name,
+    provider.email,
+    provider.phone,
+    provider.companyName,
+    provider.location,
+    provider.verificationStatus,
+  ].join(' '));
+
+  if (!normalizedQuery) {
+    return provider.servicesCount * 0.3 + provider.portfoliosCount * 0.5 + (normalizeText(provider.verificationStatus).includes('verified') ? 2 : 0);
+  }
+
+  let score = 0;
+  if (haystack.startsWith(normalizedQuery)) score += 4;
+  if (haystack.includes(normalizedQuery)) score += 3;
+
+  const tokens = normalizedQuery.split(/\s+/).filter(Boolean);
+  const matchedTokens = tokens.filter((token) => haystack.includes(token)).length;
+  score += matchedTokens * 2;
+
+  if (matchedTokens === tokens.length) {
+    score += 2;
+  }
+
+  score += provider.servicesCount * 0.3;
+  score += provider.portfoliosCount * 0.5;
+
+  if (normalizeText(provider.verificationStatus).includes('verified')) {
+    score += 1;
+  }
+
+  return score;
+};
+
 const Providers = () => {
   const { t } = useTranslation();
   const [providers, setProviders] = useState([]);
   const [search, setSearch] = useState('');
+  const [activeFilter, setActiveFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -124,15 +174,39 @@ const Providers = () => {
 
   const filteredProviders = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return providers;
-    return providers.filter((provider) => {
-      const haystack = [provider.name, provider.email, provider.phone, provider.companyName, provider.location]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-      return haystack.includes(q);
+    const filteredBySegment = providers.filter((provider) => {
+      const isVerified = normalizeText(provider.verificationStatus).includes('verified');
+      const isActive = provider.servicesCount + provider.portfoliosCount >= 3;
+      const isPortfolioRich = provider.portfoliosCount >= 2;
+
+      if (activeFilter === 'verified' && !isVerified) return false;
+      if (activeFilter === 'active' && !isActive) return false;
+      if (activeFilter === 'portfolio' && !isPortfolioRich) return false;
+
+      return true;
     });
-  }, [providers, search]);
+
+    return filteredBySegment
+      .map((provider) => ({ provider, score: scoreProvider(provider, q) }))
+      .filter(({ score }) => (q ? score > 0 : true))
+      .sort((left, right) => right.score - left.score)
+      .map(({ provider }) => provider);
+  }, [activeFilter, providers, search]);
+
+  const analytics = useMemo(() => {
+    const verified = providers.filter((provider) => normalizeText(provider.verificationStatus).includes('verified')).length;
+    const averageServices = providers.length
+      ? Math.round(providers.reduce((sum, provider) => sum + provider.servicesCount, 0) / providers.length)
+      : 0;
+    const topProvider = providers.slice().sort((left, right) => scoreProvider(right, '') - scoreProvider(left, ''))[0] || null;
+
+    return {
+      total: providers.length,
+      verified,
+      averageServices,
+      topProvider,
+    };
+  }, [providers]);
 
   const featuredProvider = filteredProviders[0] || providers[0] || null;
   const featuredMapUrl = buildMapsSearchUrl(
@@ -172,6 +246,43 @@ const Providers = () => {
                 />
               </div>
             </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              {[
+                { key: 'all', label: t('providers.filterAll', { defaultValue: 'All' }) },
+                { key: 'verified', label: t('providers.filterVerified', { defaultValue: 'Verified' }) },
+                { key: 'active', label: t('providers.filterActive', { defaultValue: 'High activity' }) },
+                { key: 'portfolio', label: t('providers.filterPortfolio', { defaultValue: 'Portfolio rich' }) },
+              ].map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => setActiveFilter(item.key)}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${activeFilter === item.key ? 'bg-slate-950 text-white shadow-lg shadow-slate-900/10' : 'border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'}`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <article className="rounded-2xl border border-sky-200 bg-sky-50 p-4 shadow-lg shadow-sky-100/40">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">{t('providers.total', { defaultValue: 'Total providers' })}</p>
+              <p className="display-title mt-2 text-3xl font-extrabold text-slate-900">{analytics.total}</p>
+            </article>
+            <article className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-lg shadow-emerald-100/40">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">{t('providers.verifiedCount', { defaultValue: 'Verified' })}</p>
+              <p className="display-title mt-2 text-3xl font-extrabold text-slate-900">{analytics.verified}</p>
+            </article>
+            <article className="rounded-2xl border border-violet-200 bg-violet-50 p-4 shadow-lg shadow-violet-100/40">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-700">{t('providers.avgServices', { defaultValue: 'Avg. services' })}</p>
+              <p className="display-title mt-2 text-3xl font-extrabold text-slate-900">{analytics.averageServices}</p>
+            </article>
+            <article className="rounded-2xl border border-orange-200 bg-orange-50 p-4 shadow-lg shadow-orange-100/40">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-700">{t('providers.topProvider', { defaultValue: 'Top provider' })}</p>
+              <p className="mt-2 text-lg font-extrabold text-slate-900">{analytics.topProvider?.name || t('providers.noResults')}</p>
+            </article>
           </div>
 
           {loading && <p className="text-slate-700">{t('providers.loading')}</p>}

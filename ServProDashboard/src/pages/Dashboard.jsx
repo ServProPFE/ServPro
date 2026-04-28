@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { API_ENDPOINTS } from '../config/api';
 import apiService from '../services/apiService';
@@ -15,6 +15,7 @@ const Dashboard = () => {
     totalRevenue: 0,
   });
   const [recentBookings, setRecentBookings] = useState([]);
+  const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const normalizeItems = (payload) => {
@@ -53,6 +54,7 @@ const Dashboard = () => {
         totalServices: servicesArray.length,
         totalRevenue,
       });
+      setServices(servicesArray);
 
       // Get recent bookings
       const recent = bookingsArray
@@ -66,6 +68,42 @@ const Dashboard = () => {
       setLoading(false);
     }
   };
+
+  const dashboardInsights = useMemo(() => {
+    const categoryCounts = services.reduce((accumulator, service) => {
+      const category = service.category || 'AUTRE';
+      accumulator[category] = (accumulator[category] || 0) + 1;
+      return accumulator;
+    }, {});
+
+    const [topCategory, topCategoryCount] = Object.entries(categoryCounts)
+      .sort((left, right) => right[1] - left[1])[0] || ['AUTRE', 0];
+
+    const completedBookings = recentBookings.filter((booking) => booking.status === 'DONE').length;
+    const completionRate = recentBookings.length
+      ? Math.round((completedBookings / recentBookings.length) * 100)
+      : 0;
+
+    const averageRevenue = completedBookings > 0
+      ? Math.round(stats.totalRevenue / completedBookings)
+      : 0;
+
+    let recommendation = t('dashboard.recommendationCatalog', { defaultValue: 'Grow the catalog to expand reach.' });
+
+    if (stats.pendingBookings > Math.max(1, Math.round(stats.totalBookings * 0.3))) {
+      recommendation = t('dashboard.recommendationPending', { defaultValue: 'Prioritize booking confirmations and follow-ups.' });
+    } else if (topCategoryCount > 0) {
+      recommendation = t('dashboard.recommendationCategory', { defaultValue: 'Promote the highest-demand service category.' });
+    }
+
+    return {
+      topCategory,
+      topCategoryCount,
+      completionRate,
+      averageRevenue,
+      recommendation,
+    };
+  }, [recentBookings, services, stats.pendingBookings, stats.totalBookings, stats.totalRevenue, t]);
 
   if (loading) {
     return <div className="loading">{t('common.loading')}</div>;
@@ -104,6 +142,47 @@ const Dashboard = () => {
           icon="💰"
           color="green"
         />
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="rounded-2xl border border-sky-200 bg-sky-50 p-6 shadow-lg shadow-sky-100/50">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700">{t('dashboard.insightsTitle', { defaultValue: 'AI insights' })}</p>
+          <h2 className="display-title mt-2 text-2xl font-bold text-slate-900">{t('dashboard.insightsSubtitle', { defaultValue: 'Operational recommendations from live data' })}</h2>
+          <p className="mt-2 text-sm text-slate-600">{t('dashboard.insightsDescription', { defaultValue: 'Use these signals to prioritize confirmations, service growth, and revenue planning.' })}</p>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <article className="rounded-2xl border border-white bg-white p-4 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{t('dashboard.topCategory', { defaultValue: 'Top category' })}</p>
+              <p className="display-title mt-2 text-2xl font-extrabold text-slate-900">{t(`services.categories.${dashboardInsights.topCategory}`)}</p>
+              <p className="mt-1 text-sm text-slate-600">{dashboardInsights.topCategoryCount} {t('dashboard.stats.services').toLowerCase()}</p>
+            </article>
+            <article className="rounded-2xl border border-white bg-white p-4 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{t('dashboard.completionRate', { defaultValue: 'Completion rate' })}</p>
+              <p className="display-title mt-2 text-2xl font-extrabold text-slate-900">{dashboardInsights.completionRate}%</p>
+              <p className="mt-1 text-sm text-slate-600">{t('dashboard.averageRevenue', { defaultValue: 'Avg. revenue per completed booking' })}: {dashboardInsights.averageRevenue} TND</p>
+            </article>
+          </div>
+        </div>
+
+        <aside className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 shadow-lg shadow-emerald-100/50">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">{t('dashboard.recommendationTitle', { defaultValue: 'Recommended action' })}</p>
+          <h2 className="mt-2 text-2xl font-extrabold text-slate-900">{t('dashboard.recommendationHeading', { defaultValue: 'What to do next' })}</h2>
+          <p className="mt-3 text-sm leading-6 text-slate-700">{dashboardInsights.recommendation}</p>
+
+          <div className="mt-5 rounded-2xl border border-white bg-white p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{t('dashboard.kpiTitle', { defaultValue: 'Live KPI' })}</p>
+            <div className="mt-3 flex items-end justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold text-slate-500">{t('dashboard.stats.pending')}</p>
+                <p className="display-title text-3xl font-extrabold text-slate-900">{stats.pendingBookings}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-semibold text-slate-500">{t('dashboard.stats.revenue')}</p>
+                <p className="display-title text-3xl font-extrabold text-slate-900">{stats.totalRevenue} TND</p>
+              </div>
+            </div>
+          </div>
+        </aside>
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-900/5">
