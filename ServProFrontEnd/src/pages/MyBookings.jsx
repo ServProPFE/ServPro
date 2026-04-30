@@ -55,9 +55,7 @@ const MyBookings = () => {
     }
 
     try {
-      await apiService.patch(`${API_ENDPOINTS.BOOKING_BY_ID(bookingId)}/status`, {
-        status: 'CANCELLED',
-      });
+      await apiService.delete(API_ENDPOINTS.BOOKING_BY_ID(bookingId));
       fetchBookings();
     } catch (err) {
       alert(`${t('booking.cancelError')}: ${err.message}`);
