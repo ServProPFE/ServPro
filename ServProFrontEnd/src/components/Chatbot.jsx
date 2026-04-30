@@ -18,6 +18,18 @@ const normalizeItems = (payload) => {
   return [];
 };
 
+const resolveRecommendedServices = (services, fallbackService = null) => {
+  if (Array.isArray(services)) {
+    return services;
+  }
+
+  if (fallbackService) {
+    return [fallbackService];
+  }
+
+  return [];
+};
+
 const Chatbot = () => {
   const { t, i18n } = useTranslation();
   const { isAuthenticated } = useAuth();
@@ -28,7 +40,6 @@ const Chatbot = () => {
   const [suggestions, setSuggestions] = useState([]);
   const [awaitingPreference, setAwaitingPreference] = useState(false);
   const [preferenceContextMessage, setPreferenceContextMessage] = useState('');
-  const [catalogPriceRange, setCatalogPriceRange] = useState(null);
   const messagesEndRef = useRef(null);
 
   const createMessageId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -87,65 +98,24 @@ const Chatbot = () => {
     }
   }, [isOpen, loadSuggestions]);
 
-  useEffect(() => {
-    let isActive = true;
-
-    const loadCatalogPriceRange = async () => {
-      try {
-        const data = await apiService.get(API_ENDPOINTS.SERVICES);
-        const services = normalizeItems(data)
-          .map((service) => ({
-            price: Number(service?.priceMin),
-            currency: service?.currency || 'TND',
-          }))
-          .filter((service) => Number.isFinite(service.price));
-
-        if (!isActive || services.length === 0) {
-          return;
-        }
-
-        const prices = services.map((service) => service.price);
-        const minPrice = Math.min(...prices);
-        const maxPrice = Math.max(...prices);
-        const currency = services.find((service) => service.price === minPrice)?.currency || 'TND';
-
-        setCatalogPriceRange({
-          min: minPrice,
-          max: maxPrice,
-          currency,
-        });
-      } catch {
-        if (isActive) {
-          setCatalogPriceRange(null);
-        }
-      }
-    };
-
-    void loadCatalogPriceRange();
-
-    return () => {
-      isActive = false;
-    };
-  }, []);
-
   const formatServicePrice = (service) => {
     const priceMin = Number(service?.priceMin);
     const priceMax = Number(service?.priceMax);
-    const currency = service?.currency || catalogPriceRange?.currency || 'TND';
+    const currency = service?.currency || 'TND';
 
-    if (Number.isFinite(priceMin) && Number.isFinite(priceMax)) {
+    if (Number.isFinite(priceMin) && Number.isFinite(priceMax) && priceMax > priceMin) {
       return `${priceMin} - ${priceMax} ${currency}`;
-    }
-
-    if (catalogPriceRange) {
-      return `${catalogPriceRange.min} - ${catalogPriceRange.max} ${catalogPriceRange.currency}`;
     }
 
     if (Number.isFinite(priceMin)) {
       return `${priceMin} ${currency}`;
     }
 
-    return `0 ${currency}`;
+    if (Number.isFinite(priceMax)) {
+      return `${priceMax} ${currency}`;
+    }
+
+    return `- ${currency}`;
   };
 
   const handleSendMessage = async (messageText = null) => {
@@ -195,11 +165,15 @@ const Chatbot = () => {
         setPreferenceContextMessage('');
       }
 
+      const fallbackService = response?.recommendedService || response?.service || null;
+      const recommendedServices = resolveRecommendedServices(response?.recommendedServices, fallbackService);
+
       const botMessage = {
         id: createMessageId(),
         type: 'bot',
         text: normalizeBotMessage(response?.message),
-        service: response?.recommendedService || response?.service || null,
+        services: recommendedServices,
+        service: fallbackService,
         confidence: response?.confidence,
         timestamp: new Date()
       };
@@ -287,7 +261,13 @@ const Chatbot = () => {
               </div>
             )}
 
-            {messages.map((msg) => (
+            {messages.map((msg) => {
+              const hasArrayServices = Array.isArray(msg.services) && msg.services.length > 0;
+              const messageServices = hasArrayServices
+                ? msg.services
+                : resolveRecommendedServices(null, msg.service);
+
+              return (
               <div key={msg.id} className={`message ${msg.type}`}>
                 <div className="message-content">
                   <div className="message-text">
@@ -295,23 +275,26 @@ const Chatbot = () => {
                       <p key={`${msg.id}-${line}`}>{line}</p>
                     ))}
                   </div>
-                  {msg.service && (
-                    <div className="message-service-card">
-                      <h4>{resolveServiceName(t, msg.service.name)}</h4>
-                      <p className="service-provider">{t('chatbot.by')} {getProviderDisplay(msg.service.provider)}</p>
+                  {messageServices.map((recommendedService, index) => (
+                    <div
+                      key={`${msg.id}-${resolveServiceId(recommendedService) || index}`}
+                      className="message-service-card"
+                    >
+                      <h4>{resolveServiceName(t, recommendedService.name)}</h4>
+                      <p className="service-provider">{t('chatbot.by')} {getProviderDisplay(recommendedService.provider)}</p>
                       <p className="service-price">
-                        {formatServicePrice(msg.service)}
+                        {formatServicePrice(recommendedService)}
                       </p>
                       <p className="service-duration">
-                        {msg.service.duration} {i18n.language?.startsWith('ar') ? 'دقيقة' : 'minutes'}
+                        {recommendedService.duration} {i18n.language?.startsWith('ar') ? 'دقيقة' : 'minutes'}
                       </p>
-                      {resolveServiceId(msg.service) ? (
-                        <a href={`/services/${resolveServiceId(msg.service)}`} className="service-link">
+                      {resolveServiceId(recommendedService) ? (
+                        <a href={`/services/${resolveServiceId(recommendedService)}`} className="service-link">
                           {t('chatbot.viewService')}
                         </a>
                       ) : null}
                     </div>
-                  )}
+                  ))}
                   <span className="message-time">
                     {new Date(msg.timestamp).toLocaleTimeString(i18n.language, {
                       hour: '2-digit',
@@ -320,7 +303,8 @@ const Chatbot = () => {
                   </span>
                 </div>
               </div>
-            ))}
+            );
+            })}
 
             {isLoading && (
               <div className="message bot">

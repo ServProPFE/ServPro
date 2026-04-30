@@ -205,7 +205,15 @@ const getChatbotResponse = asyncHandler(async (req, res) => {
     bookingCounts: analytics.bookingCounts,
   });
   const categoryFallbackService = await getCategoryFallbackService(detected_service);
-  const recommendedService = localResponse.recommendedService || categoryFallbackService;
+  const recommendedServices = Array.isArray(localResponse.recommendedServices)
+    ? localResponse.recommendedServices.filter(Boolean)
+    : [];
+
+  if (recommendedServices.length === 0 && categoryFallbackService) {
+    recommendedServices.push(categoryFallbackService);
+  }
+
+  const recommendedService = recommendedServices[0] || localResponse.recommendedService || categoryFallbackService || null;
   const botMessage = getRecommendationMessage(aiAnalysis, language);
 
   const response = {
@@ -213,6 +221,7 @@ const getChatbotResponse = asyncHandler(async (req, res) => {
     detectedService: detected_service,
     confidence: confidence,
     recommendedService: recommendedService,
+    recommendedServices,
     needsPreference: needsPreference || localResponse.needsPreference,
     preferenceOptions: Array.isArray(aiAnalysis.preference_options) && aiAnalysis.preference_options.length > 0
       ? aiAnalysis.preference_options

@@ -131,6 +131,61 @@ const CATEGORY_SUGGESTIONS = {
   },
 };
 
+const PREFERENCE_ALIASES = {
+  cheapest: [
+    'cheap',
+    'cheapest',
+    'lowest price',
+    'budget',
+    'affordable',
+    'low cost',
+    'ar5es',
+    'arhes',
+    'ارخص',
+    'الأرخص',
+    'اقل سعر',
+  ],
+  most_expensive: [
+    'expensive',
+    'most expensive',
+    'premium',
+    'high end',
+    'costliest',
+    'اغلى',
+    'الأغلى',
+  ],
+  fastest: [
+    'fast',
+    'fastest',
+    'quick',
+    'quickest',
+    'urgent',
+    'soonest',
+    'asap',
+    'اسرع',
+    'الأسرع',
+    'عاجل',
+  ],
+  closest: [
+    'close',
+    'closest',
+    'near',
+    'nearest',
+    'nearby',
+    'around me',
+    'اقرب',
+    'الأقرب',
+    'قريب',
+  ],
+  farthest: [
+    'far',
+    'farthest',
+    'furthest',
+    'ابعد',
+    'الأبعد',
+  ],
+};
+
 const STOPWORDS = new Set([
   'a',
   'an',
@@ -181,6 +236,18 @@ const normalizeText = (value) => {
     .replaceAll(/[^\p{L}\p{N}]+/gu, ' ')
     .toLowerCase()
     .trim();
+};
+
+const parsePreferenceFromQuery = (query = '') => {
+  const normalizedQuery = normalizeText(query);
+  if (!normalizedQuery) {
+    return null;
+  }
+
+  const matchedEntry = Object.entries(PREFERENCE_ALIASES).find(([, aliases]) => aliases
+    .some((alias) => normalizedQuery.includes(normalizeText(alias))));
+
+  return matchedEntry ? matchedEntry[0] : null;
 };
 
 const tokenizeText = (value) => normalizeText(value)
@@ -432,6 +499,49 @@ const buildRecommendationPayload = (service, score = 0) => {
   };
 };
 
+const applyPreferenceOrdering = (rankedServices = [], preference = null) => {
+  if (!preference || rankedServices.length <= 1) {
+    return rankedServices;
+  }
+
+  const sortable = [...rankedServices];
+
+  if (preference === 'cheapest') {
+    return sortable.sort((left, right) => {
+      const leftPrice = Number(left?.service?.priceMin || Number.MAX_SAFE_INTEGER);
+      const rightPrice = Number(right?.service?.priceMin || Number.MAX_SAFE_INTEGER);
+      if (leftPrice !== rightPrice) {
+        return leftPrice - rightPrice;
+      }
+      return right.score - left.score;
+    });
+  }
+
+  if (preference === 'most_expensive') {
+    return sortable.sort((left, right) => {
+      const leftPrice = Number(left?.service?.priceMin || 0);
+      const rightPrice = Number(right?.service?.priceMin || 0);
+      if (leftPrice !== rightPrice) {
+        return rightPrice - leftPrice;
+      }
+      return right.score - left.score;
+    });
+  }
+
+  if (preference === 'fastest') {
+    return sortable.sort((left, right) => {
+      const leftDuration = Number(left?.service?.duration || Number.MAX_SAFE_INTEGER);
+      const rightDuration = Number(right?.service?.duration || Number.MAX_SAFE_INTEGER);
+      if (leftDuration !== rightDuration) {
+        return leftDuration - rightDuration;
+      }
+      return right.score - left.score;
+    });
+  }
+
+  return sortable;
+};
+
 const buildPreferenceOptions = (rankedServices, language = 'en') => {
   const options = [];
   const seenCategories = new Set();
@@ -449,10 +559,37 @@ const buildPreferenceOptions = (rankedServices, language = 'en') => {
   return options.slice(0, 3);
 };
 
-const buildAssistantMessage = ({ rankedServices, language = 'en', needsPreference = false }) => {
+const buildMultiRecommendationMessage = ({ language, recommendationCount, categoryLabel, preference }) => {
+  const isArabic = language === 'ar';
+  const localizedTemplates = {
+    cheapest: isArabic
+      ? `إليك أفضل ${recommendationCount} خيارات ضمن ${categoryLabel} مرتبة من الأرخص إلى الأغلى.`
+      : `Here are the top ${recommendationCount} ${categoryLabel} options, sorted from cheapest to priciest.`,
+    most_expensive: isArabic
+      ? `إليك أفضل ${recommendationCount} خيارات ضمن ${categoryLabel} مرتبة من الأغلى إلى الأقل تكلفة.`
+      : `Here are the top ${recommendationCount} ${categoryLabel} options, sorted from most premium to lower cost.`,
+    fastest: isArabic
+      ? `إليك أفضل ${recommendationCount} خيارات ضمن ${categoryLabel} مرتبة من الأسرع إلى الأبطأ.`
+      : `Here are the top ${recommendationCount} ${categoryLabel} options, sorted from fastest to slowest.`,
+    default: isArabic
+      ? `إليك أفضل ${recommendationCount} خيارات ضمن ${categoryLabel} حسب طلبك.`
+      : `Here are the top ${recommendationCount} ${categoryLabel} options based on your request.`,
+  };
+
+  return localizedTemplates[preference] || localizedTemplates.default;
+};
+
+const buildAssistantMessage = ({
+  rankedServices,
+  language = 'en',
+  needsPreference = false,
+  preference = null,
+  recommendationCount = 1,
+}) => {
+  const isArabic = language === 'ar';
   const bestService = rankedServices[0]?.service;
   if (!bestService) {
-    return language === 'ar'
+    return isArabic
       ? 'يمكنني مساعدتك في السباكة أو الكهرباء أو التكييف أو التنظيف. اكتب طلبك وسأقترح لك الخدمة المناسبة.'
       : 'I can help with plumbing, electrical, HVAC, or cleaning. Send your request and I will suggest the right service.';
   }
@@ -460,12 +597,21 @@ const buildAssistantMessage = ({ rankedServices, language = 'en', needsPreferenc
   const categoryLabel = localizeCategory(bestService.category, language);
 
   if (needsPreference) {
-    return language === 'ar'
+    return isArabic
       ? `وجدت عدة خيارات قريبة. هل تقصد ${categoryLabel} أم تريد خدمة أخرى؟`
       : `I found a few close matches. Did you mean ${categoryLabel}, or should I narrow it down another way?`;
   }
 
-  return language === 'ar'
+  if (recommendationCount > 1) {
+    return buildMultiRecommendationMessage({
+      language,
+      recommendationCount,
+      categoryLabel,
+      preference,
+    });
+  }
+
+  return isArabic
     ? `وجدت خدمة مناسبة: ${bestService.name} (${categoryLabel}).`
     : `I found a strong match: ${bestService.name} (${categoryLabel}).`;
 };
@@ -475,14 +621,34 @@ const buildLocalChatbotResponse = ({ message, language = 'en', services = [], pr
   const topScore = rankedServices[0]?.score || 0;
   const nextScore = rankedServices[1]?.score || 0;
   const detected = inferDetectedCategory(message, rankedServices);
-  const needsPreference = !rankedServices[0] || topScore < 0.12 || (topScore - nextScore) < 0.05;
-  const recommendation = buildRecommendationPayload(rankedServices[0]?.service, topScore);
+  const preference = parsePreferenceFromQuery(message);
+  const needsPreference = !preference && (!rankedServices[0] || topScore < 0.12 || (topScore - nextScore) < 0.05);
+
+  const dynamicThreshold = Math.max(0.08, topScore * 0.55);
+  const recommendationPool = rankedServices.filter(({ score }) => score >= dynamicThreshold).slice(0, 6);
+  const orderedPool = applyPreferenceOrdering(
+    recommendationPool.length > 0 ? recommendationPool : rankedServices.slice(0, 6),
+    preference,
+  );
+
+  const recommendations = orderedPool
+    .slice(0, 3)
+    .map(({ service, score }) => buildRecommendationPayload(service, score))
+    .filter(Boolean);
+  const recommendation = recommendations[0] || null;
 
   return {
-    message: buildAssistantMessage({ rankedServices, language, needsPreference }),
+    message: buildAssistantMessage({
+      rankedServices: orderedPool,
+      language,
+      needsPreference,
+      preference,
+      recommendationCount: recommendations.length,
+    }),
     detectedService: detected.detectedService,
     confidence: Number(Math.max(detected.confidence, topScore).toFixed(3)),
     recommendedService: recommendation,
+    recommendedServices: recommendations,
     needsPreference,
     preferenceOptions: buildPreferenceOptions(rankedServices, language),
     allScores: Object.fromEntries(
@@ -544,12 +710,14 @@ const buildDynamicSuggestions = ({ services = [], providerRatings, bookingCounts
 };
 
 module.exports = {
+  applyPreferenceOrdering,
   buildDynamicSuggestions,
   buildLocalChatbotResponse,
   buildRecommendationPayload,
   inferDetectedCategory,
   localizeCategory,
   normalizeText,
+  parsePreferenceFromQuery,
   rankServicesByQuery,
   tokenizeText,
 };
