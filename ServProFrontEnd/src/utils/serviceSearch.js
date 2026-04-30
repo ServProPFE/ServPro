@@ -1,5 +1,44 @@
 import { resolveServiceName } from './serviceName';
 
+const STOPWORDS = new Set([
+  'a',
+  'an',
+  'and',
+  'are',
+  'for',
+  'from',
+  'help',
+  'i',
+  'in',
+  'is',
+  'my',
+  'need',
+  'please',
+  'service',
+  'the',
+  'to',
+  'with',
+  'je',
+  'de',
+  'des',
+  'du',
+  'la',
+  'le',
+  'les',
+  'un',
+  'une',
+  'et',
+  'pour',
+  'sur',
+  'dans',
+  'avec',
+  'mon',
+  'ma',
+  'mes',
+  'nous',
+  'vous',
+]);
+
 const normalizeText = (value) => {
   if (value === null || value === undefined) {
     return '';
@@ -11,6 +50,8 @@ const normalizeText = (value) => {
     .toLowerCase()
     .trim();
 };
+
+const removeStopwords = (tokens) => tokens.filter((token) => !STOPWORDS.has(token) && token.length > 1);
 
 const extractProviderFields = (provider) => {
   if (!provider) {
@@ -61,19 +102,11 @@ const scoreServiceSearchMatch = (service, searchTokens, normalizedSearch, t) => 
   const haystack = buildServiceSearchText(service, t);
   let score = 0;
 
-  if (haystack.startsWith(normalizedSearch)) {
-    score += 4;
-  }
-
-  if (haystack.includes(normalizedSearch)) {
-    score += 3;
-  }
-
   const matchedTokens = searchTokens.filter((token) => haystack.includes(token)).length;
-  score += matchedTokens * 2;
+  score += matchedTokens * (100 / (searchTokens.length || 1));
 
-  if (matchedTokens === searchTokens.length) {
-    score += 2;
+  if (matchedTokens > 0) {
+    score += 15;
   }
 
   score += Number(service?.priceMin || 0) > 0 ? 0.25 : 0;
@@ -85,7 +118,8 @@ const scoreServiceSearchMatch = (service, searchTokens, normalizedSearch, t) => 
 export const filterServicesBySearch = ({ services, searchTerm, category = 'ALL', t }) => {
   const normalizedCategory = category || 'ALL';
   const normalizedSearch = normalizeText(searchTerm);
-  const searchTokens = normalizedSearch ? normalizedSearch.split(/\s+/).filter(Boolean) : [];
+  const rawTokens = normalizedSearch ? normalizedSearch.split(/\s+/).filter(Boolean) : [];
+  const searchTokens = removeStopwords(rawTokens);
 
   const matchedServices = (services || []).filter((service) => {
     if (normalizedCategory !== 'ALL' && service?.category !== normalizedCategory) {
@@ -97,7 +131,7 @@ export const filterServicesBySearch = ({ services, searchTerm, category = 'ALL',
     }
 
     const haystack = buildServiceSearchText(service, t);
-    return searchTokens.every((token) => haystack.includes(token));
+    return searchTokens.some((token) => haystack.includes(token));
   });
 
   if (searchTokens.length === 0) {

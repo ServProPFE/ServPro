@@ -20,7 +20,49 @@ type SuggestionsResponse = {
   ar?: string[];
 };
 
+const STOPWORDS = new Set([
+  'a',
+  'an',
+  'and',
+  'are',
+  'for',
+  'from',
+  'help',
+  'i',
+  'in',
+  'is',
+  'my',
+  'need',
+  'please',
+  'service',
+  'the',
+  'to',
+  'with',
+  'je',
+  'de',
+  'des',
+  'du',
+  'la',
+  'le',
+  'les',
+  'un',
+  'une',
+  'et',
+  'pour',
+  'sur',
+  'dans',
+  'avec',
+  'mon',
+  'ma',
+  'mes',
+  'nous',
+  'vous',
+]);
+
 const normalizeText = (value: string) => value.normalize('NFD').replaceAll(/\p{Diacritic}/gu, '').toLowerCase().trim();
+
+const removeStopwords = (tokens: string[]): string[] =>
+  tokens.filter((token) => !STOPWORDS.has(token) && token.length > 1);
 
 const resolveSuggestions = (payload: SuggestionsResponse, lang: 'en' | 'ar') => {
   if (Array.isArray(payload.suggestions)) return payload.suggestions;
@@ -38,20 +80,20 @@ const scoreService = (service: ServiceItem, query: string, t: (key: string, opti
     t(`services.categories.${service.category}`, { defaultValue: service.category }),
   ].join(' '));
 
-  const tokens = normalizeText(query).split(/\s+/).filter(Boolean);
+  const rawTokens = normalizeText(query).split(/\s+/).filter(Boolean);
+  const tokens = removeStopwords(rawTokens);
+
   if (tokens.length === 0) {
     return 0;
   }
 
   let score = 0;
-  if (haystack.startsWith(normalizeText(query))) score += 4;
-  if (haystack.includes(normalizeText(query))) score += 3;
 
   const matchedTokens = tokens.filter((token) => haystack.includes(token)).length;
-  score += matchedTokens * 2;
+  score += matchedTokens * (100 / (tokens.length || 1));
 
-  if (matchedTokens === tokens.length) {
-    score += 2;
+  if (matchedTokens > 0) {
+    score += 15;
   }
 
   return score;
