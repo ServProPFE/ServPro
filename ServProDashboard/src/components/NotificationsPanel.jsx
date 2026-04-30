@@ -1,6 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import notificationService from '../services/notificationService';
+
+const resolveServiceName = (rawName) => {
+  if (!rawName || typeof rawName !== 'string') {
+    return 'Service';
+  }
+  return rawName
+    .replace(/^services?Names\./, '')
+    .replaceAll(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replaceAll('_', ' ')
+    .replaceAll('.', ' ')
+    .replaceAll('-', ' ')
+    .trim()
+    .charAt(0).toUpperCase() + rawName.slice(1);
+};
 
 const NotificationsPanel = ({ open, onClose }) => {
   const { t } = useTranslation();
@@ -139,6 +154,11 @@ const NotificationsPanel = ({ open, onClose }) => {
                 <span className="rounded-full bg-slate-100 px-2 py-0.5">
                   {notification.actor?.name || t('notifications.system', { defaultValue: 'System' })}
                 </span>
+                {notification.metadata?.serviceName && (
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5">
+                    {resolveServiceName(notification.metadata.serviceName)}
+                  </span>
+                )}
               </div>
 
               {isUnread ? (
@@ -159,6 +179,11 @@ const NotificationsPanel = ({ open, onClose }) => {
       </div>
     </div>
   );
+};
+
+NotificationsPanel.propTypes = {
+  open: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
 };
 
 export default NotificationsPanel;

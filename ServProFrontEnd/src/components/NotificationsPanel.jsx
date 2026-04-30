@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import notificationService from '../services/notificationService';
+import { resolveServiceName } from '../utils/serviceName';
 
 const NotificationsPanel = ({ open, onClose }) => {
   const { t } = useTranslation();
@@ -139,6 +141,11 @@ const NotificationsPanel = ({ open, onClose }) => {
                 <span className="rounded-full bg-slate-100 px-2 py-0.5">
                   {notification.actor?.name || t('notifications.system', { defaultValue: 'System' })}
                 </span>
+                {notification.metadata?.serviceName && (
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5">
+                    {resolveServiceName(t, `serviceNames.${notification.metadata.serviceName}`, notification.metadata.serviceName)}
+                  </span>
+                )}
               </div>
 
               {isUnread ? (
@@ -159,6 +166,11 @@ const NotificationsPanel = ({ open, onClose }) => {
       </div>
     </div>
   );
+};
+
+NotificationsPanel.propTypes = {
+  open: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
 };
 
 export default NotificationsPanel;

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import notificationService from '../services/notificationService';
 import { useAuth } from '../context/AuthContext';
+import { resolveServiceName } from '../utils/serviceName';
 
 const Notifications = () => {
   const { t } = useTranslation();
@@ -103,9 +104,11 @@ const Notifications = () => {
           <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold">
             {notification.actor?.name || t('notifications.system', { defaultValue: 'System' })}
           </span>
-          <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold">
-            {notification.metadata?.serviceName || notification.destination}
-          </span>
+          {notification.metadata?.serviceName && (
+            <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold">
+              {resolveServiceName(t, `serviceNames.${notification.metadata.serviceName}`, notification.metadata.serviceName)}
+            </span>
+          )}
         </div>
 
         {isUnread ? (
