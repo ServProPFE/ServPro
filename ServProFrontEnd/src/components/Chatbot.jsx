@@ -80,6 +80,10 @@ const Chatbot = () => {
   };
 
   useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  useEffect(() => {
     // Show welcome message on first open
     if (isOpen && messages.length === 0) {
       setMessages([{
@@ -90,6 +94,8 @@ const Chatbot = () => {
       }]);
     }
   }, [isOpen, messages.length, t]);
+
+  const loadSuggestions = useCallback(async () => {
     try {
       const lang = i18n.language?.startsWith('ar') ? 'ar' : 'en';
       const data = await apiService.get(`${API_ENDPOINTS.CHATBOT_SUGGESTIONS}?language=${lang}`);

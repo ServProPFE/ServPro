@@ -60,6 +60,7 @@ function App() {
                 }
               />
               <Route path="/notifications" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>
           <Footer />
