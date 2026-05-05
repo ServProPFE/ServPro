@@ -11,9 +11,11 @@ const seedProviders = [
     email: "hassan@provider.com",
     phone: "+216 98 456 789",
     providerProfile: {
+      businessName: "Hassan Plomberie Services",
       companyName: "Hassan Plomberie Services",
       license: "PLB-2024-001",
       insurance: "INS-PLB-123456",
+      address: "Tunis",
       location: "Tunis",
       turnover: "120k TND/year",
       experienceYears: 8,
@@ -27,9 +29,11 @@ const seedProviders = [
     email: "karim@provider.com",
     phone: "+216 98 567 890",
     providerProfile: {
+      businessName: "Karim Electricite Pro",
       companyName: "Karim Electricite Pro",
       license: "ELEC-2024-002",
       insurance: "INS-ELEC-234567",
+      address: "Sfax",
       location: "Sfax",
       turnover: "180k TND/year",
       experienceYears: 12,
@@ -43,9 +47,11 @@ const seedProviders = [
     email: "salah@provider.com",
     phone: "+216 98 678 901",
     providerProfile: {
+      businessName: "Salah Clim Services",
       companyName: "Salah Clim Services",
       license: "CLIM-2024-003",
       insurance: "INS-CLIM-345678",
+      address: "Sousse",
       location: "Sousse",
       turnover: "150k TND/year",
       experienceYears: 10,
@@ -59,9 +65,11 @@ const seedProviders = [
     email: "amira@provider.com",
     phone: "+216 98 789 012",
     providerProfile: {
+      businessName: "Amira Clean Pro",
       companyName: "Amira Clean Pro",
       license: "CLEAN-2024-004",
       insurance: "INS-CLEAN-456789",
+      address: "Bizerte",
       location: "Bizerte",
       turnover: "95k TND/year",
       experienceYears: 5,
@@ -73,18 +81,22 @@ const seedProviders = [
 
 const providerProfileDefaults = {
   "hassan@provider.com": {
+    address: "Tunis",
     location: "Tunis",
     turnover: "120k TND/year",
   },
   "karim@provider.com": {
+    address: "Sfax",
     location: "Sfax",
     turnover: "180k TND/year",
   },
   "salah@provider.com": {
+    address: "Sousse",
     location: "Sousse",
     turnover: "150k TND/year",
   },
   "amira@provider.com": {
+    address: "Bizerte",
     location: "Bizerte",
     turnover: "95k TND/year",
   },

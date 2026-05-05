@@ -268,8 +268,12 @@ const extractProviderFields = (provider) => {
     provider.email,
     provider.phone,
     provider.companyName,
+    provider.businessName,
     provider.providerProfile?.companyName,
+    provider.providerProfile?.businessName,
+    provider.providerProfile?.address,
     provider.providerProfile?.location,
+    provider.providerProfile?.turnover,
     provider.providerProfile?.experienceYears,
     provider.providerProfile?.serviceRadius,
   ];

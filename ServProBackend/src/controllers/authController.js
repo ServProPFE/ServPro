@@ -16,7 +16,18 @@ const signToken = (user) => {
 
 //Contrôleur pour l'inscription d'un nouvel utilisateur
 const register = asyncHandler(async (req, res) => {
-  const { type, name, email, phone, password } = req.body;
+  const {
+    type,
+    name,
+    email,
+    phone,
+    password,
+    businessName,
+    address,
+    location,
+    turnover,
+    providerProfile: incomingProviderProfile,
+  } = req.body;
 
   if (!type || !name || !email || !password) {
     const error = new Error("Missing required fields");
@@ -32,7 +43,26 @@ const register = asyncHandler(async (req, res) => {
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
-  const user = await User.create({ type, name, email, phone, passwordHash });
+  const providerProfileInput = incomingProviderProfile || {};
+  const providerProfile = type === "PROVIDER"
+    ? {
+        ...providerProfileInput,
+        businessName: providerProfileInput.businessName || providerProfileInput.companyName || businessName,
+        companyName: providerProfileInput.companyName || providerProfileInput.businessName || businessName,
+        address: providerProfileInput.address || address || location,
+        location: providerProfileInput.location || address || location,
+        turnover: providerProfileInput.turnover ?? turnover,
+      }
+    : undefined;
+
+  const user = await User.create({
+    type,
+    name,
+    email,
+    phone,
+    passwordHash,
+    ...(providerProfile ? { providerProfile } : {}),
+  });
   const token = signToken(user);
 
   res.status(201).json({

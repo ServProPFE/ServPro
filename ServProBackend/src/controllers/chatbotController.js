@@ -113,7 +113,7 @@ const requestPythonAI = async ({ method = 'get', endpoint, data, timeoutMs = AI_
 const loadServiceAnalytics = async () => {
   const [services, bookings, ratings] = await Promise.all([
     Service.find({})
-      .populate('provider', 'name email phone providerProfile.companyName providerProfile.location providerProfile.experienceYears')
+      .populate('provider', 'name email phone providerProfile.companyName providerProfile.businessName providerProfile.address providerProfile.location providerProfile.turnover providerProfile.experienceYears')
       .lean(),
     Booking.aggregate([
       { $match: { status: { $ne: 'CANCELLED' } } },
