@@ -264,6 +264,29 @@ def has_preference_hint(user_input):
     return any(re.search(pattern, normalized_text) for pattern in preference_patterns)
 
 
+def extract_preference(user_input):
+    """Return normalized preference key if present in the user input, else None."""
+    if not user_input:
+        return None
+
+    text = user_input.strip().lower()
+
+    mapping = {
+        'cheapest': ['cheap', 'cheapest', 'low cost', 'budget', 'ارخص', 'الأرخص', 'اقل سعر'],
+        'most_expensive': ['expensive', 'premium', 'most expensive', 'اغلى', 'الأغلى'],
+        'closest': ['close', 'closest', 'near', 'nearest', 'nearby', 'اقرب', 'الأقرب'],
+        'farthest': ['far', 'farthest', 'furthest', 'ابعد', 'الأبعد'],
+        'fastest': ['fast', 'fastest', 'quick', 'urgent', 'soonest', 'اسرع', 'الأسرع']
+    }
+
+    for key, tokens in mapping.items():
+        for token in tokens:
+            if token in text:
+                return key
+
+    return None
+
+
 def build_preference_followup_message(language='en'):
     if language == 'ar':
         return 'ما هي أولويتك في الاختيار: الأرخص، الأغلى، الأقرب، الأبعد، أم الأسرع؟'
@@ -385,7 +408,7 @@ def fetch_backend_prompt_context(user_input):
     return context
 
 
-def llm_nlp_classify(user_input, language='en', prompt_context=None):
+def llm_nlp_classify(user_input, language='en', prompt_context=None, preference=None):
     """Use Gemini to perform structured NLP classification for service routing."""
     llm_result = {
         'enabled': bool(LLM_ENABLED and gemini_model),
@@ -415,6 +438,10 @@ def llm_nlp_classify(user_input, language='en', prompt_context=None):
             )
     backend_context_block = chr(10).join(backend_context_lines) if backend_context_lines else "- none"
 
+    pref_note = 'no preference'
+    if preference:
+        pref_note = preference
+
     prompt = f"""You are an NLP classifier for a home services chatbot.
 Return ONLY strict JSON, no markdown.
 
@@ -426,6 +453,7 @@ Live backend context candidates:
 
 Input language hint: {language}
 User input: \"{user_input}\"
+User preference: {pref_note}
 
 Output JSON schema:
 {{
@@ -1178,6 +1206,10 @@ def recommend():
         user_input = data.get('text', '').strip()
         language = data.get('language', 'en')
         is_first_prompt = bool(data.get('is_first_prompt', False))
+        # Allow explicit structured preference from caller; otherwise infer from text
+        preference = data.get('preference') or None
+        if not preference:
+            preference = extract_preference(user_input)
         
         if not user_input:
             return jsonify({
@@ -1219,18 +1251,34 @@ def recommend():
                 'all_scores': {}
             }), 200
         
-        prompt_context = fetch_backend_prompt_context(user_input)
+        # If a preference token was present, strip preference terms from the free-text
+        cleaned_input = str(user_input)
+        if preference:
+            pref_tokens = {
+                'cheapest': ['cheap', 'cheapest', 'low cost', 'budget', 'ارخص', 'الأرخص', 'اقل سعر'],
+                'most_expensive': ['expensive', 'premium', 'most expensive', 'اغلى', 'الأغلى'],
+                'closest': ['close', 'closest', 'near', 'nearest', 'nearby', 'اقرب', 'الأقرب'],
+                'farthest': ['far', 'farthest', 'furthest', 'ابعد', 'الأبعد'],
+                'fastest': ['fast', 'fastest', 'quick', 'urgent', 'soonest', 'اسرع', 'الأسرع']
+            }
+            tokens_to_remove = pref_tokens.get(preference, [])
+            for tok in tokens_to_remove:
+                cleaned_input = re.sub(r"\\b" + re.escape(tok) + r"\\b", '', cleaned_input, flags=re.IGNORECASE)
+            cleaned_input = ' '.join(cleaned_input.split()).strip()
+
+        prompt_context = fetch_backend_prompt_context(cleaned_input)
 
         # Get baseline NLP recommendation then blend with structured LLM and deep model classification.
-        tfidf_result = recommender.recommend_service(user_input)
-        llm_result = llm_nlp_classify(user_input, language, prompt_context=prompt_context)
+        tfidf_result = recommender.recommend_service(cleaned_input)
+        llm_result = llm_nlp_classify(cleaned_input, language, prompt_context=prompt_context, preference=preference)
         result = merge_tfidf_llm_scores(tfidf_result, llm_result)
-        deep_result = deep_nlp_classify(user_input)
+        deep_result = deep_nlp_classify(cleaned_input)
         result = merge_with_deep_scores(result, deep_result)
         
         # Prepare response
         response = {
             'user_input': user_input,
+            'preference': preference,
             'detected_service': result['detected_service'],
             'confidence': result['confidence'],
             'language': language,
@@ -1263,7 +1311,12 @@ def recommend():
             })
             response['message'] = response['recommendations'][0]['message']
 
-            should_ask_preference = is_first_prompt and not has_preference_hint(user_input)
+            # Do not ask preference if caller provided it or it was inferred from text
+            should_ask_preference = is_first_prompt and not (preference or has_preference_hint(user_input))
+            # If an explicit preference was provided, ensure we don't mark needs_preference
+            if preference:
+                should_ask_preference = False
+
             if should_ask_preference:
                 preference_message = build_preference_followup_message(language)
                 response['message'] = preference_message
@@ -1320,11 +1373,27 @@ def analyze():
         if not user_input:
             return jsonify({'error': 'Empty input'}), 400
         
-        prompt_context = fetch_backend_prompt_context(user_input)
-        tfidf_result = recommender.recommend_service(user_input)
-        llm_result = llm_nlp_classify(user_input, language, prompt_context=prompt_context)
+        # Consider explicit or inferred preference for analysis
+        preference = data.get('preference') or extract_preference(user_input)
+        cleaned_input = str(user_input)
+        if preference:
+            pref_tokens = {
+                'cheapest': ['cheap', 'cheapest', 'low cost', 'budget', 'ارخص', 'الأرخص', 'اقل سعر'],
+                'most_expensive': ['expensive', 'premium', 'most expensive', 'اغلى', 'الأغلى'],
+                'closest': ['close', 'closest', 'near', 'nearest', 'nearby', 'اقرب', 'الأقرب'],
+                'farthest': ['far', 'farthest', 'furthest', 'ابعد', 'الأبعد'],
+                'fastest': ['fast', 'fastest', 'quick', 'urgent', 'soonest', 'اسرع', 'الأسرع']
+            }
+            tokens_to_remove = pref_tokens.get(preference, [])
+            for tok in tokens_to_remove:
+                cleaned_input = re.sub(r"\\b" + re.escape(tok) + r"\\b", '', cleaned_input, flags=re.IGNORECASE)
+            cleaned_input = ' '.join(cleaned_input.split()).strip()
+
+        prompt_context = fetch_backend_prompt_context(cleaned_input)
+        tfidf_result = recommender.recommend_service(cleaned_input)
+        llm_result = llm_nlp_classify(cleaned_input, language, prompt_context=prompt_context, preference=preference)
         result = merge_tfidf_llm_scores(tfidf_result, llm_result)
-        deep_result = deep_nlp_classify(user_input)
+        deep_result = deep_nlp_classify(cleaned_input)
         result = merge_with_deep_scores(result, deep_result)
         
         return jsonify({

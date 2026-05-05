@@ -176,10 +176,24 @@ const Chatbot = () => {
     try {
       const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
       const isFirstPrompt = messages.filter((chatMessage) => chatMessage.type === 'user').length === 0;
-      const outboundMessage = `${pendingRequest}. Preference: ${payloadText}`;
+
+      // Normalize preference choice into one of the server keys
+      const normalizePreference = (text) => {
+        if (!text) return null;
+        const v = text.trim().toLowerCase();
+        if (/cheap|cheapest|budget|low/.test(v) || /ارخص|الأرخص|اقل/.test(v)) return 'cheapest';
+        if (/expensive|premium|most/.test(v) || /اغلى|الأغلى/.test(v)) return 'most_expensive';
+        if (/close|closest|near|nearest|nearby/.test(v) || /اقرب|الأقرب/.test(v)) return 'closest';
+        if (/far|farthest|furthest/.test(v) || /ابعد|الأبعد/.test(v)) return 'farthest';
+        if (/fast|fastest|quick|urgent|soon/.test(v) || /اسرع|الأسرع/.test(v)) return 'fastest';
+        return null;
+      };
+
+      const prefKey = normalizePreference(payloadText);
 
       const response = await apiService.post(API_ENDPOINTS.CHATBOT, {
-        message: outboundMessage,
+        message: pendingRequest,
+        preference: prefKey,
         language: language,
         isFirstPrompt
       });

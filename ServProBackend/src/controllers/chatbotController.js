@@ -154,7 +154,7 @@ const getCategoryFallbackService = async (detectedService) => {
 
 // Get chatbot response with Python AI analysis
 const getChatbotResponse = asyncHandler(async (req, res) => {
-  const { message, language = 'en', isFirstPrompt = false } = req.body;
+  const { message, language = 'en', isFirstPrompt = false, preference = null } = req.body;
 
   if (!message || message.trim() === '') {
     const error = new Error(language === 'ar' ? 'الرسالة فارغة' : 'Message cannot be empty');
@@ -172,7 +172,8 @@ const getChatbotResponse = asyncHandler(async (req, res) => {
       data: {
         text: message,
         language: language,
-        is_first_prompt: Boolean(isFirstPrompt)
+        is_first_prompt: Boolean(isFirstPrompt),
+        preference: preference
       }
     });
   } catch (aiError) {
