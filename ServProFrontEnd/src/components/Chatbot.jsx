@@ -39,8 +39,10 @@ const Chatbot = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [awaitingPreference, setAwaitingPreference] = useState(false);
-  const [preferenceContextMessage, setPreferenceContextMessage] = useState('');
+  const [pendingRequest, setPendingRequest] = useState('');
   const messagesEndRef = useRef(null);
+
+  const preferenceChoices = ['cheapest', 'fastest', 'closest', 'most_expensive', 'farthest'];
 
   const createMessageId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
@@ -78,10 +80,16 @@ const Chatbot = () => {
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const loadSuggestions = useCallback(async () => {
+    // Show welcome message on first open
+    if (isOpen && messages.length === 0) {
+      setMessages([{
+        id: createMessageId(),
+        type: 'bot',
+        text: t('chatbot.preferenceIntro'),
+        timestamp: new Date()
+      }]);
+    }
+  }, [isOpen, messages.length, t]);
     try {
       const lang = i18n.language?.startsWith('ar') ? 'ar' : 'en';
       const data = await apiService.get(`${API_ENDPOINTS.CHATBOT_SUGGESTIONS}?language=${lang}`);
@@ -118,9 +126,10 @@ const Chatbot = () => {
     return `- ${currency}`;
   };
 
-  const handleSendMessage = async (messageText = null) => {
-    const message = messageText || inputMessage.trim();
-    if (!message) return;
+  const handleSendMessage = async (messageText = null, displayText = null) => {
+    const payloadText = (messageText || inputMessage.trim());
+    const visibleText = (displayText || messageText || inputMessage.trim());
+    if (!payloadText) return;
 
     if (!isAuthenticated) {
       setMessages([...messages, {
@@ -136,20 +145,32 @@ const Chatbot = () => {
     const userMessage = {
       id: createMessageId(),
       type: 'user',
-      text: message,
+      text: visibleText,
       timestamp: new Date()
     };
     setMessages(prev => [...prev, userMessage]);
     setInputMessage('');
+
+    // If no pending request, capture this as the request and ask for preference
+    if (!pendingRequest) {
+      setPendingRequest(payloadText);
+      setAwaitingPreference(true);
+      setMessages(prev => [...prev, {
+        id: createMessageId(),
+        type: 'bot',
+        text: t('chatbot.preferencePrompt'),
+        timestamp: new Date()
+      }]);
+      return;
+    }
+
+    // We have both request and preference, now send to AI
     setIsLoading(true);
 
     try {
       const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
       const isFirstPrompt = messages.filter((chatMessage) => chatMessage.type === 'user').length === 0;
-      const preferencePrefix = language === 'ar' ? 'الأولوية' : 'Preference';
-      const outboundMessage = awaitingPreference && preferenceContextMessage
-        ? `${preferenceContextMessage}. ${preferencePrefix}: ${message}`
-        : message;
+      const outboundMessage = `${pendingRequest}. Preference: ${payloadText}`;
 
       const response = await apiService.post(API_ENDPOINTS.CHATBOT, {
         message: outboundMessage,
@@ -159,10 +180,9 @@ const Chatbot = () => {
 
       if (response?.needsPreference) {
         setAwaitingPreference(true);
-        setPreferenceContextMessage(message);
       } else {
         setAwaitingPreference(false);
-        setPreferenceContextMessage('');
+        setPendingRequest('');
       }
 
       const fallbackService = response?.recommendedService || response?.service || null;
@@ -243,6 +263,7 @@ const Chatbot = () => {
                 <div className="welcome-icon">👋</div>
                 <h4>{t('chatbot.welcome')}</h4>
                 <p>{t('chatbot.welcomeMessage')}</p>
+                <p style={{ fontSize: '0.85em', color: '#666', marginTop: '8px' }}>{t('chatbot.preferenceHint')}</p>
                 
                 {suggestions.length > 0 && (
                   <div className="chatbot-suggestions">
@@ -258,6 +279,23 @@ const Chatbot = () => {
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+
+            {awaitingPreference && (
+              <div className="chatbot-preferences">
+                <p className="preferences-label">{t('chatbot.preferenceActionsLabel')}</p>
+                <div className="preferences-grid">
+                  {preferenceChoices.map((choice) => (
+                    <button
+                      key={choice}
+                      className="preference-chip"
+                      onClick={() => handleSendMessage(choice, t(`chatbot.preferences.${choice}`))}
+                    >
+                      {t(`chatbot.preferences.${choice}`)}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 

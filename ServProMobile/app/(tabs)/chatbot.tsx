@@ -9,7 +9,6 @@ import { AppTheme } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { API_ENDPOINTS } from '@/services/apiConfig';
 import { apiService } from '@/services/apiService';
-import { servproDataService } from '@/services/servproDataService';
 
 type ChatRole = 'user' | 'bot';
 
@@ -24,11 +23,6 @@ type ChatService = {
   duration?: number;
 };
 
-type CatalogPriceRange = {
-  min: number;
-  max: number;
-  currency: string;
-};
 
 type ChatResponse = {
   message?: string;
@@ -61,6 +55,14 @@ const resolveSuggestions = (payload: SuggestionsResponse, lang: 'en' | 'ar') => 
 
 const resolveServiceId = (service?: ChatService | null) => service?._id || service?.id;
 
+const preferenceChoices = [
+  'cheapest',
+  'fastest',
+  'closest',
+  'most_expensive',
+  'farthest',
+] as const;
+
 const resolveProviderName = (provider?: ChatService['provider']) => {
   if (!provider) return '';
   if (typeof provider === 'string') return provider;
@@ -89,67 +91,42 @@ export default function ChatbotScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [awaitingPreference, setAwaitingPreference] = useState(false);
-  const [preferenceContextMessage, setPreferenceContextMessage] = useState('');
-  const [catalogPriceRange, setCatalogPriceRange] = useState<CatalogPriceRange | null>(null);
+  const [pendingRequest, setPendingRequest] = useState('');
 
   const chatLanguage = useMemo<'en' | 'ar'>(() => (i18n.language?.startsWith('ar') ? 'ar' : 'en'), [i18n.language]);
 
   useEffect(() => {
-    let isActive = true;
-
-    const loadCatalogPriceRange = async () => {
-      try {
-        const services = await servproDataService.getServices();
-        const pricedServices = services
-          .map((service) => ({
-            price: Number(service.priceMin),
-            currency: service.currency || 'TND',
-          }))
-          .filter((service) => Number.isFinite(service.price));
-
-        if (!isActive || pricedServices.length === 0) {
-          return;
-        }
-
-        const prices = pricedServices.map((service) => service.price);
-        const minPrice = Math.min(...prices);
-        const maxPrice = Math.max(...prices);
-        const currency = pricedServices.find((service) => service.price === minPrice)?.currency || 'TND';
-
-        setCatalogPriceRange({
-          min: minPrice,
-          max: maxPrice,
-          currency,
-        });
-      } catch {
-        if (isActive) {
-          setCatalogPriceRange(null);
-        }
+    setMessages((previousMessages) => {
+      if (previousMessages.length > 0) {
+        return previousMessages;
       }
-    };
 
-    void loadCatalogPriceRange();
-
-    return () => {
-      isActive = false;
-    };
-  }, []);
+      return [
+        {
+          id: 'welcome-message',
+          role: 'bot',
+          text: t('chatbot.preferenceIntro'),
+          createdAt: new Date().toISOString(),
+        },
+      ];
+    });
+  }, [t]);
 
   const formatServicePrice = (service?: ChatService | null) => {
     const priceMin = Number(service?.priceMin);
     const priceMax = Number(service?.priceMax);
-    const currency = service?.currency || catalogPriceRange?.currency || 'TND';
+    const currency = service?.currency || 'TND';
 
-    if (Number.isFinite(priceMin) && Number.isFinite(priceMax)) {
+    if (Number.isFinite(priceMin) && Number.isFinite(priceMax) && priceMax > priceMin) {
       return `${priceMin} - ${priceMax} ${currency}`;
-    }
-
-    if (catalogPriceRange) {
-      return `${catalogPriceRange.min} - ${catalogPriceRange.max} ${catalogPriceRange.currency}`;
     }
 
     if (Number.isFinite(priceMin)) {
       return `${priceMin} ${currency}`;
+    }
+
+    if (Number.isFinite(priceMax)) {
+      return `${priceMax} ${currency}`;
     }
 
     return `0 ${currency}`;
@@ -175,25 +152,31 @@ export default function ChatbotScreen() {
     ]);
   };
 
-  const sendMessage = async (preset?: string) => {
-    const text = (preset ?? inputValue).trim();
-    if (!text || isLoading) return;
+  const sendMessage = async (preset?: string, displayText?: string) => {
+    const payloadText = (preset ?? inputValue).trim();
+    const visibleText = (displayText ?? preset ?? inputValue).trim();
+    if (!payloadText || isLoading) return;
 
     if (!isAuthenticated) {
       addMessage({ role: 'bot', text: t('chatbot.loginRequired') });
       return;
     }
 
-    addMessage({ role: 'user', text });
+    addMessage({ role: 'user', text: visibleText });
     setInputValue('');
+
+    if (!pendingRequest) {
+      setPendingRequest(payloadText);
+      setAwaitingPreference(true);
+      addMessage({ role: 'bot', text: t('chatbot.preferencePrompt') });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
       const isFirstPrompt = messages.filter((chatMessage) => chatMessage.role === 'user').length === 0;
-      const preferencePrefix = chatLanguage === 'ar' ? 'الأولوية' : 'Preference';
-      const outboundMessage = awaitingPreference && preferenceContextMessage
-        ? `${preferenceContextMessage}. ${preferencePrefix}: ${text}`
-        : text;
+      const outboundMessage = `${pendingRequest}. Preference: ${payloadText}`;
 
       const response = await apiService.post<ChatResponse>(API_ENDPOINTS.CHATBOT, {
         message: outboundMessage,
@@ -203,10 +186,9 @@ export default function ChatbotScreen() {
 
       if (response.needsPreference) {
         setAwaitingPreference(true);
-        setPreferenceContextMessage(text);
       } else {
         setAwaitingPreference(false);
-        setPreferenceContextMessage('');
+        setPendingRequest('');
       }
 
       addMessage({
@@ -239,6 +221,7 @@ export default function ChatbotScreen() {
           </View>
 
           <Text style={styles.heroMessage}>{t('chatbot.welcomeMessage')}</Text>
+          <Text style={styles.preferenceHelper}>{t('chatbot.preferenceHint')}</Text>
 
           <Pressable style={styles.reloadBtn} onPress={loadSuggestions}>
             <Ionicons name="refresh" size={14} color={AppTheme.colors.primary} />
@@ -252,6 +235,19 @@ export default function ChatbotScreen() {
                   <Text style={styles.suggestionText}>{suggestion}</Text>
                 </Pressable>
               ))}
+            </View>
+          ) : null}
+
+          {awaitingPreference ? (
+            <View style={styles.preferenceWrap}>
+              <Text style={styles.preferenceLabel}>{t('chatbot.preferenceActionsLabel')}</Text>
+              <View style={styles.preferenceChips}>
+                {preferenceChoices.map((choice) => (
+                  <Pressable key={choice} style={styles.preferenceChip} onPress={() => sendMessage(choice, t(`chatbot.preferences.${choice}`))}>
+                    <Text style={styles.preferenceChipText}>{t(`chatbot.preferences.${choice}`)}</Text>
+                  </Pressable>
+                ))}
+              </View>
             </View>
           ) : null}
         </View>
@@ -366,6 +362,12 @@ const styles = StyleSheet.create({
     color: '#e2e8f0',
     lineHeight: 20,
   },
+  preferenceHelper: {
+    marginTop: 8,
+    color: '#cbd5e1',
+    fontSize: 12,
+    lineHeight: 18,
+  },
   reloadBtn: {
     marginTop: 12,
     alignSelf: 'flex-start',
@@ -387,6 +389,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+  },
+  preferenceWrap: {
+    marginTop: 12,
+    gap: 8,
+  },
+  preferenceLabel: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  preferenceChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  preferenceChip: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.24)',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  preferenceChipText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '700',
   },
   suggestionChip: {
     backgroundColor: 'rgba(255,255,255,0.14)',

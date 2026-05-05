@@ -218,6 +218,17 @@
     "subtitle": "How can I help you today?",
     "welcome": "Welcome!",
     "welcomeMessage": "I'm your AI assistant. Ask me about our services or seek recommendations!",
+    "preferenceIntro": "Tell me what you need, then I will ask which preference matters most before I suggest a service.",
+    "preferenceHint": "I will wait for your preference before showing a recommendation.",
+    "preferencePrompt": "Which matters most for this request: cheapest, fastest, closest, premium, or farthest?",
+    "preferenceActionsLabel": "Choose a preference",
+    "preferences": {
+      "cheapest": "Cheapest",
+      "fastest": "Fastest",
+      "closest": "Closest",
+      "most_expensive": "Premium",
+      "farthest": "Farthest"
+    },
     "suggestionsLabel": "Quick suggestions:",
     "inputPlaceholder": "Type your message here...",
     "loginRequired": "Please log in to use the chatbot service.",

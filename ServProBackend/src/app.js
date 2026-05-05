@@ -36,6 +36,7 @@ const defaultAllowedOrigins = [
 	"https://app.servpro.local",
 	"http://localhost:5173",
 	"http://localhost:5174",
+	"https://servpro--0ptcatldvs.expo.app",
 ];
 
 const allowedOrigins = new Set(
@@ -50,8 +51,9 @@ const corsOptions = {
 		// Allow server-to-server and CLI requests that do not send Origin.
 		const isTrustedServproOrigin = /^https:\/\/[a-z0-9-]+\.servpro\.(tn|local)$/i.test(origin || "");
 		const isTrustedLocalhost = /^http:\/\/localhost(?::\d+)?$/i.test(origin || "");
+		const isTrustedExpoApp = /^https:\/\/[a-z0-9-]+\.expo\.app$/i.test(origin || "");
 
-		if (!origin || allowedOrigins.has(origin) || isTrustedServproOrigin || isTrustedLocalhost) {
+		if (!origin || allowedOrigins.has(origin) || isTrustedServproOrigin || isTrustedLocalhost || isTrustedExpoApp) {
 			callback(null, true);
 			return;
 		}

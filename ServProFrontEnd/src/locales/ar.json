@@ -218,6 +218,17 @@
     "subtitle": "كيف يمكنني مساعدتك اليوم؟",
     "welcome": "أهلاً وسهلاً!",
     "welcomeMessage": "أنا مساعدك الذكي. اسألني عن خدماتنا أو اطلب التوصيات!",
+    "preferenceIntro": "أخبرني بما تحتاج، ثم سأسأل أي تفضيل يهمك أكثر قبل أن أقترح عليك خدمة.",
+    "preferenceHint": "سأنتظر تفضيلك قبل عرض التوصيات.",
+    "preferencePrompt": "ما الذي يهمك أكثر في هذا الطلب: الأرخص، الأسرع، الأقرب، الفاخر، أو الأبعد؟",
+    "preferenceActionsLabel": "اختر تفضيلك",
+    "preferences": {
+      "cheapest": "الأرخص",
+      "fastest": "الأسرع",
+      "closest": "الأقرب",
+      "most_expensive": "الفاخر",
+      "farthest": "الأبعد"
+    },
     "suggestionsLabel": "اقتراحات سريعة:",
     "inputPlaceholder": "اكتب رسالتك هنا...",
     "loginRequired": "يرجى تسجيل الدخول لاستخدام خدمة الدردشة.",

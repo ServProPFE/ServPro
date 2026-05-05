@@ -1,6 +1,6 @@
 import { Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { AppBackground } from '@/components/servpro/AppBackground';
@@ -15,7 +15,7 @@ export default function ProfileScreen() {
 
   return (
     <AppBackground>
-      <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.headerCard}>
           <View style={styles.headerRow}>
             <View style={styles.avatar}>
@@ -132,7 +132,7 @@ export default function ProfileScreen() {
             </View>
           </View>
         )}
-      </View>
+      </ScrollView>
     </AppBackground>
   );
 }

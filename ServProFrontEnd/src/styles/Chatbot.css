@@ -353,6 +353,49 @@
   cursor: not-allowed;
 }
 
+.chatbot-preferences {
+  padding: 16px;
+  background: white;
+  border-top: 1px solid var(--border-color);
+  border-radius: 8px;
+  margin-top: 12px;
+}
+
+.preferences-label {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0 0 12px 0;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.preferences-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 8px;
+}
+
+.preference-chip {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 8px 12px;
+  cursor: pointer;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-color);
+  transition: all 0.2s;
+}
+
+.preference-chip:hover {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+  transform: scale(1.05);
+}
+
 /* RTL Support */
 [dir="rtl"] .chatbot-container {
   right: auto;
