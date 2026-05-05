@@ -15,10 +15,12 @@ const userSchema = new mongoose.Schema(
     passwordHash: { type: String, required: true },
     providerProfile: {
       companyName: { type: String },
+      businessName: { type: String },
+      address: { type: String },
       license: { type: String },
       insurance: { type: String },
       location: { type: String },
-      turnover: { type: String },
+      turnover: { type: Number },
       experienceYears: { type: Number, default: 0 },
       serviceRadius: { type: Number, default: 0 },
       verificationStatus: {

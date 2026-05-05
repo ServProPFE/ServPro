@@ -110,7 +110,7 @@ const ServiceDetail = () => {
           {providerInfo && (
             <div className="provider-info">
               <h2>{t('service.providerAbout')}</h2>
-              <div className="provider-card">
+              <div className="provider-card group">
                 <h3>{providerInfo.name}</h3>
                 {providerInfo.providerProfile && (
                   <>
@@ -120,10 +120,25 @@ const ServiceDetail = () => {
                     {providerInfo.providerProfile.experienceYears > 0 && (
                       <p><strong>{t('service.experience')}:</strong> {t('service.years', { count: providerInfo.providerProfile.experienceYears })}</p>
                     )}
+                    {providerInfo.providerProfile.location && (
+                      <p><strong>{t('providers.location')}:</strong> {providerInfo.providerProfile.location}</p>
+                    )}
                     <span className={`status-badge ${providerInfo.providerProfile.verificationStatus}`}>
                       {providerInfo.providerProfile.verificationStatus}
                     </span>
                   </>
+                )}
+                {/* Location Tooltip on Hover */}
+                {providerInfo.providerProfile?.location && (
+                  <div className="location-tooltip">
+                    <div className="tooltip-content">
+                      <span className="tooltip-icon">📍</span>
+                      <div>
+                        <p className="tooltip-label">{t('providers.location')}</p>
+                        <p className="tooltip-text">{providerInfo.providerProfile.location}</p>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>

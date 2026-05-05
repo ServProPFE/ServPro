@@ -14,6 +14,8 @@ const Register = () => {
     confirmPassword: '',
     businessName: '',
     address: '',
+    location: '',
+    turnover: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -156,6 +158,32 @@ const Register = () => {
                     value={formData.address}
                     onChange={handleChange}
                     placeholder={t('auth.addressPlaceholder')}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-400 focus:bg-white focus:ring-2 focus:ring-sky-100"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="location" className="text-sm font-semibold text-slate-700">{t('auth.location')}</label>
+                  <input
+                    type="text"
+                    id="location"
+                    name="location"
+                    value={formData.location}
+                    onChange={handleChange}
+                    placeholder={t('auth.locationPlaceholder', { defaultValue: 'Your business location' })}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-400 focus:bg-white focus:ring-2 focus:ring-sky-100"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="turnover" className="text-sm font-semibold text-slate-700">{t('auth.turnover')}</label>
+                  <input
+                    type="number"
+                    id="turnover"
+                    name="turnover"
+                    value={formData.turnover}
+                    onChange={handleChange}
+                    placeholder={t('auth.turnoverPlaceholder', { defaultValue: 'Annual turnover (optional)' })}
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-400 focus:bg-white focus:ring-2 focus:ring-sky-100"
                   />
                 </div>
