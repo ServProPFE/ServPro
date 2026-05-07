@@ -2,12 +2,16 @@ import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { API_ENDPOINTS } from '../config/api';
 import apiService from '../services/apiService';
+import pollingService from '../services/pollingService';
 import { useAuth } from '../context/AuthContext';
+import { useRealtimeContext } from '../context/RealtimeContext';
 import StatsCard from '../components/StatsCard';
+import RealtimeStatus from '../components/RealtimeStatus';
 
 const Dashboard = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { isConnected, onStats, onBookingUpdate } = useRealtimeContext();
   const [stats, setStats] = useState({
     totalBookings: 0,
     pendingBookings: 0,
@@ -17,6 +21,7 @@ const Dashboard = () => {
   const [recentBookings, setRecentBookings] = useState([]);
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [lastUpdate, setLastUpdate] = useState(null);
 
   const normalizeItems = (payload) => {
     if (Array.isArray(payload?.items)) {
@@ -30,7 +35,44 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+
+    // Set up polling as fallback (5-second interval)
+    const unsubscribeBookingsPolling = pollingService.subscribe('bookings', (data) => {
+      const bookingsArray = normalizeItems(data);
+      updateStats(bookingsArray);
+      const recent = bookingsArray
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 5);
+      setRecentBookings(recent);
+      setLastUpdate(new Date());
+    }, 5000);
+
+    const unsubscribeServicesPolling = pollingService.subscribe('services', (data) => {
+      const servicesArray = normalizeItems(data);
+      setServices(servicesArray);
+    }, 10000);
+
+    // Set up real-time listeners (if WebSocket available)
+    const unsubscribeStats = onStats((data) => {
+      setStats(data);
+      setLastUpdate(new Date());
+    });
+
+    const unsubscribeBookingUpdate = onBookingUpdate((data) => {
+      // Refetch data on booking update
+      fetchDashboardData();
+      setLastUpdate(new Date());
+    });
+
+    // Cleanup
+    return () => {
+      unsubscribeBookingsPolling();
+      unsubscribeServicesPolling();
+      unsubscribeStats();
+      unsubscribeBookingUpdate();
+      pollingService.stopAllPolling();
+    };
+  }, [onStats, onBookingUpdate]);
 
   const fetchDashboardData = async () => {
     try {
@@ -42,18 +84,7 @@ const Dashboard = () => {
       const bookingsArray = normalizeItems(bookingsData);
       const servicesArray = normalizeItems(servicesData);
 
-      const totalBookings = bookingsArray.length;
-      const pendingBookings = bookingsArray.filter(b => b.status === 'PENDING').length;
-      const totalRevenue = bookingsArray
-        .filter(b => b.status === 'DONE')
-        .reduce((sum, b) => sum + (b.totalPrice || 0), 0);
-
-      setStats({
-        totalBookings,
-        pendingBookings,
-        totalServices: servicesArray.length,
-        totalRevenue,
-      });
+      updateStats(bookingsArray);
       setServices(servicesArray);
 
       // Get recent bookings
@@ -61,12 +92,28 @@ const Dashboard = () => {
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
         .slice(0, 5);
       setRecentBookings(recent);
+      setLastUpdate(new Date());
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       setRecentBookings([]);
     } finally {
       setLoading(false);
     }
+  };
+
+  const updateStats = (bookingsArray) => {
+    const totalBookings = bookingsArray.length;
+    const pendingBookings = bookingsArray.filter(b => b.status === 'PENDING').length;
+    const totalRevenue = bookingsArray
+      .filter(b => b.status === 'DONE')
+      .reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+
+    setStats({
+      totalBookings,
+      pendingBookings,
+      totalServices: services.length,
+      totalRevenue,
+    });
   };
 
   const dashboardInsights = useMemo(() => {
@@ -114,9 +161,21 @@ const Dashboard = () => {
       <div className="group relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-xl shadow-slate-900/5 transition-all duration-300 ease-out hover:-translate-y-1 hover:border-sky-200 hover:shadow-2xl hover:shadow-sky-900/10">
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white via-white to-sky-50/60 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
         <div className="relative">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">Operations Center</p>
-        <h1 className="display-title mt-2 text-3xl font-extrabold text-slate-900 sm:text-4xl">{t('dashboard.title')}</h1>
-        <p className="mt-2 text-sm text-slate-600">{t('dashboard.welcome', { name: user?.name })}</p>
+          <div className="flex items-start justify-between gap-4 sm:items-center">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">Operations Center</p>
+              <h1 className="display-title mt-2 text-3xl font-extrabold text-slate-900 sm:text-4xl">{t('dashboard.title')}</h1>
+              <p className="mt-2 text-sm text-slate-600">{t('dashboard.welcome', { name: user?.name })}</p>
+            </div>
+            <div className="flex flex-col items-end gap-2">
+              <RealtimeStatus />
+              {lastUpdate && (
+                <span className="text-xs text-slate-500">
+                  {t('dashboard.lastUpdate', { defaultValue: 'Last update' })}: {lastUpdate.toLocaleTimeString()}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 

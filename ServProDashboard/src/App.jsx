@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { BrowserRouter as Router, Navigate, Routes, Route } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AuthProvider } from './context/AuthContext';
+import { RealtimeProvider } from './context/RealtimeContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Sidebar from './components/Sidebar';
 import NotificationsPanel from './components/NotificationsPanel';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import LiveUpdates from './components/LiveUpdates';
 import ServicesManagement from './pages/ServicesManagement';
 import ServiceForm from './pages/ServiceForm';
 import BookingsManagement from './pages/BookingsManagement';
@@ -64,6 +66,8 @@ function App() {
   return (
     <Router>
       <AuthProvider>
+        <RealtimeProvider>
+          <LiveUpdates />
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -121,6 +125,7 @@ function App() {
             }
           />
         </Routes>
+      </RealtimeProvider>
       </AuthProvider>
     </Router>
   );
