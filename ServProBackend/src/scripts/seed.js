@@ -595,24 +595,28 @@ const seedData = async () => {
       {
         name: "Certified Plumbing Technician",
         authority: "Tunisia Skilled Trades Board",
+        imageUrl: "https://images.unsplash.com/photo-1608148945033-01571c3e8553",
         expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
         provider: providers[0]._id,
       },
       {
         name: "Electrical Safety Specialist",
         authority: "National Electrical Institute",
+        imageUrl: "https://images.unsplash.com/photo-1621905251918-48416bd8575a",
         expiresAt: new Date(Date.now() + 540 * 24 * 60 * 60 * 1000),
         provider: providers[1]._id,
       },
       {
         name: "HVAC Maintenance Pro",
         authority: "Cooling Systems Academy",
+        imageUrl: "https://images.unsplash.com/photo-1581579186986-5a1863af95aa",
         expiresAt: new Date(Date.now() + 480 * 24 * 60 * 60 * 1000),
         provider: providers[2]._id,
       },
       {
         name: "Professional Cleaning Operator",
         authority: "Home Services Council",
+        imageUrl: "https://images.unsplash.com/photo-1585421514738-01798e348b17",
         expiresAt: new Date(Date.now() + 300 * 24 * 60 * 60 * 1000),
         provider: providers[3]._id,
       },

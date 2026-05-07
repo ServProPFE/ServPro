@@ -3,6 +3,7 @@ const { User } = require("../models/User");
 const { Service } = require("../models/Service");
 const { Portfolio } = require("../models/Portfolio");
 const { Availability } = require("../models/Availability");
+const { Certification } = require("../models/Certification");
 
 const seedProviders = [
   {
@@ -172,6 +173,37 @@ const providerPortfolios = {
   },
 };
 
+const providerCertifications = {
+  "hassan@provider.com": [
+    {
+      name: "Certified Plumbing Technician",
+      authority: "Tunisia Skilled Trades Board",
+      imageUrl: "https://images.unsplash.com/photo-1608148945033-01571c3e8553",
+    },
+  ],
+  "karim@provider.com": [
+    {
+      name: "Electrical Safety Specialist",
+      authority: "National Electrical Institute",
+      imageUrl: "https://images.unsplash.com/photo-1621905251918-48416bd8575a",
+    },
+  ],
+  "salah@provider.com": [
+    {
+      name: "HVAC Maintenance Pro",
+      authority: "Cooling Systems Academy",
+      imageUrl: "https://images.unsplash.com/photo-1581579186986-5a1863af95aa",
+    },
+  ],
+  "amira@provider.com": [
+    {
+      name: "Professional Cleaning Operator",
+      authority: "Home Services Council",
+      imageUrl: "https://images.unsplash.com/photo-1585421514738-01798e348b17",
+    },
+  ],
+};
+
 const providerAvailability = {
   "hassan@provider.com": [
     { day: 1, start: "08:00", end: "17:00" },
@@ -299,6 +331,44 @@ const seedProviderPortfolios = async (providerMap) => {
   return portfoliosCreated;
 };
 
+const ensureCertification = async (providerId, certificationDef) => {
+  const existing = await Certification.findOne({
+    provider: providerId,
+    name: certificationDef.name,
+  }).lean();
+
+  if (existing) {
+    return false;
+  }
+
+  await Certification.create({
+    ...certificationDef,
+    provider: providerId,
+    expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+  });
+  return true;
+};
+
+const seedProviderCertifications = async (providerMap) => {
+  let certificationsCreated = 0;
+
+  for (const [email, certDefs] of Object.entries(providerCertifications)) {
+    const provider = providerMap[email] || await User.findOne({ email }).lean();
+    if (!provider?._id) {
+      continue;
+    }
+
+    for (const certDef of certDefs) {
+      const created = await ensureCertification(provider._id, certDef);
+      if (created) {
+        certificationsCreated += 1;
+      }
+    }
+  }
+
+  return certificationsCreated;
+};
+
 const seedProviderAvailability = async (providerMap) => {
   let availabilityCreated = 0;
 
@@ -386,11 +456,12 @@ const ensureProductionSeedData = async () => {
 
   const servicesCreated = await seedProviderServices(providerMap);
   const portfoliosCreated = await seedProviderPortfolios(providerMap);
+  const certificationsCreated = await seedProviderCertifications(providerMap);
   const availabilityCreated = await seedProviderAvailability(providerMap);
   const providersUpdated = await backfillProviderProfileDefaults(providerMap);
 
-  console.log(`[production-seed] usersCreated=${usersCreated}, servicesCreated=${servicesCreated}, portfoliosCreated=${portfoliosCreated}, availabilityCreated=${availabilityCreated}, providersUpdated=${providersUpdated}`);
-  return { seeded: true, usersCreated, servicesCreated, portfoliosCreated, availabilityCreated, providersUpdated };
+  console.log(`[production-seed] usersCreated=${usersCreated}, servicesCreated=${servicesCreated}, portfoliosCreated=${portfoliosCreated}, certificationsCreated=${certificationsCreated}, availabilityCreated=${availabilityCreated}, providersUpdated=${providersUpdated}`);
+  return { seeded: true, usersCreated, servicesCreated, portfoliosCreated, certificationsCreated, availabilityCreated, providersUpdated };
 };
 
 module.exports = {

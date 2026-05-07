@@ -53,9 +53,23 @@ type AvailabilityItem = {
   day?: number;
   start?: string;
   end?: string;
+}
+
+type CertificationItem = {
+  _id?: string;
+  id?: string;
+  name?: string;
+  authority?: string;
+  imageUrl?: string;
+  image?: string;
+  expiresAt?: string;
 };
 
 const dayLabels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+const getDayLabel = (dayIndex: number): string => {
+  return dayLabels[dayIndex] || dayLabels[0];
+};
 
 const toArray = <T,>(payload: { items?: T[] } | T[] | undefined): T[] => {
   if (!payload) return [];
@@ -147,6 +161,7 @@ export default function ProviderPortfolioScreen() {
   const [availability, setAvailability] = useState<AvailabilityItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [certifications, setCertifications] = useState<CertificationItem[]>([]);
 
   useEffect(() => {
     if (!providerId) return;
@@ -156,11 +171,12 @@ export default function ProviderPortfolioScreen() {
       setError('');
 
       try {
-        const [providersRes, servicesRes, portfolioRes, availabilityRes] = await Promise.all([
+        const [providersRes, servicesRes, portfolioRes, availabilityRes, certificationsRes] = await Promise.all([
           apiService.get<{ items?: ProviderApiItem[] } | ProviderApiItem[]>(API_ENDPOINTS.PROVIDERS),
           apiService.get<{ items?: ServiceItem[] } | ServiceItem[]>(API_ENDPOINTS.SERVICES_BY_PROVIDER(providerId)),
           apiService.get<{ items?: PortfolioItem[] } | PortfolioItem[]>(API_ENDPOINTS.PORTFOLIOS_BY_PROVIDER(providerId)),
           apiService.get<{ items?: AvailabilityItem[] } | AvailabilityItem[]>(API_ENDPOINTS.AVAILABILITY_BY_PROVIDER(providerId)),
+          apiService.get<{ items?: CertificationItem[] } | CertificationItem[]>(API_ENDPOINTS.CERTIFICATIONS_BY_PROVIDER(providerId)).catch(() => ({ items: [] })),
         ]);
 
         const providerItems = toArray(providersRes);
@@ -170,6 +186,7 @@ export default function ProviderPortfolioScreen() {
         setServices(toArray(servicesRes));
         setPortfolio(toArray(portfolioRes));
         setAvailability(toArray(availabilityRes));
+        setCertifications(toArray(certificationsRes));
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : t('common.error', { message: 'Unknown error' }));
       } finally {
@@ -181,6 +198,15 @@ export default function ProviderPortfolioScreen() {
   }, [providerId, t]);
 
   const profile = provider?.providerProfile;
+
+  const availabilityByDay = [0, 1, 2, 3, 4, 5, 6].map((dayIndex) => ({
+    dayIndex,
+    dayLabel: getDayLabel(dayIndex),
+    slots: availability.filter((slot) => Number(slot.day) === dayIndex),
+  }));
+
+  const photoCertifications = certifications.filter((cert) => cert.imageUrl || cert.image);
+  const textCertifications = certifications.filter((cert) => !cert.imageUrl && !cert.image);
 
   return (
     <AppBackground>
@@ -265,16 +291,69 @@ export default function ProviderPortfolioScreen() {
               </View>
             )}
 
-            {/* Availability Section */}
+            {/* Certificates Section - Photo Gallery */}
+            {certifications.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>{t('providerPortfolio.certificatesTitle')}</Text>
+
+                {photoCertifications.length > 0 && (
+                  <View>
+                    <Text style={styles.subsectionTitle}>{t('providerPortfolio.certificatePhotos', { defaultValue: 'Certificate Photos' })}</Text>
+                    <View style={styles.certificateGrid}>
+                      {photoCertifications.map((cert, index) => {
+                        const imageUrl = cert.imageUrl || cert.image;
+                        return (
+                          <View key={cert._id || `cert-photo-${index}`} style={styles.certificateCard}>
+                            <Image source={{ uri: imageUrl }} style={styles.certificateImage} resizeMode="cover" />
+                            <View style={styles.certificateOverlay}>
+                              <Text style={styles.certificateName} numberOfLines={2}>{cert.name}</Text>
+                              {cert.authority && <Text style={styles.certificateAuthority} numberOfLines={1}>{cert.authority}</Text>}
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
+                )}
+
+                {textCertifications.length > 0 && (
+                  <View style={photoCertifications.length > 0 ? { marginTop: 16 } : undefined}>
+                    <Text style={styles.subsectionTitle}>{t('providerPortfolio.certificateDetails', { defaultValue: 'Certificate Details' })}</Text>
+                    {textCertifications.map((cert, index) => (
+                      <View key={cert._id || `cert-text-${index}`} style={styles.rowCard}>
+                        <Text style={styles.rowTitle}>{cert.name || t('providerPortfolio.certificateFallback')}</Text>
+                        <Text style={styles.rowSub}>{cert.authority || t('providerPortfolio.unknownAuthority')}</Text>
+                        {cert.expiresAt && <Text style={styles.rowSub}>{t('providerPortfolio.expiresOn')}: {new Date(cert.expiresAt).toLocaleDateString()}</Text>}
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Availability Section - Calendar Grid */}
             {availability.length > 0 && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>{t('providers.availability')}</Text>
-                {availability.map((slot) => (
-                  <View key={slot._id} style={styles.rowCard}>
-                    <Text style={styles.rowTitle}>{dayLabels[slot.day || 0] || '-'}</Text>
-                    <Text style={styles.rowSub}>{slot.start || '--:--'} - {slot.end || '--:--'}</Text>
-                  </View>
-                ))}
+                <View style={styles.calendarGrid}>
+                  {availabilityByDay.map(({ dayIndex, dayLabel, slots }) => (
+                    <View key={dayIndex} style={styles.dayCard}>
+                      <Text style={styles.dayTitle}>{dayLabel}</Text>
+                      <Text style={styles.dayCount}>{slots.length}</Text>
+                      <View style={styles.slotsContainer}>
+                        {slots.length > 0 ? (
+                          slots.map((slot) => (
+                            <View key={slot._id} style={styles.slotBadge}>
+                              <Text style={styles.slotText} numberOfLines={1}>{slot.start} - {slot.end}</Text>
+                            </View>
+                          ))
+                        ) : (
+                          <Text style={styles.noSlotText}>-</Text>
+                        )}
+                      </View>
+                    </View>
+                  ))}
+                </View>
               </View>
             )}
           </View>
@@ -440,6 +519,90 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e2e8f0',
     backgroundColor: '#e2e8f0',
+  },
+  certificateGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
+  },
+  certificateCard: {
+    width: '48%',
+    height: 120,
+    borderRadius: 10,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    backgroundColor: '#e2e8f0',
+  },
+  certificateImage: {
+    width: '100%',
+    height: '100%',
+  },
+  certificateOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(15, 23, 42, 0.8)',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  certificateName: {
+    color: '#ffffff',
+    fontWeight: '600',
+    fontSize: 11,
+  },
+  certificateAuthority: {
+    color: '#cbd5e1',
+    fontSize: 9,
+    marginTop: 2,
+  },
+  calendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
+  },
+  dayCard: {
+    width: '48%',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    backgroundColor: '#f8fafc',
+    padding: 10,
+  },
+  dayTitle: {
+    color: AppTheme.colors.text,
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  dayCount: {
+    color: '#64748b',
+    fontSize: 11,
+    marginTop: 4,
+  },
+  slotsContainer: {
+    marginTop: 6,
+    gap: 4,
+  },
+  slotBadge: {
+    backgroundColor: '#ffffff',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+  },
+  slotText: {
+    color: '#334155',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  noSlotText: {
+    color: '#94a3b8',
+    fontSize: 11,
+    fontWeight: '500',
   },
   gridRow: {
     flexDirection: 'row',

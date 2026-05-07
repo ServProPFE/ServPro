@@ -17,6 +17,7 @@ const CertificationsManagement = () => {
   const [formData, setFormData] = useState({
     name: '',
     authority: '',
+    imageUrl: '',
     expiresAt: '',
     provider: '',
   });
@@ -99,6 +100,7 @@ const CertificationsManagement = () => {
     const payload = {
       name: formData.name,
       authority: formData.authority,
+      imageUrl: formData.imageUrl || null,
       expiresAt: formData.expiresAt || null,
       provider: formData.provider || user?._id || user?.id,
     };
@@ -122,6 +124,7 @@ const CertificationsManagement = () => {
     setFormData({
       name: item.name || '',
       authority: item.authority || '',
+      imageUrl: item.imageUrl || '',
       expiresAt: item.expiresAt ? item.expiresAt.substring(0, 10) : '',
       provider: item.provider || '',
     });
@@ -176,6 +179,10 @@ const CertificationsManagement = () => {
 
               <div className="form-row">
                 <div className="form-group">
+                  <label htmlFor="imageUrl">{t('certifications.fields.imageUrl', { defaultValue: 'Certificate Photo URL' })}</label>
+                  <input id="imageUrl" name="imageUrl" type="url" placeholder="https://example.com/cert.jpg" value={formData.imageUrl} onChange={handleChange} />
+                </div>
+                <div className="form-group">
                   <label htmlFor="expiresAt">{t('certifications.fields.expiresAt')}</label>
                   <input id="expiresAt" name="expiresAt" type="date" value={formData.expiresAt} onChange={handleChange} />
                 </div>
@@ -206,6 +213,7 @@ const CertificationsManagement = () => {
           <table>
             <thead>
               <tr>
+                <th style={{ width: '60px' }}>{t('certifications.table.image', { defaultValue: 'Image' })}</th>
                 <th>{t('certifications.table.name')}</th>
                 <th>{t('certifications.table.authority')}</th>
                 <th>{t('certifications.table.expiresAt')}</th>
@@ -216,6 +224,13 @@ const CertificationsManagement = () => {
             <tbody>
               {items.map((item) => (
                 <tr key={item._id}>
+                  <td style={{ textAlign: 'center' }}>
+                    {item.imageUrl ? (
+                      <img src={item.imageUrl} alt="cert preview" style={{ width: '48px', height: '48px', borderRadius: '4px', objectFit: 'cover' }} />
+                    ) : (
+                      <span style={{ color: '#cbd5e1', fontSize: '12px' }}>-</span>
+                    )}
+                  </td>
                   <td>{item.name}</td>
                   <td>{item.authority || '-'}</td>
                   <td>{item.expiresAt ? new Date(item.expiresAt).toLocaleDateString() : '-'}</td>

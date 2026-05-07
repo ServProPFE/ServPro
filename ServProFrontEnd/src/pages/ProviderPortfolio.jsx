@@ -114,6 +114,27 @@ const ProviderPortfolio = () => {
     slots: availability.filter((slot) => Number(slot.day) === day.dayIndex),
   }));
 
+  const [selectedDate, setSelectedDate] = useState(null);
+
+  const generateUpcomingDates = (start = new Date(), weeks = 4) => {
+    const dates = [];
+    const totalDays = weeks * 7;
+    for (let i = 0; i < totalDays; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      dates.push(d);
+    }
+    return dates;
+  };
+
+  const upcomingDates = generateUpcomingDates(new Date(), 4);
+
+  const slotsForDate = (date) => {
+    if (!date) return [];
+    const weekday = date.getDay();
+    return availability.filter((s) => Number(s.day) === weekday);
+  };
+
   const profileInitial = (provider?.name || t('providerPortfolio.title') || 'P').slice(0, 1).toUpperCase();
 
   return (
@@ -275,55 +296,117 @@ const ProviderPortfolio = () => {
               </div>
             )}
 
-            {/* Certifications Section */}
+            {/* Certifications Section - Photo Gallery */}
             {mergedCertificationItems.length > 0 && (
               <div className="mb-8 border-b border-slate-200 pb-8">
                 <h2 className="text-xl font-semibold text-slate-900 mb-4">{t('providerPortfolio.certificatesTitle')}</h2>
-                <div className="space-y-2">
-                  {mergedCertificationItems.map((certification, index) => (
-                    <article key={certification._id || `cert-${index}`} className="rounded-lg border border-slate-200 px-4 py-3 hover:border-slate-300 transition">
-                      <p className="font-semibold text-slate-900">{certification.name || t('providerPortfolio.certificateFallback')}</p>
-                      <p className="text-sm text-slate-600">{certification.authority || t('providerPortfolio.unknownAuthority')}</p>
-                      {certification.expiresAt && <p className="text-sm text-slate-600">{t('providerPortfolio.expiresOn')}: {new Date(certification.expiresAt).toLocaleDateString()}</p>}
-                    </article>
-                  ))}
-                </div>
+
+                {/* Photo Certificates */}
+                {mergedCertificationItems.some(cert => cert.imageUrl || cert.image) && (
+                  <div className="mb-6">
+                    <p className="text-sm font-semibold text-slate-600 mb-3">{t('providerPortfolio.certificatePhotos', { defaultValue: 'Certificate Photos' })}</p>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      {mergedCertificationItems.filter(cert => cert.imageUrl || cert.image).map((certification, index) => {
+                        const imageUrl = certification.imageUrl || certification.image;
+                        return (
+                          <div key={certification._id || `cert-photo-${index}`} className="group relative rounded-xl overflow-hidden border border-slate-200 hover:border-slate-300 transition">
+                            <img
+                              src={imageUrl}
+                              alt={certification.name || t('providerPortfolio.certificateFallback')}
+                              className="w-full h-48 object-cover group-hover:scale-105 transition duration-300"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent opacity-0 group-hover:opacity-100 transition">
+                              <div className="absolute bottom-0 left-0 right-0 p-3">
+                                <p className="text-sm font-semibold text-white line-clamp-2">{certification.name || t('providerPortfolio.certificateFallback')}</p>
+                                {certification.authority && <p className="text-xs text-slate-200 line-clamp-1">{certification.authority}</p>}
+                                {certification.expiresAt && <p className="text-xs text-slate-300 mt-1">{t('providerPortfolio.expiresOn')}: {new Date(certification.expiresAt).toLocaleDateString()}</p>}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Text Certifications (without photos) */}
+                {mergedCertificationItems.some(cert => !cert.imageUrl && !cert.image) && (
+                  <div>
+                    <p className="text-sm font-semibold text-slate-600 mb-3">{t('providerPortfolio.certificateDetails', { defaultValue: 'Certificate Details' })}</p>
+                    <div className="space-y-2">
+                      {mergedCertificationItems.filter(cert => !cert.imageUrl && !cert.image).map((certification, index) => (
+                        <article key={certification._id || `cert-text-${index}`} className="rounded-lg border border-slate-200 px-4 py-3 hover:border-slate-300 transition">
+                          <p className="font-semibold text-slate-900">{certification.name || t('providerPortfolio.certificateFallback')}</p>
+                          <p className="text-sm text-slate-600">{certification.authority || t('providerPortfolio.unknownAuthority')}</p>
+                          {certification.expiresAt && <p className="text-sm text-slate-600">{t('providerPortfolio.expiresOn')}: {new Date(certification.expiresAt).toLocaleDateString()}</p>}
+                        </article>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Availability Section */}
-            {availabilityByDay.some(day => day.slots.length > 0) && (
+            {/* Availability Section - 4-week calendar */}
+            {availabilityByDay.some((day) => day.slots.length > 0) && (
               <div>
                 <div className="mb-6">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600">{t('providerPortfolio.availabilityTitle')}</p>
                   <h2 className="mt-1 text-xl font-semibold text-slate-900">{t('providerPortfolio.calendarTitle', { defaultValue: 'Calendar view' })}</h2>
-                  <p className="mt-1 text-sm text-slate-600">{t('providerPortfolio.calendarSubtitle', { defaultValue: 'Weekly schedule shown as a calendar-style grid.' })}</p>
+                  <p className="mt-1 text-sm text-slate-600">{t('providerPortfolio.calendarSubtitle', { defaultValue: 'Upcoming 4 weeks — tap a day to view slots.' })}</p>
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-7">
-                  {availabilityByDay.map(({ dayIndex, dayKey, slots }) => (
-                    <article key={dayKey} className="rounded-2xl border border-slate-200 bg-slate-50 p-3 hover:border-slate-300 transition">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-semibold text-slate-900">{t(`providerPortfolio.days.${dayIndex}`)}</p>
-                        <span className="rounded-full bg-white px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                          {slots.length}
-                        </span>
-                      </div>
-
-                      <div className="mt-3 space-y-2">
-                        {slots.length > 0 ? slots.map((slot) => (
-                          <div key={slot._id} className="rounded-xl bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">
-                            <p className="font-semibold text-slate-900">{slot.start || '--:--'} - {slot.end || '--:--'}</p>
-                          </div>
-                        )) : (
-                          <p className="rounded-xl border border-dashed border-slate-200 bg-white px-3 py-5 text-center text-sm text-slate-500">
-                            {t('providerPortfolio.noAvailability')}
-                          </p>
-                        )}
-                      </div>
-                    </article>
+                <div className="grid grid-cols-7 gap-2">
+                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+                    <div key={d} className="text-center text-xs font-semibold text-slate-500">{d}</div>
                   ))}
+
+                  {upcomingDates.map((date) => {
+                    const daySlots = slotsForDate(date);
+                    const isToday = new Date().toDateString() === date.toDateString();
+                    return (
+                      <button
+                        key={date.toISOString()}
+                        onClick={() => setSelectedDate(date)}
+                        className={`group relative flex h-24 flex-col items-start justify-between rounded-xl border p-3 text-left transition ${isToday ? 'ring-2 ring-teal-400' : 'hover:border-slate-300'}`}>
+                        <div className="flex w-full items-center justify-between">
+                          <span className="text-sm font-semibold text-slate-900">{date.getDate()}</span>
+                          <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-500">{daySlots.length}</span>
+                        </div>
+                        <div className="mt-1 w-full text-[12px] text-slate-600 line-clamp-3">
+                          {daySlots.length > 0 ? (
+                            daySlots.slice(0, 3).map((s, i) => (
+                              <div key={s._id || i} className="text-[12px]">{s.start || '--:--'} - {s.end || '--:--'}</div>
+                            ))
+                          ) : (
+                            <div className="text-[12px] text-slate-400">{t('providerPortfolio.noAvailabilityShort')}</div>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
+
+                {/* Selected date details */}
+                {selectedDate && (
+                  <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-slate-900">{selectedDate.toDateString()}</h3>
+                      <button onClick={() => setSelectedDate(null)} className="text-sm text-slate-500">{t('common.close')}</button>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      {slotsForDate(selectedDate).length > 0 ? (
+                        slotsForDate(selectedDate).map((s) => (
+                          <div key={s._id} className="rounded-lg border border-slate-100 px-3 py-2">
+                            <p className="font-semibold text-slate-900">{s.start || '--:--'} - {s.end || '--:--'}</p>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-slate-500">{t('providerPortfolio.noAvailability')}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

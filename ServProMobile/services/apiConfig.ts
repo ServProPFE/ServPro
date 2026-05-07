@@ -70,6 +70,8 @@ export const API_ENDPOINTS = {
   PORTFOLIOS: `${API_BASE_URL}/portfolios`,
   PORTFOLIOS_BY_PROVIDER: (providerId: string) => `${API_BASE_URL}/portfolios?providerId=${providerId}`,
   AVAILABILITY_BY_PROVIDER: (providerId: string) => `${API_BASE_URL}/availability?providerId=${providerId}`,
+  CERTIFICATIONS_BY_PROVIDER: (providerId: string) => `${API_BASE_URL}/certifications?providerId=${providerId}`,
   CHATBOT: `${API_BASE_URL}/chatbot`,
   CHATBOT_SUGGESTIONS: `${API_BASE_URL}/chatbot/suggestions`,
+  BASE_URL: API_BASE_URL,
 };

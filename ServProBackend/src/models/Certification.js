@@ -6,6 +6,7 @@ const certificationSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     authority: { type: String },
+    imageUrl: { type: String, description: "URL to certificate photo image" },
     expiresAt: { type: Date },
     provider: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   },
