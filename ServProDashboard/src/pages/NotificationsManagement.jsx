@@ -77,8 +77,9 @@ const NotificationsManagement = () => {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      <div className="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-xl shadow-slate-900/5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="group relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-xl shadow-slate-900/5 transition-all duration-300 ease-out hover:-translate-y-1 hover:border-sky-200 hover:shadow-2xl hover:shadow-sky-900/10">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white via-white to-sky-50/60 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">Operations Center</p>
             <h1 className="display-title mt-2 text-3xl font-extrabold text-slate-900 sm:text-4xl">
@@ -101,7 +102,7 @@ const NotificationsManagement = () => {
           </button>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-600">
+        <div className="relative mt-4 flex flex-wrap gap-3 text-sm text-slate-600">
           <span className="rounded-full bg-sky-100 px-3 py-1 font-semibold text-sky-700">
             {unreadCount} {t('notifications.unread', { defaultValue: 'unread' })}
           </span>
@@ -111,7 +112,7 @@ const NotificationsManagement = () => {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-900/5">
+      <div className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-900/5 transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-900/10">
         <div className="grid gap-4 p-4 sm:grid-cols-2 xl:grid-cols-3">
           {notifications.map((notification) => {
             const isUnread = !notification.readAt;
@@ -120,7 +121,7 @@ const NotificationsManagement = () => {
             return (
               <article
                 key={notification._id}
-                className={`flex h-full flex-col rounded-2xl border p-4 transition ${isUnread ? 'border-sky-300 bg-sky-50/70' : 'border-slate-200 bg-white'}`}
+                className={`flex h-full flex-col rounded-2xl border p-4 transition-all duration-300 ${isUnread ? 'border-sky-300 bg-sky-50/70' : 'border-slate-200 bg-white'} hover:-translate-y-0.5 hover:shadow-md`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>

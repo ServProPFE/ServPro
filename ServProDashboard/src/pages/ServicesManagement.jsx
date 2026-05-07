@@ -66,8 +66,9 @@ const ServicesManagement = () => {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      <div className="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-xl shadow-slate-900/5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="group relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-xl shadow-slate-900/5 transition-all duration-300 ease-out hover:-translate-y-1 hover:border-sky-200 hover:shadow-2xl hover:shadow-sky-900/10">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white via-white to-sky-50/60 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">Management</p>
             <h1 className="display-title mt-2 text-3xl font-extrabold text-slate-900">{t('services.title')}</h1>
@@ -84,7 +85,7 @@ const ServicesManagement = () => {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-900/5">
+      <div className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-900/5 transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-900/10">
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
             <thead className="bg-slate-50">
@@ -98,7 +99,7 @@ const ServicesManagement = () => {
             </thead>
             <tbody>
               {services.map(service => (
-                <tr key={service._id} className="border-t border-slate-100">
+                <tr key={service._id} className="border-t border-slate-100 transition-colors duration-200 hover:bg-slate-50/80">
                   <td className="px-5 py-4 font-semibold text-slate-900">{t(service.name)}</td>
                   <td className="px-5 py-4">
                     <span className="inline-flex rounded-full bg-teal-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-teal-700">{t(`services.categories.${service.category}`)}</span>
