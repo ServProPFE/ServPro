@@ -13,6 +13,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import MyBookings from './pages/MyBookings';
 import MyTransactions from './pages/MyTransactions';
+import MyProfile from './pages/MyProfile';
 import Providers from './pages/Providers';
 import ProviderPortfolio from './pages/ProviderPortfolio';
 
@@ -56,6 +57,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <MyTransactions />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <MyProfile />
                   </ProtectedRoute>
                 }
               />

@@ -113,6 +113,9 @@ const Navbar = () => {
                 <li>
                   <Link to="/my-transactions" className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/10" onClick={closeMenu}>{t('nav.myTransactions')}</Link>
                 </li>
+                <li>
+                  <Link to="/profile" className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/10" onClick={closeMenu}>{t('nav.profile', { defaultValue: 'Profile' })}</Link>
+                </li>
               </>
             )}
           </ul>
@@ -136,6 +139,9 @@ const Navbar = () => {
                   </button>
                   <NotificationsPanel open={notificationsOpen} onClose={closeNotifications} />
                 </div>
+                <Link to="/profile" className="rounded-full border border-white/25 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10" onClick={closeMenu}>
+                  {t('nav.profile', { defaultValue: 'Profile' })}
+                </Link>
                 <span className="text-sm font-medium text-slate-100">{t('nav.hello', { name: user?.name })}</span>
                 <button
                   onClick={handleLogout}
