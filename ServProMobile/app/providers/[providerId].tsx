@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocalSearchParams } from 'expo-router';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { AppBackground } from '@/components/servpro/AppBackground';
@@ -65,11 +65,7 @@ type CertificationItem = {
   expiresAt?: string;
 };
 
-const dayLabels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
-const getDayLabel = (dayIndex: number): string => {
-  return dayLabels[dayIndex] || dayLabels[0];
-};
+const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const toArray = <T,>(payload: { items?: T[] } | T[] | undefined): T[] => {
   if (!payload) return [];
@@ -198,12 +194,39 @@ export default function ProviderPortfolioScreen() {
   }, [providerId, t]);
 
   const profile = provider?.providerProfile;
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
-  const availabilityByDay = [0, 1, 2, 3, 4, 5, 6].map((dayIndex) => ({
-    dayIndex,
-    dayLabel: getDayLabel(dayIndex),
-    slots: availability.filter((slot) => Number(slot.day) === dayIndex),
-  }));
+  const today = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
+
+  const calendarDates = useMemo(() => {
+    const start = new Date(today);
+    start.setDate(today.getDate() - today.getDay());
+
+    return Array.from({ length: 42 }, (_, index) => {
+      const date = new Date(start);
+      date.setDate(start.getDate() + index);
+      return date;
+    });
+  }, [today]);
+
+  const calendarRows = useMemo(() => {
+    const rows: Date[][] = [];
+    for (let i = 0; i < calendarDates.length; i += 7) {
+      rows.push(calendarDates.slice(i, i + 7));
+    }
+    return rows;
+  }, [calendarDates]);
+
+  const slotsForDate = (date: Date) => {
+    const weekday = date.getDay();
+    return availability.filter((slot) => Number(slot.day) === weekday);
+  };
+
+  const hasAvailability = availability.some((slot) => Number(slot.day) >= 0 && Number(slot.day) <= 6);
 
   const photoCertifications = certifications.filter((cert) => cert.imageUrl || cert.image);
   const textCertifications = certifications.filter((cert) => !cert.imageUrl && !cert.image);
@@ -331,29 +354,59 @@ export default function ProviderPortfolioScreen() {
               </View>
             )}
 
-            {/* Availability Section - Calendar Grid */}
-            {availability.length > 0 && (
+            {/* Availability Section - Real Calendar */}
+            {hasAvailability && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>{t('providers.availability')}</Text>
+                <View style={styles.weekHeaderRow}>
+                  {dayLabels.map((label) => (
+                    <Text key={label} style={styles.weekHeaderText}>{label}</Text>
+                  ))}
+                </View>
+
                 <View style={styles.calendarGrid}>
-                  {availabilityByDay.map(({ dayIndex, dayLabel, slots }) => (
-                    <View key={dayIndex} style={styles.dayCard}>
-                      <Text style={styles.dayTitle}>{dayLabel}</Text>
-                      <Text style={styles.dayCount}>{slots.length}</Text>
-                      <View style={styles.slotsContainer}>
-                        {slots.length > 0 ? (
-                          slots.map((slot) => (
-                            <View key={slot._id} style={styles.slotBadge}>
-                              <Text style={styles.slotText} numberOfLines={1}>{slot.start} - {slot.end}</Text>
-                            </View>
-                          ))
-                        ) : (
-                          <Text style={styles.noSlotText}>-</Text>
-                        )}
-                      </View>
+                  {calendarRows.map((row, rowIndex) => (
+                    <View key={`row-${rowIndex}`} style={styles.calendarRow}>
+                      {row.map((date) => {
+                        const slotCount = slotsForDate(date).length;
+                        const isToday = date.toDateString() === today.toDateString();
+                        const isSelected = selectedDate ? date.toDateString() === selectedDate.toDateString() : false;
+
+                        return (
+                          <Pressable
+                            key={date.toISOString()}
+                            onPress={() => setSelectedDate(date)}
+                            style={[
+                              styles.calendarDateCell,
+                              isToday && styles.calendarDateCellToday,
+                              isSelected && styles.calendarDateCellSelected,
+                            ]}
+                          >
+                            <Text style={styles.calendarDateNumber}>{date.getDate()}</Text>
+                            <Text style={styles.calendarDateCount}>{slotCount}</Text>
+                          </Pressable>
+                        );
+                      })}
                     </View>
                   ))}
                 </View>
+
+                {selectedDate && (
+                  <View style={styles.selectedDatePanel}>
+                    <Text style={styles.selectedDateTitle}>{selectedDate.toDateString()}</Text>
+                    <View style={styles.slotsContainer}>
+                      {slotsForDate(selectedDate).length > 0 ? (
+                        slotsForDate(selectedDate).map((slot, idx) => (
+                          <View key={slot._id || `slot-${idx}`} style={styles.slotBadge}>
+                            <Text style={styles.slotText} numberOfLines={1}>{slot.start || '--:--'} - {slot.end || '--:--'}</Text>
+                          </View>
+                        ))
+                      ) : (
+                        <Text style={styles.noSlotText}>{t('providerPortfolio.noAvailability', { defaultValue: 'No availability' })}</Text>
+                      )}
+                    </View>
+                  </View>
+                )}
               </View>
             )}
           </View>
@@ -559,28 +612,76 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   calendarGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
     marginTop: 8,
+    gap: 6,
   },
-  dayCard: {
-    width: '48%',
+  weekHeaderRow: {
+    flexDirection: 'row',
+    marginTop: 4,
+    marginBottom: 8,
+    gap: 6,
+  },
+  weekHeaderText: {
+    flex: 1,
+    textAlign: 'center',
+    color: '#64748b',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  calendarRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  calendarDateCell: {
+    flex: 1,
+    minHeight: 56,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#e2e8f0',
     backgroundColor: '#f8fafc',
-    padding: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 7,
+    justifyContent: 'space-between',
   },
-  dayTitle: {
+  calendarDateCellToday: {
+    borderColor: '#14b8a6',
+    backgroundColor: '#ecfeff',
+  },
+  calendarDateCellSelected: {
+    borderColor: '#0f172a',
+    backgroundColor: '#f1f5f9',
+  },
+  calendarDateNumber: {
     color: AppTheme.colors.text,
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: 12,
   },
-  dayCount: {
-    color: '#64748b',
-    fontSize: 11,
-    marginTop: 4,
+  calendarDateCount: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    color: '#475569',
+    fontSize: 10,
+    fontWeight: '700',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    overflow: 'hidden',
+  },
+  selectedDatePanel: {
+    marginTop: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    backgroundColor: '#ffffff',
+    padding: 10,
+  },
+  selectedDateTitle: {
+    color: AppTheme.colors.text,
+    fontWeight: '800',
+    fontSize: 13,
+    marginTop: 8,
   },
   slotsContainer: {
     marginTop: 6,

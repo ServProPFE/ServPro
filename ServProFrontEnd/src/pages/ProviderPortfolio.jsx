@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import apiService from '../services/apiService';
@@ -127,7 +127,19 @@ const ProviderPortfolio = () => {
     return dates;
   };
 
-  const upcomingDates = generateUpcomingDates(new Date(), 4);
+  const today = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
+
+  const calendarStart = useMemo(() => {
+    const d = new Date(today);
+    d.setDate(today.getDate() - today.getDay());
+    return d;
+  }, [today]);
+
+  const calendarDates = useMemo(() => generateUpcomingDates(calendarStart, 6), [calendarStart]);
 
   const slotsForDate = (date) => {
     if (!date) return [];
@@ -250,44 +262,7 @@ const ProviderPortfolio = () => {
                             </div>
                           )}
 
-                          {Array.isArray(portfolio.certificates) && portfolio.certificates.length > 0 && (
-                            <div className="mt-4">
-                              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">
-                                {t('providerPortfolio.certificatesTitle')}
-                              </p>
-                              <div className="grid grid-cols-2 gap-2">
-                                {portfolio.certificates.filter(Boolean).map((certificateUrl, index) => (
-                                  <div
-                                    key={`${portfolio._id}-certificate-${index}`}
-                                    className="flex h-24 w-full flex-col justify-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
-                                  >
-                                    <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">PDF</span>
-                                    <span className="mt-1 line-clamp-2 font-semibold text-slate-900">
-                                      {getCertificateFileName(certificateUrl, `${t('providerPortfolio.certificateFallback')} ${index + 1}`)}
-                                    </span>
-
-                                    <div className="mt-2 flex items-center gap-2">
-                                      <a
-                                        href={certificateUrl}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="inline-flex items-center rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-100"
-                                      >
-                                        {t('common.view', { defaultValue: 'Open PDF' })}
-                                      </a>
-                                      <a
-                                        href={certificateUrl}
-                                        download
-                                        className="inline-flex items-center rounded-full bg-slate-900 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-slate-700"
-                                      >
-                                        {t('common.download', { defaultValue: 'Download PDF' })}
-                                      </a>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
+            
                         </article>
                       ))}
                     </div>
@@ -328,22 +303,6 @@ const ProviderPortfolio = () => {
                     </div>
                   </div>
                 )}
-
-                {/* Text Certifications (without photos) */}
-                {mergedCertificationItems.some(cert => !cert.imageUrl && !cert.image) && (
-                  <div>
-                    <p className="text-sm font-semibold text-slate-600 mb-3">{t('providerPortfolio.certificateDetails', { defaultValue: 'Certificate Details' })}</p>
-                    <div className="space-y-2">
-                      {mergedCertificationItems.filter(cert => !cert.imageUrl && !cert.image).map((certification, index) => (
-                        <article key={certification._id || `cert-text-${index}`} className="rounded-lg border border-slate-200 px-4 py-3 hover:border-slate-300 transition">
-                          <p className="font-semibold text-slate-900">{certification.name || t('providerPortfolio.certificateFallback')}</p>
-                          <p className="text-sm text-slate-600">{certification.authority || t('providerPortfolio.unknownAuthority')}</p>
-                          {certification.expiresAt && <p className="text-sm text-slate-600">{t('providerPortfolio.expiresOn')}: {new Date(certification.expiresAt).toLocaleDateString()}</p>}
-                        </article>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 
@@ -353,7 +312,7 @@ const ProviderPortfolio = () => {
                 <div className="mb-6">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600">{t('providerPortfolio.availabilityTitle')}</p>
                   <h2 className="mt-1 text-xl font-semibold text-slate-900">{t('providerPortfolio.calendarTitle', { defaultValue: 'Calendar view' })}</h2>
-                  <p className="mt-1 text-sm text-slate-600">{t('providerPortfolio.calendarSubtitle', { defaultValue: 'Upcoming 4 weeks — tap a day to view slots.' })}</p>
+                  <p className="mt-1 text-sm text-slate-600">{t('providerPortfolio.calendarSubtitle', { defaultValue: 'Calendar aligned by weekday — tap a day to view slots.' })}</p>
                 </div>
 
                 <div className="grid grid-cols-7 gap-2">
@@ -361,14 +320,15 @@ const ProviderPortfolio = () => {
                     <div key={d} className="text-center text-xs font-semibold text-slate-500">{d}</div>
                   ))}
 
-                  {upcomingDates.map((date) => {
+                  {calendarDates.map((date) => {
                     const daySlots = slotsForDate(date);
                     const isToday = new Date().toDateString() === date.toDateString();
+                    const isPastDate = date < today;
                     return (
                       <button
                         key={date.toISOString()}
                         onClick={() => setSelectedDate(date)}
-                        className={`group relative flex h-24 flex-col items-start justify-between rounded-xl border p-3 text-left transition ${isToday ? 'ring-2 ring-teal-400' : 'hover:border-slate-300'}`}>
+                        className={`group relative flex h-24 flex-col items-start justify-between rounded-xl border p-3 text-left transition ${isToday ? 'ring-2 ring-teal-400' : 'hover:border-slate-300'} ${isPastDate ? 'opacity-55' : ''}`}>
                         <div className="flex w-full items-center justify-between">
                           <span className="text-sm font-semibold text-slate-900">{date.getDate()}</span>
                           <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-500">{daySlots.length}</span>
