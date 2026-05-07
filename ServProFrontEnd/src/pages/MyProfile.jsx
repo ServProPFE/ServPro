@@ -107,100 +107,108 @@ const MyProfile = () => {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8">
-      <section className="group relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-xl shadow-slate-900/5 transition-all duration-300 ease-out hover:-translate-y-1 hover:border-teal-200 hover:shadow-2xl hover:shadow-teal-900/10">
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white via-white to-teal-50/60 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-start gap-4">
-            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-3xl bg-gradient-to-br from-teal-500 to-sky-500 text-3xl font-bold text-white shadow-lg shadow-teal-900/20">
-              {initials}
-            </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600">{t('profile.pageLabel', { defaultValue: 'Account Center' })}</p>
-              <h1 className="display-title mt-2 text-3xl font-extrabold text-slate-900 sm:text-4xl">{t('profile.title', { defaultValue: 'My Profile' })}</h1>
-              <p className="mt-2 max-w-2xl text-sm text-slate-600">{t('profile.subtitle', { defaultValue: 'Review your account details, activity, and shortcuts in one place.' })}</p>
-            </div>
-          </div>
+    <div className="mx-auto max-w-6xl">
+      <section className="group relative overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-xl shadow-slate-900/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white via-white to-teal-50/70 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[360px]">
-            <ProfileMeta label={t('profile.role', { defaultValue: 'Account type' })} value={user?.type || t('profile.notAvailable', { defaultValue: 'Not available' })} />
-            <ProfileMeta label={t('profile.joined', { defaultValue: 'Joined' })} value={user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : t('profile.notAvailable', { defaultValue: 'Not available' })} />
-          </div>
-        </div>
-      </section>
-
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard title={t('profile.stats.bookings', { defaultValue: 'Bookings' })} value={stats.bookings} note={`${stats.pendingBookings} ${t('profile.pendingBookings', { defaultValue: 'pending' })}`} accent="from-sky-500 to-cyan-500" />
-        <MetricCard title={t('profile.stats.transactions', { defaultValue: 'Transactions' })} value={stats.transactions} note={`${stats.successfulTransactions} ${t('profile.successfulTransactions', { defaultValue: 'successful' })}`} accent="from-emerald-500 to-teal-500" />
-        <MetricCard title={t('profile.stats.completionRate', { defaultValue: 'Completion rate' })} value={`${stats.completionRate}%`} note={`${stats.completedBookings} ${t('profile.completedBookings', { defaultValue: 'completed bookings' })}`} accent="from-amber-500 to-orange-500" />
-        <MetricCard title={t('profile.stats.completeness', { defaultValue: 'Profile completeness' })} value={`${stats.profileCompleteness}%`} note={t('profile.stats.completenessHint', { defaultValue: 'Based on the account fields you completed' })} accent="from-violet-500 to-fuchsia-500" />
-      </section>
-
-      <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <div className="space-y-6">
-          <ProfilePanel title={t('profile.accountDetails', { defaultValue: 'Account details' })} accent="sky">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <ProfileField label={t('profile.fullName', { defaultValue: 'Full name' })} value={user?.name} />
-              <ProfileField label={t('profile.email', { defaultValue: 'Email' })} value={user?.email} />
-              <ProfileField label={t('profile.phone', { defaultValue: 'Phone' })} value={user?.phone} />
-              <ProfileField label={t('profile.accountType', { defaultValue: 'Account type' })} value={user?.type} />
-            </div>
-          </ProfilePanel>
-
-          <ProfilePanel title={t('profile.activity', { defaultValue: 'Recent activity' })} accent="teal">
-            <div className="space-y-4">
-              {recentBookings.length > 0 ? recentBookings.map((booking) => (
-                <div key={booking._id} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-slate-900">{booking.service?.name || t('profile.bookingFallback', { defaultValue: 'Booking' })}</p>
-                      <p className="text-sm text-slate-500">{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString() : '-'}</p>
-                    </div>
-                    <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700">{booking.status}</span>
-                  </div>
-                </div>
-              )) : (
-                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">{t('profile.noBookings', { defaultValue: 'No bookings yet.' })}</div>
-              )}
-            </div>
-          </ProfilePanel>
-        </div>
-
-        <div className="space-y-6">
-          {user?.providerProfile && (
-            <ProfilePanel title={t('profile.providerDetails', { defaultValue: 'Provider profile' })} accent="emerald">
-              <div className="space-y-3">
-                <ProfileField label={t('profile.companyName', { defaultValue: 'Company name' })} value={providerProfile.companyName} />
-                <ProfileField label={t('profile.location', { defaultValue: 'Location' })} value={providerProfile.location} />
-                <ProfileField label={t('profile.experience', { defaultValue: 'Experience' })} value={providerProfile.experienceYears != null ? t('service.years', { count: providerProfile.experienceYears }) : null} />
-                <ProfileField label={t('profile.verificationStatus', { defaultValue: 'Verification status' })} value={providerProfile.verificationStatus} />
+        <div className="relative border-b border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-teal-900 px-6 py-8 text-white sm:px-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-3xl bg-white/10 text-3xl font-bold text-white ring-1 ring-white/20">
+                {initials}
               </div>
-            </ProfilePanel>
-          )}
-
-          <ProfilePanel title={t('profile.transactions', { defaultValue: 'Recent transactions' })} accent="amber">
-            <div className="space-y-4">
-              {recentTransactions.length > 0 ? recentTransactions.map((transaction) => (
-                <div key={transaction._id} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-slate-900">{transaction.amount} {transaction.currency}</p>
-                      <p className="text-sm text-slate-500">{transaction.createdAt ? new Date(transaction.createdAt).toLocaleDateString() : '-'}</p>
-                    </div>
-                    <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700">{transaction.status}</span>
-                  </div>
-                </div>
-              )) : (
-                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">{t('profile.noTransactions', { defaultValue: 'No transactions yet.' })}</div>
-              )}
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-200">{t('profile.pageLabel', { defaultValue: 'Account Center' })}</p>
+                <h1 className="display-title mt-2 text-3xl font-extrabold sm:text-4xl">{t('profile.title', { defaultValue: 'My Profile' })}</h1>
+                <p className="mt-2 max-w-2xl text-sm text-slate-300">{t('profile.subtitle', { defaultValue: 'Everything about the user account in a single profile.' })}</p>
+                <p className="mt-3 text-sm text-slate-200">{user?.email || user?.phone || t('profile.notAvailable', { defaultValue: 'Not available' })}</p>
+              </div>
             </div>
-          </ProfilePanel>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <QuickLink to="/my-bookings" label={t('profile.goToBookings', { defaultValue: 'View bookings' })} />
-            <QuickLink to="/my-transactions" label={t('profile.goToTransactions', { defaultValue: 'View transactions' })} />
-            <QuickLink to="/services" label={t('profile.goToServices', { defaultValue: 'Browse services' })} />
-            <QuickLink to="/providers" label={t('profile.goToProviders', { defaultValue: 'Browse providers' })} />
+            <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[360px]">
+              <ProfileMeta label={t('profile.role', { defaultValue: 'Account type' })} value={user?.type || t('profile.notAvailable', { defaultValue: 'Not available' })} />
+              <ProfileMeta label={t('profile.joined', { defaultValue: 'Joined' })} value={user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : t('profile.notAvailable', { defaultValue: 'Not available' })} />
+            </div>
+          </div>
+        </div>
+
+        <div className="relative grid gap-8 px-6 py-8 sm:px-8">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <MetricCard title={t('profile.stats.bookings', { defaultValue: 'Bookings' })} value={stats.bookings} note={`${stats.pendingBookings} ${t('profile.pendingBookings', { defaultValue: 'pending' })}`} accent="from-sky-500 to-cyan-500" />
+            <MetricCard title={t('profile.stats.transactions', { defaultValue: 'Transactions' })} value={stats.transactions} note={`${stats.successfulTransactions} ${t('profile.successfulTransactions', { defaultValue: 'successful' })}`} accent="from-emerald-500 to-teal-500" />
+            <MetricCard title={t('profile.stats.completionRate', { defaultValue: 'Completion rate' })} value={`${stats.completionRate}%`} note={`${stats.completedBookings} ${t('profile.completedBookings', { defaultValue: 'completed bookings' })}`} accent="from-amber-500 to-orange-500" />
+            <MetricCard title={t('profile.stats.completeness', { defaultValue: 'Profile completeness' })} value={`${stats.profileCompleteness}%`} note={t('profile.stats.completenessHint', { defaultValue: 'Based on the account fields you completed' })} accent="from-violet-500 to-fuchsia-500" />
+          </div>
+
+          <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+            <div className="space-y-6">
+              <ProfilePanel title={t('profile.accountDetails', { defaultValue: 'Account details' })} accent="sky">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <ProfileField label={t('profile.fullName', { defaultValue: 'Full name' })} value={user?.name} />
+                  <ProfileField label={t('profile.email', { defaultValue: 'Email' })} value={user?.email} />
+                  <ProfileField label={t('profile.phone', { defaultValue: 'Phone' })} value={user?.phone} />
+                  <ProfileField label={t('profile.accountType', { defaultValue: 'Account type' })} value={user?.type} />
+                </div>
+              </ProfilePanel>
+
+              {user?.providerProfile && (
+                <ProfilePanel title={t('profile.providerDetails', { defaultValue: 'Provider profile' })} accent="emerald">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <ProfileField label={t('profile.companyName', { defaultValue: 'Company name' })} value={providerProfile.companyName} />
+                    <ProfileField label={t('profile.location', { defaultValue: 'Location' })} value={providerProfile.location} />
+                    <ProfileField label={t('profile.experience', { defaultValue: 'Experience' })} value={providerProfile.experienceYears != null ? t('service.years', { count: providerProfile.experienceYears }) : null} />
+                    <ProfileField label={t('profile.verificationStatus', { defaultValue: 'Verification status' })} value={providerProfile.verificationStatus} />
+                  </div>
+                </ProfilePanel>
+              )}
+
+              <ProfilePanel title={t('profile.activity', { defaultValue: 'Recent activity' })} accent="teal">
+                <div className="space-y-4">
+                  {recentBookings.length > 0 ? recentBookings.map((booking) => (
+                    <div key={booking._id} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="font-semibold text-slate-900">{booking.service?.name || t('profile.bookingFallback', { defaultValue: 'Booking' })}</p>
+                          <p className="text-sm text-slate-500">{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString() : '-'}</p>
+                        </div>
+                        <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700">{booking.status}</span>
+                      </div>
+                    </div>
+                  )) : (
+                    <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">{t('profile.noBookings', { defaultValue: 'No bookings yet.' })}</div>
+                  )}
+                </div>
+              </ProfilePanel>
+            </div>
+
+            <div className="space-y-6">
+              <ProfilePanel title={t('profile.transactions', { defaultValue: 'Recent transactions' })} accent="amber">
+                <div className="space-y-4">
+                  {recentTransactions.length > 0 ? recentTransactions.map((transaction) => (
+                    <div key={transaction._id} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="font-semibold text-slate-900">{transaction.amount} {transaction.currency}</p>
+                          <p className="text-sm text-slate-500">{transaction.createdAt ? new Date(transaction.createdAt).toLocaleDateString() : '-'}</p>
+                        </div>
+                        <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700">{transaction.status}</span>
+                      </div>
+                    </div>
+                  )) : (
+                    <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">{t('profile.noTransactions', { defaultValue: 'No transactions yet.' })}</div>
+                  )}
+                </div>
+              </ProfilePanel>
+
+              <ProfilePanel title={t('profile.shortcuts', { defaultValue: 'Shortcuts' })} accent="sky">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <QuickLink to="/my-bookings" label={t('profile.goToBookings', { defaultValue: 'View bookings' })} />
+                  <QuickLink to="/my-transactions" label={t('profile.goToTransactions', { defaultValue: 'View transactions' })} />
+                  <QuickLink to="/services" label={t('profile.goToServices', { defaultValue: 'Browse services' })} />
+                  <QuickLink to="/providers" label={t('profile.goToProviders', { defaultValue: 'Browse providers' })} />
+                </div>
+              </ProfilePanel>
+            </div>
           </div>
         </div>
       </section>
