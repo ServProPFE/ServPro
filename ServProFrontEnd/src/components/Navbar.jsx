@@ -141,7 +141,6 @@ const Navbar = () => {
                     <path d="M12 4a5 5 0 1 0 0 10 5 5 0 0 0 0-10Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                     <path d="M4 20c0-4 4-6 8-6s8 2 8 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
-                  {t('nav.profile')}
                 </Link>
                 <span className="text-sm font-medium text-slate-100">{t('nav.hello', { name: user?.name })}</span>
                 <button
