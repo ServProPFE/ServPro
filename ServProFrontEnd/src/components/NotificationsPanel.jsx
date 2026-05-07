@@ -143,7 +143,7 @@ const NotificationsPanel = ({ open, onClose }) => {
                 </span>
                 {notification.metadata?.serviceName && (
                   <span className="rounded-full bg-slate-100 px-2 py-0.5">
-                    {resolveServiceName(t, `serviceNames.${notification.metadata.serviceName}`, notification.metadata.serviceName)}
+                    {resolveServiceName(t, notification.metadata.serviceName, notification.metadata.serviceName)}
                   </span>
                 )}
               </div>

@@ -106,7 +106,7 @@ const Notifications = () => {
           </span>
           {notification.metadata?.serviceName && (
             <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold">
-              {resolveServiceName(t, `serviceNames.${notification.metadata.serviceName}`, notification.metadata.serviceName)}
+              {resolveServiceName(t, notification.metadata.serviceName, notification.metadata.serviceName)}
             </span>
           )}
         </div>

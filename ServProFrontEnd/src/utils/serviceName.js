@@ -1,5 +1,5 @@
 const humanizeServiceKey = (key) => {
-  const withoutPrefix = key.replace(/^services?Names\./, '');
+  const withoutPrefix = key.replace(/^(services?Names\.)+/i, '');
   const withSpaces = withoutPrefix
     .replaceAll(/([a-z0-9])([A-Z])/g, '$1 $2')
     .replaceAll('_', ' ')
@@ -19,13 +19,11 @@ export const resolveServiceName = (t, rawName, fallback = 'Service') => {
     return fallback;
   }
 
-  const normalizedName = rawName.startsWith('servicesNames.')
-    ? rawName.replace(/^servicesNames\./, 'serviceNames.')
-    : rawName;
-  const translated = t(normalizedName);
+  const normalizedName = rawName.replace(/^(services?Names\.)+/i, 'serviceNames.');
+  const translated = t(normalizedName, { defaultValue: humanizeServiceKey(normalizedName) });
 
   if (/^services?Names\./.test(rawName)) {
-    if (translated !== normalizedName) {
+    if (translated && translated !== normalizedName) {
       return translated;
     }
 
@@ -33,12 +31,12 @@ export const resolveServiceName = (t, rawName, fallback = 'Service') => {
   }
 
   if (rawName.includes('.')) {
-    if (translated !== rawName) {
+    if (translated && translated !== rawName) {
       return translated;
     }
 
-    return rawName;
+    return humanizeServiceKey(rawName);
   }
 
-  return rawName;
+  return translated || humanizeServiceKey(rawName);
 };

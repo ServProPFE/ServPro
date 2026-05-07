@@ -11,8 +11,9 @@
         "buildType": "apk"
       },
       "env": {
-        "GRADLE_OPTS": "-Dorg.gradle.internal.http.connectionTimeout=60000 -Dorg.gradle.internal.http.socketTimeout=60000"
-      }
+        "GRADLE_OPTS": "-Dorg.gradle.internal.http.connectionTimeout=60000 -Dorg.gradle.internal.http.socketTimeout=60000 -XX:MetaspaceSize=512m -XX:MaxMetaspaceSize=2048m"
+      },
+      "channel": "development"
     },
     "preview": {
       "distribution": "internal",
@@ -20,8 +21,9 @@
         "buildType": "apk"
       },
       "env": {
-        "GRADLE_OPTS": "-Dorg.gradle.internal.http.connectionTimeout=60000 -Dorg.gradle.internal.http.socketTimeout=60000"
-      }
+        "GRADLE_OPTS": "-Dorg.gradle.internal.http.connectionTimeout=60000 -Dorg.gradle.internal.http.socketTimeout=60000 -XX:MetaspaceSize=512m -XX:MaxMetaspaceSize=2048m"
+      },
+      "channel": "preview"
     },
     "production": {
       "autoIncrement": true,
@@ -29,8 +31,9 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "GRADLE_OPTS": "-Dorg.gradle.internal.http.connectionTimeout=60000 -Dorg.gradle.internal.http.socketTimeout=60000"
-      }
+        "GRADLE_OPTS": "-Dorg.gradle.internal.http.connectionTimeout=60000 -Dorg.gradle.internal.http.socketTimeout=60000 -XX:MetaspaceSize=512m -XX:MaxMetaspaceSize=2048m"
+      },
+      "channel": "production"
     }
   },
   "submit": {
