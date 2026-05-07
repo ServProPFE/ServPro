@@ -111,10 +111,13 @@ const Dashboard = () => {
 
   return (
     <div className="mx-auto max-w-7xl space-y-8">
-      <div className="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-xl shadow-slate-900/5">
+      <div className="group relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-xl shadow-slate-900/5 transition-all duration-300 ease-out hover:-translate-y-1 hover:border-sky-200 hover:shadow-2xl hover:shadow-sky-900/10">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white via-white to-sky-50/60 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+        <div className="relative">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">Operations Center</p>
         <h1 className="display-title mt-2 text-3xl font-extrabold text-slate-900 sm:text-4xl">{t('dashboard.title')}</h1>
         <p className="mt-2 text-sm text-slate-600">{t('dashboard.welcome', { name: user?.name })}</p>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -145,26 +148,31 @@ const Dashboard = () => {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-        <div className="rounded-2xl border border-sky-200 bg-sky-50 p-6 shadow-lg shadow-sky-100/50">
+        <div className="group relative overflow-hidden rounded-2xl border border-sky-200 bg-sky-50 p-6 shadow-lg shadow-sky-100/50 transition-all duration-300 ease-out hover:-translate-y-1 hover:border-sky-300 hover:shadow-2xl hover:shadow-sky-200/60">
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-sky-50 via-sky-50 to-white opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+          <div className="relative">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700">{t('dashboard.insightsTitle', { defaultValue: 'AI insights' })}</p>
           <h2 className="display-title mt-2 text-2xl font-bold text-slate-900">{t('dashboard.insightsSubtitle', { defaultValue: 'Operational recommendations from live data' })}</h2>
           <p className="mt-2 text-sm text-slate-600">{t('dashboard.insightsDescription', { defaultValue: 'Use these signals to prioritize confirmations, service growth, and revenue planning.' })}</p>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <article className="rounded-2xl border border-white bg-white p-4 shadow-sm">
+            <article className="rounded-2xl border border-white bg-white p-4 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{t('dashboard.topCategory', { defaultValue: 'Top category' })}</p>
               <p className="display-title mt-2 text-2xl font-extrabold text-slate-900">{t(`services.categories.${dashboardInsights.topCategory}`)}</p>
               <p className="mt-1 text-sm text-slate-600">{dashboardInsights.topCategoryCount} {t('dashboard.stats.services').toLowerCase()}</p>
             </article>
-            <article className="rounded-2xl border border-white bg-white p-4 shadow-sm">
+            <article className="rounded-2xl border border-white bg-white p-4 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{t('dashboard.completionRate', { defaultValue: 'Completion rate' })}</p>
               <p className="display-title mt-2 text-2xl font-extrabold text-slate-900">{dashboardInsights.completionRate}%</p>
               <p className="mt-1 text-sm text-slate-600">{t('dashboard.averageRevenue', { defaultValue: 'Avg. revenue per completed booking' })}: {dashboardInsights.averageRevenue} TND</p>
             </article>
           </div>
+          </div>
         </div>
 
-        <aside className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 shadow-lg shadow-emerald-100/50">
+        <aside className="group relative overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50 p-6 shadow-lg shadow-emerald-100/50 transition-all duration-300 ease-out hover:-translate-y-1 hover:border-emerald-300 hover:shadow-2xl hover:shadow-emerald-200/60">
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-emerald-50 via-emerald-50 to-white opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+          <div className="relative">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">{t('dashboard.recommendationTitle', { defaultValue: 'Recommended action' })}</p>
           <h2 className="mt-2 text-2xl font-extrabold text-slate-900">{t('dashboard.recommendationHeading', { defaultValue: 'What to do next' })}</h2>
           <p className="mt-3 text-sm leading-6 text-slate-700">{dashboardInsights.recommendation}</p>
@@ -182,10 +190,11 @@ const Dashboard = () => {
               </div>
             </div>
           </div>
+          </div>
         </aside>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-900/5">
+      <div className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-900/5 transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-900/10">
         <div className="border-b border-slate-200 bg-slate-50 px-5 py-4">
           <h2 className="display-title text-xl font-bold text-slate-900">{t('dashboard.recentTitle')}</h2>
         </div>
@@ -211,7 +220,7 @@ const Dashboard = () => {
                 };
 
                 return (
-                  <tr key={booking._id} className="border-t border-slate-100">
+                  <tr key={booking._id} className="border-t border-slate-100 transition-colors duration-200 hover:bg-slate-50/80">
                     <td className="px-5 py-3 font-semibold text-slate-900">{booking.service?.name ? t(booking.service.name) : 'N/A'}</td>
                     <td className="px-5 py-3 text-slate-700">{booking.client?.name || 'N/A'}</td>
                     <td className="px-5 py-3 text-slate-700">{new Date(booking.expectedAt).toLocaleDateString()}</td>
