@@ -146,6 +146,7 @@ Frontend & dashboard (`.env`):
 
 ```env
 VITE_API_BASE_URL=http://localhost:4000
+VITE_WS_BASE_URL=ws://localhost:4000
 ```
 
 Python AI (`python_ai/.env` optionnel):
@@ -184,6 +185,23 @@ Verification post-deploiement backend:
 - `https://servpro-backend.onrender.com/chatbot/health`
 
 Si `chatbot/health` retourne `degraded`, verifier en priorite la variable `PYTHON_AI_SERVICE` et les logs du service Python AI.
+
+## Real-Time Tracking System (Dashboard)
+
+Le dashboard `ServProDashboard` est equipe d'un systeme de suivi en temps reel utilisant WebSocket avec fallback HTTP polling automatique:
+
+- **Connexion primaire**: WebSocket pour les mises a jour instantanees
+- **Fallback**: Polling HTTP (intervalles 5-10 secondes) si WebSocket indisponible
+- **Statut visuel**: Indicateur "Live" (🟢) ou "Offline" (🔴) dans l'en-tete
+- **Notifications**: Toast notifications pour les evenements (nouvelles commandes, mises a jour, etc.)
+
+### Requirements backend
+Le backend doit fournir:
+1. Endpoint WebSocket a `/ws` avec authentification Bearer token
+2. Broadcast d'evenements JSON: `{ type: 'event:name', data: {...} }`
+3. Evenements supports: `booking:created`, `booking:update`, `stats:update`, `notification:new`, etc.
+
+**Voir [ServProDashboard/INTEGRATION_CHECKLIST.md](ServProDashboard/INTEGRATION_CHECKLIST.md) pour les details d'implementation.**
 
 ## Fonctions principales
 
