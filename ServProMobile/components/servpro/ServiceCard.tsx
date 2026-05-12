@@ -20,7 +20,7 @@ export function ServiceCard({
       </View>
 
       <Text style={styles.title}>{t(item.name, { defaultValue: item.name })}</Text>
-      <Text style={styles.description}>{item.description}</Text>
+      <Text style={styles.description}>{t(item.description, { defaultValue: item.description })}</Text>
 
       <View style={styles.footer}>
         <View>

@@ -13,7 +13,7 @@ export function OfferCard({ item }: { item: OfferItem }) {
         <Text style={styles.badgeText}>-{item.discount}%</Text>
       </View>
       <Text style={styles.title}>{t(item.title, { defaultValue: item.title })}</Text>
-      <Text style={styles.description}>{item.description}</Text>
+      <Text style={styles.description}>{t(item.description, { defaultValue: item.description })}</Text>
       <Text style={styles.meta}>{t('offers.validUntil', { date: new Date(item.validUntil).toLocaleDateString() })}</Text>
     </View>
   );

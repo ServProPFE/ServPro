@@ -310,5 +310,15 @@
     "plumberyPromotion": "Plumbery Promotion - 20% off",
     "acOffer": "AC Offer - 15% discount",
     "springCleaning": "Spring Cleaning - 25% off"
+  },
+  "serviceDescriptions": {
+    "waterLeakRepair": "Rapid and reliable plumbing support for leaks, faucets, and urgent repairs.",
+    "electricalInstallation": "Safe electrical diagnostics, wiring updates, and installation services.",
+    "acMaintenance": "Maintenance and optimization for AC systems to keep your home efficient.",
+    "apartmentCleaning": "Professional deep-clean package for kitchens, living spaces, and offices."
+  },
+  "offerDescriptions": {
+    "springCleaning": "Book any service this week and get premium support priority.",
+    "acOffer": "New clients receive a discounted first intervention from top providers."
   }
 }

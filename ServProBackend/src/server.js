@@ -2,6 +2,7 @@
 require("dotenv").config();
 const axios = require("axios");
 const { ensureProductionSeedData } = require("./scripts/productionSeed");
+const RealtimeServer = require("./services/realtimeServer");
 
 //Importer l'application Express et la fonction de connexion à la base de données
 const { app } = require("./app");
@@ -48,9 +49,16 @@ const startServer = async () => {
   await ensureProductionSeedData();
   await warmupPythonAI();
 
-  app.listen(port, () => {
+  const server = app.listen(port, () => {
     console.log(`Server running on port ${port}`);
   });
+
+  // Initialize WebSocket server
+  const realtime = RealtimeServer.getInstance(server);
+  realtime.init();
+
+  // Export realtime for use in controllers
+  app.locals.realtime = realtime;
 };
 
 //Lancer le serveur et gérer les erreurs éventuelles
