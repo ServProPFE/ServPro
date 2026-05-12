@@ -318,9 +318,9 @@ const ProviderPortfolio = () => {
                   <p className="mt-1 text-sm text-slate-600">{t('providerPortfolio.calendarSubtitle', { defaultValue: 'Calendar aligned by weekday — tap a day to view slots.' })}</p>
                 </div>
 
-                <div className="grid grid-cols-7 gap-2">
+                <div className="grid grid-cols-7 gap-1.5">
                   {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
-                    <div key={d} className="text-center text-xs font-semibold text-slate-500">{d}</div>
+                    <div key={d} className="text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500">{d}</div>
                   ))}
 
                   {calendarDates.map((date) => {
@@ -331,18 +331,18 @@ const ProviderPortfolio = () => {
                       <button
                         key={date.toISOString()}
                         onClick={() => setSelectedDate(date)}
-                        className={`group relative flex h-24 flex-col items-start justify-between rounded-xl border p-3 text-left transition ${isToday ? 'ring-2 ring-teal-400' : 'hover:border-slate-300'} ${isPastDate ? 'opacity-55' : ''}`}>
+                        className={`group relative flex h-16 flex-col items-start justify-between rounded-lg border p-2 text-left transition ${isToday ? 'ring-2 ring-teal-400' : 'hover:border-slate-300'} ${isPastDate ? 'opacity-55' : ''}`}>
                         <div className="flex w-full items-center justify-between">
-                          <span className="text-sm font-semibold text-slate-900">{date.getDate()}</span>
-                          <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-500">{daySlots.length}</span>
+                          <span className="text-xs font-semibold text-slate-900">{date.getDate()}</span>
+                          <span className="rounded-full bg-white px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">{daySlots.length}</span>
                         </div>
-                        <div className="mt-1 w-full text-[12px] text-slate-600 line-clamp-3">
+                        <div className="mt-0.5 w-full text-[10px] leading-tight text-slate-600 line-clamp-2">
                           {daySlots.length > 0 ? (
-                            daySlots.slice(0, 3).map((s, i) => (
-                              <div key={s._id || i} className="text-[12px]">{s.start || '--:--'} - {s.end || '--:--'}</div>
+                            daySlots.slice(0, 2).map((s, i) => (
+                              <div key={s._id || i} className="text-[10px]">{s.start || '--:--'} - {s.end || '--:--'}</div>
                             ))
                           ) : (
-                            <div className="text-[12px] text-slate-400">{t('providerPortfolio.noAvailabilityShort')}</div>
+                            <div className="text-[10px] text-slate-400">{t('providerPortfolio.noAvailabilityShort')}</div>
                           )}
                         </div>
                       </button>
