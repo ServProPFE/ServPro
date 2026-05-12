@@ -319,5 +319,16 @@
   "offerDescriptions": {
     "springCleaning": "احجز أي خدمة هذا الأسبوع واحصل على أولوية الدعم المتميز.",
     "acOffer": "يحصل العملاء الجدد على تدخل مخفض الأسعار من أفضل مقدمي الخدمات."
+  },
+  "providerPortfolio": {
+    "certificatesTitle": "الشهادات",
+    "certificatePhotos": "صور مستند الشهادة",
+    "certificatePhotoHint": "استخدم صورًا واضحة لمستند الشهادة نفسه، وليس صورًا عشوائية.",
+    "certificateDocument": "مستند الشهادة",
+    "certificateDetails": "تفاصيل الشهادة",
+    "certificateFallback": "شهادة",
+    "unknownAuthority": "جهة إصدار",
+    "expiresOn": "ينتهي في",
+    "noAvailability": "لا توجد توفرية"
   }
 }

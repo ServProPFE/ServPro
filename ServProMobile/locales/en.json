@@ -320,5 +320,16 @@
   "offerDescriptions": {
     "springCleaning": "Book any service this week and get premium support priority.",
     "acOffer": "New clients receive a discounted first intervention from top providers."
+  },
+  "providerPortfolio": {
+    "certificatesTitle": "Certifications",
+    "certificatePhotos": "Certificate document photos",
+    "certificatePhotoHint": "Use clear photos of the certificate document itself, not random images.",
+    "certificateDocument": "Certificate document",
+    "certificateDetails": "Certificate Details",
+    "certificateFallback": "Certification",
+    "unknownAuthority": "Issuing Authority",
+    "expiresOn": "Expires on",
+    "noAvailability": "No availability"
   }
 }

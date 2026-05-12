@@ -321,7 +321,8 @@ export default function ProviderPortfolioScreen() {
 
                 {photoCertifications.length > 0 && (
                   <View>
-                    <Text style={styles.subsectionTitle}>{t('providerPortfolio.certificatePhotos', { defaultValue: 'Certificate Photos' })}</Text>
+                    <Text style={styles.subsectionTitle}>{t('providerPortfolio.certificatePhotos')}</Text>
+                    <Text style={styles.certificateHint}>{t('providerPortfolio.certificatePhotoHint')}</Text>
                     <View style={styles.certificateGrid}>
                       {photoCertifications.map((cert, index) => {
                         const imageUrl = cert.imageUrl || cert.image;
@@ -341,7 +342,7 @@ export default function ProviderPortfolioScreen() {
 
                 {textCertifications.length > 0 && (
                   <View style={photoCertifications.length > 0 ? { marginTop: 16 } : undefined}>
-                    <Text style={styles.subsectionTitle}>{t('providerPortfolio.certificateDetails', { defaultValue: 'Certificate Details' })}</Text>
+                    <Text style={styles.subsectionTitle}>{t('providerPortfolio.certificateDetails')}</Text>
                     {textCertifications.map((cert, index) => (
                       <View key={cert._id || `cert-text-${index}`} style={styles.rowCard}>
                         <Text style={styles.rowTitle}>{cert.name || t('providerPortfolio.certificateFallback')}</Text>
@@ -592,6 +593,13 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  certificateHint: {
+    color: '#64748b',
+    fontSize: 12,
+    marginTop: 6,
+    marginBottom: 8,
+    fontWeight: '500',
+  },
   certificateOverlay: {
     position: 'absolute',
     bottom: 0,
@@ -613,34 +621,34 @@ const styles = StyleSheet.create({
   },
   calendarGrid: {
     marginTop: 8,
-    gap: 6,
+    gap: 4,
   },
   weekHeaderRow: {
     flexDirection: 'row',
     marginTop: 4,
     marginBottom: 8,
-    gap: 6,
+    gap: 4,
   },
   weekHeaderText: {
     flex: 1,
     textAlign: 'center',
     color: '#64748b',
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
   },
   calendarRow: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 4,
   },
   calendarDateCell: {
     flex: 1,
-    minHeight: 56,
+    minHeight: 44,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#e2e8f0',
     backgroundColor: '#f8fafc',
     paddingHorizontal: 8,
-    paddingVertical: 7,
+    paddingVertical: 6,
     justifyContent: 'space-between',
   },
   calendarDateCellToday: {
@@ -654,7 +662,7 @@ const styles = StyleSheet.create({
   calendarDateNumber: {
     color: AppTheme.colors.text,
     fontWeight: '700',
-    fontSize: 12,
+    fontSize: 11,
   },
   calendarDateCount: {
     alignSelf: 'flex-start',
@@ -663,7 +671,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#cbd5e1',
     color: '#475569',
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
     paddingHorizontal: 6,
     paddingVertical: 2,
