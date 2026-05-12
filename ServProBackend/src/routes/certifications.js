@@ -9,7 +9,7 @@ const { listCertifications, createCertification,updateCertification,deleteCertif
 const router = express.Router();
 
 //Définir les routes pour les certifications
-router.get("/", authenticate, authorizeRoles("CLIENT", "PROVIDER", "ADMIN"), listCertifications);
+router.get("/", listCertifications);
 router.post("/", authenticate, authorizeRoles("PROVIDER", "ADMIN"), createCertification);
 router.put("/:id", authenticate, authorizeRoles("PROVIDER", "ADMIN"), updateCertification);
 router.delete("/:id", authenticate, authorizeRoles("PROVIDER", "ADMIN"), deleteCertification);
