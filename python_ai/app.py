@@ -409,7 +409,7 @@ def fetch_backend_prompt_context(user_input):
 
 
 def llm_nlp_classify(user_input, language='en', prompt_context=None, preference=None):
-    """Use Gemini to perform structured NLP classification for service routing."""
+    """Use Gemini to perform structured NLP classification for service routing with coherence to service type and preferences."""
     llm_result = {
         'enabled': bool(LLM_ENABLED and gemini_model),
         'used': False,
@@ -425,54 +425,125 @@ def llm_nlp_classify(user_input, language='en', prompt_context=None, preference=
     if not gemini_model:
         return llm_result
 
+    # Build service catalog with domain-specific context
     service_catalog = []
+    service_details = {
+        'plomberie': 'Water systems, leaks, pipes, fixtures, drains | Keywords: leak, drain, faucet, toilet, pipe',
+        'electricite': 'Electrical systems, wiring, power, lights, circuits | Keywords: power, wire, light, breaker, outlet',
+        'climatisation': 'HVAC, cooling, heating, air conditioning, thermostat | Keywords: cooling, heating, AC, temperature',
+        'nettoyage': 'Cleaning services, sanitization, dust, hygiene | Keywords: cleaning, dust, sanitation, hygiene'
+    }
     for key, data in SERVICES_DB.items():
-        service_catalog.append(f"- {key}: {data['service_name']} ({data['category']})")
+        service_catalog.append(f"- {key}: {data['service_name']} ({data['category']}) | {service_details.get(key, '')}")
 
+    # Build backend context with preference-relevant information
     backend_context_lines = []
     if prompt_context and prompt_context.get('used'):
         matches = prompt_context.get('matched_services') or []
         for match in matches[:5]:
-            backend_context_lines.append(
-                f"- {match.get('name')} ({match.get('category')}), priceMin={match.get('price_min')}, duration={match.get('duration')}"
-            )
+            duration_str = f", duration={match.get('duration')}" if match.get('duration') else ""
+            price_str = f", priceMin={match.get('price_min')} {match.get('currency', 'TND')}" if match.get('price_min') else ""
+            backend_context_lines.append(f"- {match.get('name')} ({match.get('category')}){price_str}{duration_str}")
     backend_context_block = chr(10).join(backend_context_lines) if backend_context_lines else "- none"
 
-    pref_note = 'no preference'
-    if preference:
-        pref_note = preference
+    # Build preference context for more coherent guidance
+    preference_guidance = {
+        'cheapest': 'User prioritizes LOWEST COST. In assistant_message, emphasize budget-friendly options and cost savings.',
+        'most_expensive': 'User prioritizes PREMIUM/HIGH-END service. In assistant_message, mention quality and premium expertise.',
+        'closest': 'User prioritizes PROXIMITY. In assistant_message, emphasize quick arrival and nearby availability.',
+        'farthest': 'User prioritizes DISTANCE/PRIVACY. In assistant_message, suggest specialists willing to travel.',
+        'fastest': 'User prioritizes SPEED. In assistant_message, emphasize urgent availability and quick turnaround.'
+    }
+    pref_note = preference_guidance.get(preference, 'no explicit preference stated') if preference else 'no explicit preference stated'
 
-    prompt = f"""You are an NLP classifier for a home services chatbot.
-Return ONLY strict JSON, no markdown.
+    # Issue type patterns for coherent categorization
+    issue_patterns_text = """Issue type detection (for coherent service recommendation):
+- plomberie: 'leak', 'drain', 'fixture' based on keywords
+- electricite: 'power_outage', 'wiring', 'lighting' based on keywords  
+- climatisation: 'no_cooling', 'heating', 'thermostat' based on keywords
+- nettoyage: 'deep_cleaning', 'dust', 'sanitation' based on keywords"""
 
-Allowed services:
+    # Language-specific prompt instructions for coherence
+    if language == 'ar':
+        prompt = f"""أنت متخصص في تصنيف طلبات الخدمات المنزلية للدردشة الآلية.
+أرجع JSON فقط، بدون markdown.
+
+الخدمات المتاحة:
 {chr(10).join(service_catalog)}
 
-Live backend context candidates:
+السياق الحي (الخدمات المتطابقة من النظام):
 {backend_context_block}
 
-Input language hint: {language}
-User input: \"{user_input}\"
-User preference: {pref_note}
+تفضيل المستخدم:
+{pref_note}
 
-Output JSON schema:
+{issue_patterns_text}
+
+مخرجات JSON (يجب أن تكون متسقة مع نوع الخدمة والتفضيل):
 {{
   "detected_service": "plomberie|electricite|climatisation|nettoyage|null",
-  "confidence": 0.0,
-  "issue_type": "short_label",
+  "confidence": 0.0 إلى 1.0,
+  "issue_type": "تسرب، انسداد، تركيبة | انقطاع، أسلاك، إضاءة | عدم تبريد، تدفئة، ثرموستات | تنظيف عميق، غبار، تعقيم",
   "service_scores": {{
     "plomberie": 0.0,
     "electricite": 0.0,
     "climatisation": 0.0,
     "nettoyage": 0.0
   }},
-  "assistant_message": "2-3 sentence helpful routing advice in the same language as user"
+  "assistant_message": "رسالة توجيهية 2-3 جمل بنفس لغة المستخدم، متسقة مع الخدمة المكتشفة والتفضيل المذكور"
 }}
 
-Rules:
-- confidence and all service_scores must be between 0 and 1.
-- detected_service must be null when no service is reliable.
-- Keep assistant_message concise and professional.
+القواعد:
+- confidence و service_scores يجب أن تكون بين 0 و 1
+- detected_service يجب أن تكون null إذا لم تكن هناك ثقة
+- assistant_message يجب أن تعكس التفضيل المكتشف (السعر/الموقع/السرعة)
+- تأكد من التسق بين نوع الخدمة والمشكلة والرسالة
+
+نص المستخدم: "{user_input}"
+"""
+    else:
+        prompt = f"""You are an NLP classifier for a home services chatbot. CRITICAL: responses must be COHERENT with service type, issue type, and user preferences.
+Return ONLY strict JSON, no markdown.
+
+Available Services (with domain context):
+{chr(10).join(service_catalog)}
+
+Live backend context candidates:
+{backend_context_block}
+
+User Preference Context:
+{pref_note}
+
+{issue_patterns_text}
+
+Output JSON schema (MUST be coherent across all fields):
+{{
+  "detected_service": "plomberie|electricite|climatisation|nettoyage|null",
+  "confidence": 0.0,
+  "issue_type": "specific_issue_label",
+  "service_scores": {{
+    "plomberie": 0.0,
+    "electricite": 0.0,
+    "climatisation": 0.0,
+    "nettoyage": 0.0
+  }},
+  "assistant_message": "2-3 sentences reflecting detected service, issue type, AND user preference in user's language"
+}}
+
+COHERENCE Rules:
+- confidence and all service_scores must be between 0 and 1
+- detected_service must be null only when confidence is very low (<0.15)
+- issue_type MUST match the detected_service domain patterns
+- assistant_message MUST:
+  * Reference the specific service type
+  * Acknowledge the detected problem type
+  * Reflect the user's preference (cheapest/premium/closest/fastest)
+  * Be professional and actionable
+  * Use the same language as user input
+- Keep assistant_message concise but coherent
+
+User input: "{user_input}"
+Language hint: {language}
 """
 
     try:
@@ -1298,7 +1369,8 @@ def recommend():
                 recommendation_message = generate_response(
                     result['detected_service'],
                     language,
-                    issue_type
+                    issue_type,
+                    preference
                 )
 
             response['recommendations'].append({
@@ -1508,9 +1580,10 @@ def detect_issue_type(service_key, user_input):
 
     return best_type
 
-def generate_response(service_key, language='en', issue_type='general'):
-    """Generate an accurate, actionable response message."""
+def generate_response(service_key, language='en', issue_type='general', preference=None):
+    """Generate coherent, actionable response message matching service type, issue type, and user preference."""
 
+    # Base advice coherent with service type and issue
     english_advice = {
         'plomberie': {
             'leak': "This looks like a leak issue. Turn off the nearest water valve if leakage is active, then book a plumber for inspection.",
@@ -1535,6 +1608,30 @@ def generate_response(service_key, language='en', issue_type='general'):
             'dust': "This looks like a dust/dirt cleaning request. Targeted cleaning service is recommended.",
             'sanitation': "This appears to need sanitation/hygiene-focused cleaning. A specialized cleaning service can help.",
             'general': "This request matches cleaning services."
+        }
+    }
+
+    # Preference-specific suffixes to enhance coherence with user intent
+    preference_suffix = {
+        'cheapest': {
+            'en': 'We can match you with budget-friendly providers offering competitive rates.',
+            'ar': 'يمكننا توصيلك بمقدمي خدمات اقتصاديين يقدمون أسعار منافسة.'
+        },
+        'most_expensive': {
+            'en': 'We will connect you with premium, highly-rated specialists.',
+            'ar': 'سنوصلك بمتخصصين من الدرجة الأولى عالي التقييم.'
+        },
+        'closest': {
+            'en': 'We\'ll prioritize providers nearest to your location for quick service.',
+            'ar': 'سنعطي الأولوية لمقدمي الخدمة القريبين منك للخدمة السريعة.'
+        },
+        'farthest': {
+            'en': 'We can arrange service from providers at your preferred distance.',
+            'ar': 'يمكننا ترتيب الخدمة من مقدمي خدمات على المسافة التي تفضلها.'
+        },
+        'fastest': {
+            'en': 'We\'ll match you with providers offering urgent availability.',
+            'ar': 'سنوصلك بمقدمي خدمات يوفرون توفرًا عاجلاً.'
         }
     }
 
@@ -1569,10 +1666,16 @@ def generate_response(service_key, language='en', issue_type='general'):
     service_advice = advice_map.get(service_key, {})
     advice = service_advice.get(issue_type, service_advice.get('general', 'Service found.'))
 
+    # Append preference-aware suffix if preference is specified
+    suffix = ''
+    if preference and preference in preference_suffix:
+        suffix_text = preference_suffix[preference].get(language, preference_suffix[preference].get('en', ''))
+        suffix = f' {suffix_text}'
+
     if language == 'ar':
-        return f" {advice} "
+        return f" {advice}{suffix} "
     
-    return f" {advice}"
+    return f" {advice}{suffix}"
 
 def generate_gemini_response(user_input, language='en', confidence=0.0):
     """
