@@ -30,6 +30,9 @@ const resolveRecommendedServices = (services, fallbackService = null) => {
   return [];
 };
 
+const CHAT_STORAGE_KEY = 'servpro_chatbot_history';
+const REACTIONS = ['👍', '❤️', '😊', '🤔'];
+
 const Chatbot = () => {
   const { t, i18n } = useTranslation();
   const { isAuthenticated } = useAuth();
@@ -40,6 +43,7 @@ const Chatbot = () => {
   const [suggestions, setSuggestions] = useState([]);
   const [awaitingPreference, setAwaitingPreference] = useState(false);
   const [pendingRequest, setPendingRequest] = useState('');
+  const [reactionMenu, setReactionMenu] = useState(null);
   const messagesEndRef = useRef(null);
 
   const preferenceChoices = ['cheapest', 'fastest', 'closest', 'most_expensive', 'farthest'];
@@ -47,6 +51,26 @@ const Chatbot = () => {
   const createMessageId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
   const resolveServiceId = (service) => service?.id || service?._id;
+
+  // Load chat history from localStorage
+  useEffect(() => {
+    const savedHistory = localStorage.getItem(CHAT_STORAGE_KEY);
+    if (savedHistory) {
+      try {
+        const parsed = JSON.parse(savedHistory);
+        setMessages(parsed);
+      } catch (error) {
+        console.error('Error loading chat history:', error);
+      }
+    }
+  }, []);
+
+  // Save chat history to localStorage
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
+    }
+  }, [messages]);
 
   const normalizeBotMessage = useCallback((text) => {
     const raw = (text || '').trim();
@@ -81,7 +105,7 @@ const Chatbot = () => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, isLoading]);
 
   useEffect(() => {
     // Show welcome message on first open
@@ -89,8 +113,9 @@ const Chatbot = () => {
       setMessages([{
         id: createMessageId(),
         type: 'bot',
-        text: t('chatbot.preferenceIntro'),
-        timestamp: new Date()
+        text: t('chatbot.welcome') + '\n\n' + t('chatbot.welcomeMessage'),
+        timestamp: new Date(),
+        reactions: {}
       }]);
     }
   }, [isOpen, messages.length, t]);
@@ -106,7 +131,6 @@ const Chatbot = () => {
   }, [i18n.language]);
 
   useEffect(() => {
-    // Load suggestions when chatbot opens, and refresh if language changed.
     if (isOpen) {
       loadSuggestions();
     }
@@ -132,78 +156,40 @@ const Chatbot = () => {
     return `- ${currency}`;
   };
 
-  const handleSendMessage = async (messageText = null, displayText = null) => {
-    const payloadText = (messageText || inputMessage.trim());
-    const visibleText = (displayText || messageText || inputMessage.trim());
-    if (!payloadText) return;
+  // Check if preference can be inferred from text
+  const inferPreference = (text) => {
+    if (!text) return null;
+    const v = text.trim().toLowerCase();
+    if (/cheap|cheapest|budget|low|ارخص|الأرخص|اقل/.test(v)) return 'cheapest';
+    if (/expensive|premium|most|اغلى|الأغلى/.test(v)) return 'most_expensive';
+    if (/close|closest|near|nearest|nearby|اقرب|الأقرب/.test(v)) return 'closest';
+    if (/far|farthest|furthest|ابعد|الأبعد/.test(v)) return 'farthest';
+    if (/fast|fastest|quick|urgent|soon|اسرع|الأسرع/.test(v)) return 'fastest';
+    return null;
+  };
 
-    if (!isAuthenticated) {
-      setMessages([...messages, {
-        id: createMessageId(),
-        type: 'bot',
-        text: t('chatbot.loginRequired'),
-        timestamp: new Date()
-      }]);
-      return;
-    }
+  // Build conversation context for API
+  const buildConversationContext = () => {
+    return messages
+      .filter(msg => msg.type === 'user' || (msg.type === 'bot' && msg.confidence))
+      .map(msg => ({
+        type: msg.type,
+        text: msg.text,
+        service: msg.service
+      }));
+  };
 
-    // Add user message to chat
-    const userMessage = {
-      id: createMessageId(),
-      type: 'user',
-      text: visibleText,
-      timestamp: new Date()
-    };
-    setMessages(prev => [...prev, userMessage]);
-    setInputMessage('');
-
-    // If no pending request, capture this as the request and ask for preference
-    if (!pendingRequest) {
-      setPendingRequest(payloadText);
-      setAwaitingPreference(true);
-      setMessages(prev => [...prev, {
-        id: createMessageId(),
-        type: 'bot',
-        text: t('chatbot.preferencePrompt'),
-        timestamp: new Date()
-      }]);
-      return;
-    }
-
-    // We have both request and preference, now send to AI
+  // Helper function to send chat request to API
+  const sendChatRequest = async (messageText, preference) => {
     setIsLoading(true);
-
     try {
       const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
-      const isFirstPrompt = messages.filter((chatMessage) => chatMessage.type === 'user').length === 0;
-
-      // Normalize preference choice into one of the server keys
-      const normalizePreference = (text) => {
-        if (!text) return null;
-        const v = text.trim().toLowerCase();
-        if (/cheap|cheapest|budget|low/.test(v) || /ارخص|الأرخص|اقل/.test(v)) return 'cheapest';
-        if (/expensive|premium|most/.test(v) || /اغلى|الأغلى/.test(v)) return 'most_expensive';
-        if (/close|closest|near|nearest|nearby/.test(v) || /اقرب|الأقرب/.test(v)) return 'closest';
-        if (/far|farthest|furthest/.test(v) || /ابعد|الأبعد/.test(v)) return 'farthest';
-        if (/fast|fastest|quick|urgent|soon/.test(v) || /اسرع|الأسرع/.test(v)) return 'fastest';
-        return null;
-      };
-
-      const prefKey = normalizePreference(payloadText);
-
       const response = await apiService.post(API_ENDPOINTS.CHATBOT, {
-        message: pendingRequest,
-        preference: prefKey,
+        message: messageText,
+        preference: preference,
         language: language,
-        isFirstPrompt
+        conversationHistory: buildConversationContext()
       });
-
-      if (response?.needsPreference) {
-        setAwaitingPreference(true);
-      } else {
-        setAwaitingPreference(false);
-        setPendingRequest('');
-      }
 
       const fallbackService = response?.recommendedService || response?.service || null;
       const recommendedServices = resolveRecommendedServices(response?.recommendedServices, fallbackService);
@@ -215,19 +201,115 @@ const Chatbot = () => {
         services: recommendedServices,
         service: fallbackService,
         confidence: response?.confidence,
-        timestamp: new Date()
+        timestamp: new Date(),
+        reactions: {},
+        followUpQuestions: generateFollowUpQuestions(recommendedServices)
       };
 
       setMessages(prev => [...prev, botMessage]);
-    } catch {
-      const errorMessage = {
+    } catch (error) {
+      console.error('Error:', error);
+      setMessages(prev => [...prev, {
+        id: createMessageId(),
         type: 'bot',
         text: t('chatbot.error'),
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, errorMessage]);
+        timestamp: new Date(),
+        reactions: {}
+      }]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleSendMessage = async (messageText = null, displayText = null) => {
+    const payloadText = (messageText || inputMessage.trim());
+    const visibleText = (displayText || messageText || inputMessage.trim());
+    if (!payloadText) return;
+
+    if (!isAuthenticated) {
+      setMessages([...messages, {
+        id: createMessageId(),
+        type: 'bot',
+        text: t('chatbot.loginRequired'),
+        timestamp: new Date(),
+        reactions: {}
+      }]);
+      return;
+    }
+
+    const userMessage = {
+      id: createMessageId(),
+      type: 'user',
+      text: visibleText,
+      timestamp: new Date(),
+      reactions: {}
+    };
+    setMessages(prev => [...prev, userMessage]);
+    setInputMessage('');
+    setReactionMenu(null);
+
+    // Try to infer preference from current message
+    const inferredPref = inferPreference(payloadText);
+
+    // If preference can be inferred, send directly; otherwise ask
+    if (inferredPref && pendingRequest) {
+      // We have both service request and preference
+      await sendChatRequest(pendingRequest, inferredPref);
+      setAwaitingPreference(false);
+      setPendingRequest('');
+    } else if (!pendingRequest) {
+      // First message - capture as request
+      setPendingRequest(payloadText);
+      
+      // Check if preference was inferred
+      if (inferredPref) {
+        // Preference was inferred, proceed with request
+        await sendChatRequest(payloadText, inferredPref);
+        setPendingRequest('');
+      } else {
+        // Only ask for preference if it can't be inferred
+        setAwaitingPreference(true);
+        setMessages(prev => [...prev, {
+          id: createMessageId(),
+          type: 'bot',
+          text: t('chatbot.preferencePrompt'),
+          timestamp: new Date(),
+          reactions: {}
+        }]);
+      }
+    }
+  };
+
+  const generateFollowUpQuestions = (services) => {
+    if (services.length === 0) return [];
+    const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
+    
+    if (language === 'ar') {
+      return ['أخبرني المزيد', 'قارن الأسعار', 'عرض الملف الشخصي', 'احفظ للاحقا'];
+    }
+    return ['Tell me more', 'Compare prices', 'View profile', 'Save for later'];
+  };
+
+  const handleAddReaction = (messageId, reaction) => {
+    setMessages(prev => prev.map(msg => {
+      if (msg.id === messageId) {
+        const reactions = { ...msg.reactions };
+        if (reactions[reaction]) {
+          delete reactions[reaction];
+        } else {
+          reactions[reaction] = true;
+        }
+        return { ...msg, reactions };
+      }
+      return msg;
+    }));
+    setReactionMenu(null);
+  };
+
+  const handleClearHistory = () => {
+    if (globalThis.confirm(t('chatbot.clearHistoryConfirm') || 'Clear chat history?')) {
+      setMessages([]);
+      localStorage.removeItem(CHAT_STORAGE_KEY);
     }
   };
 
@@ -257,6 +339,7 @@ const Chatbot = () => {
         className={`chatbot-toggle ${isOpen ? 'open' : ''}`}
         onClick={() => setIsOpen(!isOpen)}
         aria-label={t('chatbot.toggle')}
+        title={isOpen ? t('chatbot.close') : t('chatbot.open')}
       >
         {isOpen ? '✕' : '💬'}
       </button>
@@ -272,9 +355,18 @@ const Chatbot = () => {
                 <p className="chatbot-subtitle">{t('chatbot.subtitle')}</p>
               </div>
             </div>
-            <button onClick={() => setIsOpen(false)} className="chatbot-close">
-              ✕
-            </button>
+            <div className="chatbot-header-actions">
+              <button 
+                onClick={handleClearHistory} 
+                className="chatbot-clear"
+                title={t('chatbot.clearHistory') || 'Clear history'}
+              >
+                🗑️
+              </button>
+              <button onClick={() => setIsOpen(false)} className="chatbot-close">
+                ✕
+              </button>
+            </div>
           </div>
 
           <div className="chatbot-messages">
@@ -319,55 +411,116 @@ const Chatbot = () => {
               </div>
             )}
 
-            {messages.map((msg) => {
+            {messages.map((msg, msgIndex) => {
               const hasArrayServices = Array.isArray(msg.services) && msg.services.length > 0;
               const messageServices = hasArrayServices
                 ? msg.services
                 : resolveRecommendedServices(null, msg.service);
 
               return (
-              <div key={msg.id} className={`message ${msg.type}`}>
-                <div className="message-content">
-                  <div className="message-text">
-                    {msg.text.split('\n').map((line) => (
-                      <p key={`${msg.id}-${line}`}>{line}</p>
-                    ))}
-                  </div>
-                  {messageServices.map((recommendedService, index) => (
-                    <div
-                      key={`${msg.id}-${resolveServiceId(recommendedService) || index}`}
-                      className="message-service-card"
-                    >
-                      <h4>{resolveServiceName(t, recommendedService.name)}</h4>
-                      <p className="service-provider">{t('chatbot.by')} {getProviderDisplay(recommendedService.provider)}</p>
-                      <p className="service-price">
-                        {formatServicePrice(recommendedService)}
-                      </p>
-                      <p className="service-duration">
-                        {recommendedService.duration} {i18n.language?.startsWith('ar') ? 'دقيقة' : 'minutes'}
-                      </p>
-                      {resolveServiceId(recommendedService) ? (
-                        <a href={`/services/${resolveServiceId(recommendedService)}`} className="service-link">
-                          {t('chatbot.viewService')}
-                        </a>
-                      ) : null}
+                <div key={msg.id} className={`message ${msg.type}`}>
+                  <div className="message-content">
+                    <div className="message-text">
+                      {msg.text.split('\n').map((line) => (
+                        <p key={`${msg.id}-${line}`}>{line}</p>
+                      ))}
                     </div>
-                  ))}
-                  <span className="message-time">
-                    {new Date(msg.timestamp).toLocaleTimeString(i18n.language, {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </span>
+
+                    {messageServices.map((recommendedService, index) => (
+                      <div
+                        key={`${msg.id}-${resolveServiceId(recommendedService) || index}`}
+                        className="message-service-card"
+                      >
+                        <h4>{resolveServiceName(t, recommendedService.name)}</h4>
+                        <p className="service-provider">{t('chatbot.by')} {getProviderDisplay(recommendedService.provider)}</p>
+                        <p className="service-price">
+                          {formatServicePrice(recommendedService)}
+                        </p>
+                        <p className="service-duration">
+                          {recommendedService.duration} {i18n.language?.startsWith('ar') ? 'دقيقة' : 'minutes'}
+                        </p>
+                        
+                        {/* Follow-up action buttons */}
+                        <div className="service-actions">
+                          {resolveServiceId(recommendedService) ? (
+                            <>
+                              <a href={`/services/${resolveServiceId(recommendedService)}`} className="action-btn book-btn">
+                                📋 {t('chatbot.bookNow') || 'Book Now'}
+                              </a>
+                              <a href={`/services/${resolveServiceId(recommendedService)}`} className="action-btn view-btn">
+                                👤 {t('chatbot.viewProfile') || 'View Profile'}
+                              </a>
+                            </>
+                          ) : null}
+                          <button className="action-btn favorite-btn" title="Add to favorites">
+                            ⭐ {t('chatbot.favorite') || 'Favorite'}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Follow-up questions */}
+                    {msg.type === 'bot' && msg.followUpQuestions && msg.followUpQuestions.length > 0 && (
+                      <div className="follow-up-questions">
+                        <p className="follow-up-label">{t('chatbot.followUp') || 'What next?'}</p>
+                        <div className="follow-up-chips">
+                          {msg.followUpQuestions.map((question) => (
+                            <button
+                              key={`${msg.id}-${question}`}
+                              className="follow-up-chip"
+                              onClick={() => handleSendMessage(question)}
+                            >
+                              {question}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Reaction buttons */}
+                    <div className="message-reactions">
+                      <div className="reaction-display">
+                        {Object.entries(msg.reactions || {}).map(([reaction]) => (
+                          <span key={reaction} className="reaction-badge">{reaction}</span>
+                        ))}
+                      </div>
+                      <button
+                        className="reaction-toggle"
+                        onClick={() => setReactionMenu(reactionMenu === msg.id ? null : msg.id)}
+                        title="Add reaction"
+                      >
+                        😊
+                      </button>
+                      {reactionMenu === msg.id && (
+                        <div className="reaction-menu">
+                          {REACTIONS.map((reaction) => (
+                            <button
+                              key={reaction}
+                              className="reaction-option"
+                              onClick={() => handleAddReaction(msg.id, reaction)}
+                            >
+                              {reaction}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <span className="message-time">
+                      {new Date(msg.timestamp).toLocaleTimeString(i18n.language, {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            );
+              );
             })}
 
             {isLoading && (
               <div className="message bot">
                 <div className="message-content">
-                  <div className="typing-indicator">
+                  <div className="typing-indicator" title="AI is typing...">
                     <span></span>
                     <span></span>
                     <span></span>

@@ -1268,7 +1268,9 @@ def recommend():
         Expected JSON: {
             "text": "user message",
             "language": "en" or "ar",
-            "is_first_prompt": true|false (optional)
+            "is_first_prompt": true|false (optional),
+            "preference": "cheapest"|"fastest"|"closest"|"most_expensive"|"farthest" (optional),
+            "conversation_history": [...] (optional - array of previous messages for context)
         }
     """
     language = 'en'
@@ -1279,6 +1281,8 @@ def recommend():
         is_first_prompt = bool(data.get('is_first_prompt', False))
         # Allow explicit structured preference from caller; otherwise infer from text
         preference = data.get('preference') or None
+        conversation_history = data.get('conversation_history', [])
+        
         if not preference:
             preference = extract_preference(user_input)
         
@@ -1287,6 +1291,14 @@ def recommend():
                 'error': 'Empty input',
                 'message': 'الرجاء توفير نص' if language == 'ar' else 'Please provide some text'
             }), 400
+        
+        # Build context from conversation history if available
+        context_summary = ''
+        if conversation_history and len(conversation_history) > 0:
+            # Take last 2-3 meaningful messages for context
+            recent_messages = [msg for msg in conversation_history[-3:] if msg.get('type') == 'user']
+            if recent_messages:
+                context_summary = ' '.join([msg.get('text', '') for msg in recent_messages])
         
         # Check if user is asking for service list/information (generic query)
         generic_service_keywords = [

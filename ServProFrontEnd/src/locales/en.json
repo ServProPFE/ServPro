@@ -260,6 +260,10 @@
   },
   "chatbot": {
     "toggle": "Toggle chatbot",
+    "open": "Open chatbot",
+    "close": "Close chatbot",
+    "clearHistory": "Clear chat history",
+    "clearHistoryConfirm": "Clear all chat history?",
     "title": "AI Assistant",
     "subtitle": "How can I help you today?",
     "welcome": "Welcome!",
@@ -280,7 +284,13 @@
     "loginRequired": "Please log in to use the chatbot service.",
     "error": "Sorry, I encountered an error. Please try again.",
     "by": "by",
-    "viewService": "View Service"
+    "viewService": "View Service",
+    "bookNow": "Book Now",
+    "viewProfile": "View Profile",
+    "favorite": "Favorite",
+    "followUp": "What next?",
+    "comparePrice": "Compare",
+    "saveLater": "Save"
   },
   "footer": {
     "description": "Professional home services platform connecting clients with trusted providers.",
