@@ -18,7 +18,7 @@ const getCertificateFileName = (url, fallback) => {
 
   try {
     const parsed = new URL(url);
-    const rawName = parsed.pathname.split('/').filter(Boolean).pop();
+    const rawName = parsed.pathname.split('/').findLast(Boolean);
     return rawName || fallback;
   } catch {
     return fallback;
@@ -248,7 +248,7 @@ const ProviderPortfolio = () => {
                           <h4 className="font-semibold text-slate-900">{portfolio.title || t('providerPortfolio.untitledWork')}</h4>
                           <p className="mt-2 text-sm text-slate-600">{portfolio.description || t('providerPortfolio.noDescription')}</p>
                           
-                          {(Array.isArray(portfolio.images) ? portfolio.images : []).filter(Boolean).length > 0 && (
+                          {(Array.isArray(portfolio.images) ? portfolio.images : []).some(Boolean) && (
                             <div className="mt-3 grid grid-cols-2 gap-2">
                               {(Array.isArray(portfolio.images) ? portfolio.images : []).filter(Boolean).map((imageUrl, index) => (
                                 <img
@@ -279,10 +279,12 @@ const ProviderPortfolio = () => {
                 {/* Photo Certificates */}
                 {mergedCertificationItems.some(cert => cert.imageUrl || cert.image) && (
                   <div className="mb-6">
-                    <p className="text-sm font-semibold text-slate-600 mb-3">{t('providerPortfolio.certificatePhotos', { defaultValue: 'Certificate Photos' })}</p>
+                    <p className="text-sm font-semibold text-slate-600 mb-1">{t('providerPortfolio.certificatePhotos', { defaultValue: 'Certificate document photos' })}</p>
+                    <p className="mb-3 text-xs text-slate-500">{t('providerPortfolio.certificatePhotoHint', { defaultValue: 'Use clear photos of the certificate document itself, not random images.' })}</p>
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                       {mergedCertificationItems.filter(cert => cert.imageUrl || cert.image).map((certification, index) => {
                         const imageUrl = certification.imageUrl || certification.image;
+                        const certificateFileName = getCertificateFileName(imageUrl, t('providerPortfolio.certificateFallback'));
                         return (
                           <div key={certification._id || `cert-photo-${index}`} className="group relative rounded-xl overflow-hidden border border-slate-200 hover:border-slate-300 transition">
                             <img
@@ -293,6 +295,7 @@ const ProviderPortfolio = () => {
                             <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent opacity-0 group-hover:opacity-100 transition">
                               <div className="absolute bottom-0 left-0 right-0 p-3">
                                 <p className="text-sm font-semibold text-white line-clamp-2">{certification.name || t('providerPortfolio.certificateFallback')}</p>
+                                <p className="text-xs font-medium text-teal-100 line-clamp-1">{t('providerPortfolio.certificateDocument', { defaultValue: 'Certificate document' })}: {certificateFileName}</p>
                                 {certification.authority && <p className="text-xs text-slate-200 line-clamp-1">{certification.authority}</p>}
                                 {certification.expiresAt && <p className="text-xs text-slate-300 mt-1">{t('providerPortfolio.expiresOn')}: {new Date(certification.expiresAt).toLocaleDateString()}</p>}
                               </div>

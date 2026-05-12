@@ -21,6 +21,41 @@ const { Notation } = require("../models/Notation");
 const { Portfolio } = require("../models/Portfolio");
 const { Availability } = require("../models/Availability");
 
+const CERTIFICATE_IMAGE_SVG = [
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900">',
+  '  <defs>',
+  '    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">',
+  '      <stop offset="0%" stop-color="#f8fafc"/>',
+  '      <stop offset="100%" stop-color="#e2e8f0"/>',
+  '    </linearGradient>',
+  '    <linearGradient id="seal" x1="0" y1="0" x2="1" y2="1">',
+  '      <stop offset="0%" stop-color="#0f766e"/>',
+  '      <stop offset="100%" stop-color="#14b8a6"/>',
+  '    </linearGradient>',
+  '  </defs>',
+  '  <rect width="1200" height="900" fill="#cbd5e1"/>',
+  '  <rect x="60" y="60" width="1080" height="780" rx="36" fill="url(#bg)" stroke="#94a3b8" stroke-width="10"/>',
+  '  <rect x="95" y="95" width="1010" height="710" rx="28" fill="#ffffff" stroke="#d1d5db" stroke-width="4"/>',
+  '  <rect x="120" y="120" width="960" height="660" rx="24" fill="none" stroke="#0f766e" stroke-width="10" stroke-dasharray="18 12"/>',
+  '  <text x="600" y="220" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="82" font-weight="700" fill="#0f172a">CERTIFICATE</text>',
+  '  <text x="600" y="285" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="30" fill="#334155">This document confirms professional qualification</text>',
+  '  <line x1="220" y1="350" x2="980" y2="350" stroke="#cbd5e1" stroke-width="6"/>',
+  '  <text x="600" y="430" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="700" fill="#111827">Professional Certification</text>',
+  '  <text x="600" y="485" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="28" fill="#475569">Issued to a verified service provider</text>',
+  '  <rect x="210" y="540" width="260" height="120" rx="18" fill="#f8fafc" stroke="#cbd5e1" stroke-width="4"/>',
+  '  <rect x="520" y="540" width="160" height="160" rx="80" fill="url(#seal)"/>',
+  '  <path d="M600 585l18 36 40 6-29 28 7 40-36-19-36 19 7-40-29-28 40-6z" fill="#fef08a"/>',
+  '  <rect x="730" y="540" width="260" height="120" rx="18" fill="#f8fafc" stroke="#cbd5e1" stroke-width="4"/>',
+  '  <text x="340" y="590" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700" fill="#0f172a">Verified</text>',
+  '  <text x="340" y="628" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#64748b">Training record</text>',
+  '  <text x="860" y="590" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700" fill="#0f172a">Document ID</text>',
+  '  <text x="860" y="628" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#64748b">Serial number</text>',
+  '  <text x="600" y="770" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#64748b">Official certificate photo placeholder</text>',
+  '</svg>',
+].join('\n');
+
+const CERTIFICATE_IMAGE_URL = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(CERTIFICATE_IMAGE_SVG);
+
 // MongoDB connection
 const connectDB = async () => {
   try {
@@ -595,28 +630,28 @@ const seedData = async () => {
       {
         name: "Certified Plumbing Technician",
         authority: "Tunisia Skilled Trades Board",
-        imageUrl: "https://images.unsplash.com/photo-1608148945033-01571c3e8553",
+        imageUrl: CERTIFICATE_IMAGE_URL,
         expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
         provider: providers[0]._id,
       },
       {
         name: "Electrical Safety Specialist",
         authority: "National Electrical Institute",
-        imageUrl: "https://images.unsplash.com/photo-1621905251918-48416bd8575a",
+        imageUrl: CERTIFICATE_IMAGE_URL,
         expiresAt: new Date(Date.now() + 540 * 24 * 60 * 60 * 1000),
         provider: providers[1]._id,
       },
       {
         name: "HVAC Maintenance Pro",
         authority: "Cooling Systems Academy",
-        imageUrl: "https://images.unsplash.com/photo-1581579186986-5a1863af95aa",
+        imageUrl: CERTIFICATE_IMAGE_URL,
         expiresAt: new Date(Date.now() + 480 * 24 * 60 * 60 * 1000),
         provider: providers[2]._id,
       },
       {
         name: "Professional Cleaning Operator",
         authority: "Home Services Council",
-        imageUrl: "https://images.unsplash.com/photo-1585421514738-01798e348b17",
+        imageUrl: CERTIFICATE_IMAGE_URL,
         expiresAt: new Date(Date.now() + 300 * 24 * 60 * 60 * 1000),
         provider: providers[3]._id,
       },
