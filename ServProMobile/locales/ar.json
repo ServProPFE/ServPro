@@ -217,9 +217,10 @@
     "subtitle": "كيف يمكنني مساعدتك اليوم؟",
     "welcome": "أهلاً وسهلاً!",
     "welcomeMessage": "أنا مساعدك الذكي. أخبرني بما تحتاجه أولاً، ثم سأطلب تفضيلك قبل اقتراح الخدمة.",
-    "preferenceIntro": "أخبرني بما تحتاجه، ثم سأطلب التفضيل الأهم قبل أن أقترح خدمة.",
+    "preferenceIntro": "أخبرني بما تحتاجه، وسأحدد نوع الخدمة أولاً ثم أسألك عن التفضيل الأهم.",
     "preferenceHint": "سأنتظر تفضيلك قبل إظهار أي توصية.",
     "preferencePrompt": "ما الأهم لهذا الطلب: الأرخص، الأسرع، الأقرب، المميز، أم الأبعد؟",
+    "preferencePromptWithService": "أعتقد أن هذا الطلب يتعلق بـ{{service}}. ما الأهم لهذا الطلب: الأرخص، الأسرع، الأقرب، المميز، أم الأبعد؟",
     "preferenceActionsLabel": "اختر التفضيل",
     "preferences": {
       "cheapest": "الأرخص",
@@ -227,6 +228,12 @@
       "closest": "الأقرب",
       "most_expensive": "مميز",
       "farthest": "الأبعد"
+    },
+    "serviceNames": {
+      "plomberie": "السباكة",
+      "electricite": "الكهرباء",
+      "climatisation": "التكييف",
+      "nettoyage": "التنظيف"
     },
     "suggestionsLabel": "اقتراحات سريعة:",
     "inputPlaceholder": "اكتب رسالتك هنا...",

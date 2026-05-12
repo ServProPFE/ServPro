@@ -63,6 +63,47 @@ const preferenceChoices = [
   'farthest',
 ] as const;
 
+type ServiceKey = 'plomberie' | 'electricite' | 'climatisation' | 'nettoyage';
+
+const SERVICE_KEYWORDS: Record<ServiceKey, RegExp[]> = {
+  plomberie: [/plumb/i, /plomberie/i, /water/i, /leak/i, /pipe/i, /faucet/i, /drain/i, /sink/i, /toilet/i, /سباك/i, /سباكة/i, /تسرب/i, /أنبوب/i, /حنفية/i, /مرحاض/i],
+  electricite: [/electr/i, /electricity/i, /wire/i, /circuit/i, /power/i, /light/i, /breaker/i, /socket/i, /switch/i, /كهرباء/i, /كهربائي/i, /أسلاك/i, /مقبس/i, /ضوء/i, /مفتاح/i],
+  climatisation: [/ac\b/i, /air\s*condition/i, /hvac/i, /cooling/i, /heating/i, /thermostat/i, /temperature/i, /تكييف/i, /تبريد/i, /تدفئة/i, /برودة/i, /ثرموستات/i, /حرارة/i],
+  nettoyage: [/clean/i, /cleaning/i, /dust/i, /wash/i, /hygiene/i, /sanitize/i, /maid/i, /تنظيف/i, /نظافة/i, /غبار/i, /تعقيم/i],
+};
+
+const SERVICE_LABELS: Record<ServiceKey, { en: string; ar: string }> = {
+  plomberie: { en: 'plumbing', ar: 'السباكة' },
+  electricite: { en: 'electrical', ar: 'الكهرباء' },
+  climatisation: { en: 'HVAC', ar: 'التكييف' },
+  nettoyage: { en: 'cleaning', ar: 'التنظيف' },
+};
+
+const normalizePreference = (text: string) => {
+  if (!text) return null;
+  const value = text.trim().toLowerCase();
+  if (/\b(cheap|cheapest|budget|low\s*cost|affordable)\b/.test(value) || /ارخص|الأرخص|اقل/.test(value)) return 'cheapest';
+  if (/\b(most\s+expensive|expensive|premium|high[-\s]?end|luxury)\b/.test(value) || /اغلى|الأغلى|مميز/.test(value)) return 'most_expensive';
+  if (/\b(close|closest|near|nearest|nearby)\b/.test(value) || /اقرب|الأقرب/.test(value)) return 'closest';
+  if (/\b(far|farthest|furthest)\b/.test(value) || /ابعد|الأبعد/.test(value)) return 'farthest';
+  if (/\b(fast|fastest|quick|urgent|soon)\b/.test(value) || /اسرع|الأسرع/.test(value)) return 'fastest';
+  return null;
+};
+
+const detectServiceHint = (text: string): ServiceKey | null => {
+  const value = text.trim();
+  if (!value) return null;
+
+  const normalized = value.toLowerCase();
+  for (const [serviceKey, patterns] of Object.entries(SERVICE_KEYWORDS) as [ServiceKey, RegExp[]][]) {
+    if (patterns.some((pattern) => pattern.test(normalized))) {
+      return serviceKey;
+    }
+  }
+
+  return null;
+};
+
 const resolveProviderName = (provider?: ChatService['provider']) => {
   if (!provider) return '';
   if (typeof provider === 'string') return provider;
@@ -166,9 +207,16 @@ export default function ChatbotScreen() {
     setInputValue('');
 
     if (!pendingRequest) {
+      const serviceHint = detectServiceHint(payloadText);
       setPendingRequest(payloadText);
       setAwaitingPreference(true);
-      addMessage({ role: 'bot', text: t('chatbot.preferencePrompt') });
+
+      const serviceLabel = serviceHint ? SERVICE_LABELS[serviceHint][chatLanguage] : null;
+      const promptText = serviceLabel
+        ? t('chatbot.preferencePromptWithService', { service: serviceLabel })
+        : t('chatbot.preferencePrompt');
+
+      addMessage({ role: 'bot', text: promptText });
       return;
     }
 
@@ -176,23 +224,13 @@ export default function ChatbotScreen() {
 
     try {
       const isFirstPrompt = messages.filter((chatMessage) => chatMessage.role === 'user').length === 0;
-
-      const normalizePreference = (text: string) => {
-        if (!text) return null;
-        const v = text.trim().toLowerCase();
-        if (/cheap|cheapest|budget|low/.test(v) || /ارخص|الأرخص|اقل/.test(v)) return 'cheapest';
-        if (/expensive|premium|most/.test(v) || /اغلى|الأغلى/.test(v)) return 'most_expensive';
-        if (/close|closest|near|nearest|nearby/.test(v) || /اقرب|الأقرب/.test(v)) return 'closest';
-        if (/far|farthest|furthest/.test(v) || /ابعد|الأبعد/.test(v)) return 'farthest';
-        if (/fast|fastest|quick|urgent|soon/.test(v) || /اسرع|الأسرع/.test(v)) return 'fastest';
-        return null;
-      };
-
-      const prefKey = normalizePreference(payloadText) as string | null;
+      const prefKey = normalizePreference(payloadText);
+      const serviceHint = detectServiceHint(pendingRequest);
 
       const response = await apiService.post<ChatResponse>(API_ENDPOINTS.CHATBOT, {
         message: pendingRequest,
         preference: prefKey,
+        serviceHint,
         language: chatLanguage,
         isFirstPrompt,
       });
