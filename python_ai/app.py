@@ -9,7 +9,14 @@ import random
 from datetime import datetime
 from urllib.request import Request, urlopen
 from dotenv import load_dotenv
-import google.generativeai as genai
+
+# Lazy import for Gemini - avoid blocking startup
+try:
+    import google.generativeai as genai
+    GENAI_AVAILABLE = True
+except ImportError:
+    GENAI_AVAILABLE = False
+    genai = None
 
 try:
     from pymongo import MongoClient
@@ -22,15 +29,10 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)
 
-# Configure Gemini API
+# Configuration - but don't initialize heavy components yet
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-    gemini_model = genai.GenerativeModel('gemini-flash-latest')
-    print("✅ Gemini API configured successfully")
-else:
-    gemini_model = None
-    print("⚠️  Gemini API key not found - fallback disabled")
+gemini_model = None  # Will be lazily initialized
+gemini_initialized = False
 
 
 def get_env_float(name, default):
@@ -84,27 +86,29 @@ MONGODB_URI = os.environ.get('MONGODB_URI', '').strip()
 MONGODB_DB_NAME = os.environ.get('MONGODB_DB_NAME', 'servpro_ai').strip() or 'servpro_ai'
 MONGODB_CONNECT_TIMEOUT_MS = max(500, get_env_int('MONGODB_CONNECT_TIMEOUT_MS', 3000))
 
+# Lazy MongoDB initialization - don't connect at startup
+MONGO_CONTEXT = None
+MONGO_ENABLED = False
+MONGO_MODELS_COLLECTION = None
+MONGO_FEEDBACK_COLLECTION = None
+mongo_initialized = False
 
-def init_mongo():
+def get_mongo_context():
+    """Lazy initialize MongoDB connection on first use"""
+    global MONGO_CONTEXT, MONGO_ENABLED, MONGO_MODELS_COLLECTION, MONGO_FEEDBACK_COLLECTION, mongo_initialized
+    
+    if mongo_initialized:
+        return MONGO_CONTEXT
+    
+    mongo_initialized = True
+    
     if not MONGODB_URI:
-        print("⚠️ MongoDB URI not set - using file-only persistence")
-        return {
-            'enabled': False,
-            'client': None,
-            'db': None,
-            'models': None,
-            'feedback': None
-        }
+        MONGO_CONTEXT = {'enabled': False, 'client': None, 'db': None, 'models': None, 'feedback': None}
+        return MONGO_CONTEXT
 
     if MongoClient is None:
-        print("⚠️ pymongo is not available - using file-only persistence")
-        return {
-            'enabled': False,
-            'client': None,
-            'db': None,
-            'models': None,
-            'feedback': None
-        }
+        MONGO_CONTEXT = {'enabled': False, 'client': None, 'db': None, 'models': None, 'feedback': None}
+        return MONGO_CONTEXT
 
     try:
         client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=MONGODB_CONNECT_TIMEOUT_MS)
@@ -119,29 +123,50 @@ def init_mongo():
         except Exception:
             pass
 
-        print(f"✅ MongoDB connected ({MONGODB_DB_NAME})")
-        return {
+        MONGO_CONTEXT = {
             'enabled': True,
             'client': client,
             'db': db,
             'models': models_collection,
             'feedback': feedback_collection
         }
+        MONGO_ENABLED = True
+        MONGO_MODELS_COLLECTION = models_collection
+        MONGO_FEEDBACK_COLLECTION = feedback_collection
+        print(f"✅ MongoDB connected ({MONGODB_DB_NAME})")
+        return MONGO_CONTEXT
     except Exception as exc:
         print(f"⚠️ MongoDB unavailable - using file-only persistence: {exc}")
-        return {
-            'enabled': False,
-            'client': None,
-            'db': None,
-            'models': None,
-            'feedback': None
-        }
+        MONGO_CONTEXT = {'enabled': False, 'client': None, 'db': None, 'models': None, 'feedback': None}
+        return MONGO_CONTEXT
 
 
-MONGO_CONTEXT = init_mongo()
-MONGO_ENABLED = bool(MONGO_CONTEXT.get('enabled'))
-MONGO_MODELS_COLLECTION = MONGO_CONTEXT.get('models')
-MONGO_FEEDBACK_COLLECTION = MONGO_CONTEXT.get('feedback')
+def init_mongo():
+    """Legacy wrapper - now calls lazy initialization"""
+    return get_mongo_context()
+
+
+def get_gemini_model():
+    """Lazy initialize Gemini API on first use"""
+    global gemini_model, gemini_initialized, GENAI_AVAILABLE
+    
+    if gemini_initialized:
+        return gemini_model
+    
+    gemini_initialized = True
+    
+    if not GENAI_AVAILABLE or not GEMINI_API_KEY:
+        print("⚠️  Gemini API not available - fallback to local NLP")
+        return None
+    
+    try:
+        genai.configure(api_key=GEMINI_API_KEY)
+        gemini_model = genai.GenerativeModel('gemini-flash-latest')
+        print("✅ Gemini API initialized on first use")
+        return gemini_model
+    except Exception as e:
+        print(f"⚠️  Gemini API initialization failed: {e} - fallback to local NLP")
+        return None
 
 # Service keywords database
 SERVICES_DB = {
@@ -411,7 +436,7 @@ def fetch_backend_prompt_context(user_input):
 def llm_nlp_classify(user_input, language='en', prompt_context=None, preference=None):
     """Use Gemini to perform structured NLP classification for service routing with coherence to service type and preferences."""
     llm_result = {
-        'enabled': bool(LLM_ENABLED and gemini_model),
+        'enabled': bool(LLM_ENABLED),  # Will try to use if available
         'used': False,
         'detected_service': None,
         'confidence': 0.0,
@@ -422,7 +447,10 @@ def llm_nlp_classify(user_input, language='en', prompt_context=None, preference=
 
     if not LLM_ENABLED:
         return llm_result
-    if not gemini_model:
+    
+    # Lazy-load Gemini on first use
+    model = get_gemini_model()
+    if not model:
         return llm_result
 
     # Build service catalog with domain-specific context
@@ -547,7 +575,7 @@ Language hint: {language}
 """
 
     try:
-        response = gemini_model.generate_content(
+        response = model.generate_content(
             prompt,
             request_options={"timeout": LLM_TIMEOUT_SECONDS}
         )
@@ -1221,18 +1249,21 @@ if DEEP_BOOTSTRAP_ON_START:
 
 @app.route('/health', methods=['GET'])
 def health():
-    """Health check endpoint"""
+    """Fast health check endpoint - returns immediately without initializing heavy components"""
+    # Get initialization status without blocking
+    mongo_ready = get_mongo_context().get('enabled', False) if mongo_initialized else False
+    gemini_ready = gemini_model is not None if gemini_initialized else False
+    
     return jsonify({
         'status': 'AI Chatbot service is running',
-        'model': 'Hybrid NLP: TF-IDF + LLM (Gemini) + Deep NN',
         'version': '1.2.0',
-        'llm_enabled': bool(LLM_ENABLED and gemini_model),
-        'llm_blend_alpha': LLM_BLEND_ALPHA,
-        'deep_enabled': bool(DEEP_ENABLED and deep_classifier and deep_classifier.is_ready),
-        'deep_blend_alpha': DEEP_BLEND_ALPHA,
-        'manual_feedback_enabled': bool(MANUAL_FEEDBACK_ENABLED),
-        'mongodb_enabled': MONGO_ENABLED,
-        'mongodb_database': MONGODB_DB_NAME if MONGO_ENABLED else None
+        'timestamp': datetime.utcnow().isoformat(),
+        'services_available': {
+            'nlp_tfidf': True,  # Always available
+            'llm_gemini': gemini_ready if gemini_initialized else None,  # null = not yet initialized
+            'mongodb': mongo_ready if mongo_initialized else None,  # null = not yet initialized
+        },
+        'startup_complete': gemini_initialized and mongo_initialized
     }), 200
 
 @app.route('/services', methods=['GET'])
@@ -1694,7 +1725,9 @@ def generate_gemini_response(user_input, language='en', confidence=0.0):
     Generate response using Google Gemini API when confidence is low.
     Provides contextual, professional, and optimistic responses for on-demand services.
     """
-    if not gemini_model:
+    # Lazy-load Gemini on first use
+    model = get_gemini_model()
+    if not model:
         if language == 'ar':
             return "عذرًا، لم أتمكن من فهم طلبك بدقة. يرجى توضيح الخدمة التي تحتاجها (سباكة، كهرباء، تكييف، تنظيف)."
         return "I couldn't determine the specific service you need with confidence. Could you please clarify if you need plumbing, electrical, HVAC, or cleaning services?"
@@ -1737,7 +1770,7 @@ Response should be:
 - Clearly mention the appropriate service"""
 
         try:
-            response = gemini_model.generate_content(system_prompt, request_options={"timeout": 8})
+            response = model.generate_content(system_prompt, request_options={"timeout": 8})
         except Exception as timeout_error:
             print(f"⚠️ Gemini timeout/request error: {timeout_error}")
             if language == 'ar':
@@ -1789,5 +1822,7 @@ if __name__ == '__main__':
 
     print("🤖 Starting Python AI Chatbot Service...")
     print(f"📍 Python AI Service running on http://{host}:{port}")
-    print("   No ML libraries required - Pure Python TF-IDF!")
+    print("   ⚡ Optimization: Heavy components (Gemini, MongoDB) lazy-loaded on first use")
+    print("   ✅ /health endpoint responds immediately (< 100ms)")
+    print("   📚 No ML libraries required - Pure Python TF-IDF!")
     app.run(debug=False, host=host, port=port, use_reloader=False)
