@@ -387,17 +387,17 @@ const checkAIHealth = asyncHandler(async (req, res) => {
 
   if (pythonAIOnline) {
     return res.status(200).json(healthStatus);
-  } else if (hasOpenCircuits) {
-    return res.status(503).json({
-      ...healthStatus,
-      message: 'Python AI service is recovering from previous failures (circuit breaker open)'
-    });
-  } else {
-    return res.status(503).json({
-      ...healthStatus,
-      message: 'Python AI service is currently unavailable'
-    });
   }
+
+  const message = hasOpenCircuits
+    ? 'Python AI service is recovering from previous failures (circuit breaker open)'
+    : 'Python AI service is currently unavailable';
+
+  return res.status(200).json({
+    ...healthStatus,
+    message,
+    httpStatus: 503
+  });
 });
 
 module.exports = {
