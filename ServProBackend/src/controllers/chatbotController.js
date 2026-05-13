@@ -74,6 +74,39 @@ const isRetriableAiError = (error) => {
   return status === 429 || status >= 500;
 };
 
+// Circuit breaker for Python AI service health tracking
+const serviceHealthStatus = new Map();
+const HEALTH_CHECK_INTERVAL_MS = 30000; // Check every 30 seconds
+const CIRCUIT_OPEN_THRESHOLD = 5; // Open circuit after 5 consecutive failures
+const CIRCUIT_RECOVERY_TIMEOUT_MS = 60000; // Try to recover after 1 minute
+
+const isCircuitOpen = (serviceUrl) => {
+  const status = serviceHealthStatus.get(serviceUrl) || { failures: 0, lastCheckTime: 0, isOpen: false };
+  if (status.isOpen && Date.now() - status.lastCheckTime > CIRCUIT_RECOVERY_TIMEOUT_MS) {
+    // Try to recover
+    status.isOpen = false;
+    status.failures = 0;
+  }
+  return status.isOpen;
+};
+
+const recordSuccess = (serviceUrl) => {
+  serviceHealthStatus.set(serviceUrl, { failures: 0, lastCheckTime: Date.now(), isOpen: false });
+};
+
+const recordFailure = (serviceUrl, error) => {
+  const current = serviceHealthStatus.get(serviceUrl) || { failures: 0, lastCheckTime: Date.now(), isOpen: false };
+  current.failures += 1;
+  current.lastCheckTime = Date.now();
+  
+  if (current.failures >= CIRCUIT_OPEN_THRESHOLD) {
+    current.isOpen = true;
+    console.warn(`⚠️  Circuit breaker OPEN for ${serviceUrl} after ${current.failures} failures`);
+  }
+  
+  serviceHealthStatus.set(serviceUrl, current);
+};
+
 const requestPythonAI = async ({ method = 'get', endpoint, data, timeoutMs = AI_REQUEST_TIMEOUT_MS, retries = AI_MAX_RETRIES }) => {
   if (PYTHON_AI_SERVICES.length === 0) {
     throw new Error('No PYTHON_AI_SERVICE endpoint configured');
@@ -82,9 +115,15 @@ const requestPythonAI = async ({ method = 'get', endpoint, data, timeoutMs = AI_
   let lastError;
 
   for (const serviceUrl of PYTHON_AI_SERVICES) {
+    // Skip services with open circuit breakers
+    if (isCircuitOpen(serviceUrl)) {
+      console.warn(`⚠️  Skipping ${serviceUrl} - circuit breaker is open`);
+      continue;
+    }
+
     for (let attempt = 0; attempt <= retries; attempt += 1) {
       try {
-        const effectiveTimeout = timeoutMs + (attempt * 5000);
+        const effectiveTimeout = Math.min(timeoutMs + (attempt * 5000), 25000); // Cap timeout at 25s
 
         const response = await axios({
           method,
@@ -93,11 +132,20 @@ const requestPythonAI = async ({ method = 'get', endpoint, data, timeoutMs = AI_
           timeout: effectiveTimeout
         });
 
+        recordSuccess(serviceUrl);
         return response.data;
       } catch (error) {
         lastError = error;
+        
+        // Handle 503 Service Unavailable specifically
+        if (error.response?.status === 503) {
+          console.error(`❌ Python AI service returned 503 (unavailable) from ${serviceUrl}`);
+          recordFailure(serviceUrl, error);
+          break; // Skip remaining retries for this service, try next one
+        }
 
         if (attempt >= retries || !isRetriableAiError(error)) {
+          recordFailure(serviceUrl, error);
           break;
         }
 
@@ -288,33 +336,66 @@ const getChatbotSuggestions = asyncHandler(async (req, res) => {
 
 // Health check for Python AI service
 const checkAIHealth = asyncHandler(async (req, res) => {
+  const healthStatus = {
+    status: 'online',
+    nodeBackend: 'online',
+    pythonAI: null,
+    circuitBreaker: {},
+    timestamp: new Date()
+  };
+
+  // Check circuit breaker status for all services
+  PYTHON_AI_SERVICES.forEach(serviceUrl => {
+    const status = serviceHealthStatus.get(serviceUrl) || { failures: 0, isOpen: false };
+    healthStatus.circuitBreaker[serviceUrl] = {
+      isOpen: status.isOpen,
+      failures: status.failures,
+      lastCheckTime: status.lastCheckTime ? new Date(status.lastCheckTime) : null
+    };
+  });
+
+  // Attempt to get health from Python AI (with shorter timeout for faster response)
   try {
     const healthResponse = await requestPythonAI({
       method: 'get',
       endpoint: '/health',
-      timeoutMs: AI_HEALTH_TIMEOUT_MS,
-      retries: AI_HEALTH_RETRIES
+      timeoutMs: 8000, // Reduce from 15s to 8s for faster failure detection
+      retries: 1 // Reduce retries for health check
     });
     
-    res.json({
+    healthStatus.pythonAI = {
       status: 'online',
-      nodeBackend: 'online',
-      pythonAI: healthResponse,
-      timestamp: new Date()
-    });
-
+      ...healthResponse
+    };
   } catch (error) {
     console.error('AI service health check failed:', error.message);
     
-    res.status(503).json({
-      status: 'degraded',
-      nodeBackend: 'online',
-      pythonAI: {
-        status: 'offline',
-        error: 'Python AI service is not responding',
-        urls: PYTHON_AI_SERVICES
-      },
-      timestamp: new Date()
+    healthStatus.status = 'degraded';
+    healthStatus.pythonAI = {
+      status: 'offline',
+      error: 'Python AI service is not responding',
+      availableServices: PYTHON_AI_SERVICES,
+      servicesWithOpenCircuits: Object.entries(healthStatus.circuitBreaker)
+        .filter(([_, s]) => s.isOpen)
+        .map(([url]) => url)
+    };
+  }
+
+  // Determine overall status and HTTP code
+  const hasOpenCircuits = Object.values(healthStatus.circuitBreaker).some(s => s.isOpen);
+  const pythonAIOnline = healthStatus.pythonAI?.status === 'online';
+
+  if (pythonAIOnline) {
+    return res.status(200).json(healthStatus);
+  } else if (hasOpenCircuits) {
+    return res.status(503).json({
+      ...healthStatus,
+      message: 'Python AI service is recovering from previous failures (circuit breaker open)'
+    });
+  } else {
+    return res.status(503).json({
+      ...healthStatus,
+      message: 'Python AI service is currently unavailable'
     });
   }
 });
