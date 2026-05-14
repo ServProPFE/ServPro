@@ -141,7 +141,8 @@ const formatLocation = (provider: ProviderApiItem | null, fallback: string) => {
     const values = Object.values(raw)
       .map((value) => (typeof value === 'string' ? value.trim() : ''))
       .filter(Boolean);
-    return values.join(', ') || fallback;
+    // Only return the first location for maps precision
+    return values[0] || fallback;
   }
 
   return fallback;

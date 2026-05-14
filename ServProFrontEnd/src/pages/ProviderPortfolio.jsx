@@ -45,7 +45,8 @@ const formatLocation = (provider, t) => {
     const values = Object.values(raw)
       .map((value) => (typeof value === 'string' ? value.trim() : ''))
       .filter(Boolean);
-    return values.join(', ') || t('providerPortfolio.notProvided');
+    // Only return the first location for maps precision
+    return values[0] || t('providerPortfolio.notProvided');
   }
 
   return t('providerPortfolio.notProvided');
