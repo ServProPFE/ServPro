@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 const normalizeBaseUrl = (value?: string) => (value || '').trim().replace(/\/+$/, '');
 
 const envBaseUrl = normalizeBaseUrl(process.env.EXPO_PUBLIC_API_BASE_URL);
+const vercelFallbackBaseUrl = 'https://servpro-backend.vercel.app';
 const renderFallbackBaseUrl = 'https://servpro-backend.onrender.com';
 
 const localhostByPlatform = Platform.select({
@@ -47,6 +48,7 @@ const lanBaseUrl = lanHost ? `http://${lanHost}:4000` : '';
 export const API_BASE_URL =
   envBaseUrl ||
   extraBaseUrl ||
+  vercelFallbackBaseUrl ||
   renderFallbackBaseUrl ||
   lanBaseUrl ||
   localhostByPlatform ||

@@ -3,9 +3,11 @@ const isLocalBrowser =
   globalThis.window &&
   (globalThis.window.location.hostname === 'localhost' || globalThis.window.location.hostname === '127.0.0.1');
 
+const vercelFallbackBaseUrl = 'https://servpro-backend.vercel.app';
+
 const API_BASE_URL = isLocalBrowser
   ? 'http://localhost:4000'
-  : import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+  : import.meta.env.VITE_API_BASE_URL || vercelFallbackBaseUrl || 'http://localhost:4000';
 
 export const API_ENDPOINTS = {
   // Auth

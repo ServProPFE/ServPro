@@ -27,6 +27,7 @@ const chatbotRoutes = require("./routes/chatbot");
 
 //Créer une application Express
 const app = express();
+app.disable("x-powered-by");
 
 //Configurer les middlewares
 const defaultAllowedOrigins = [
@@ -34,6 +35,8 @@ const defaultAllowedOrigins = [
 	"https://app.servpro.tn",
 	"https://dashboard.servpro.local",
 	"https://app.servpro.local",
+	"https://servpro-frontend.vercel.app",
+	"https://serv-pro-dashboard.vercel.app",
 	"http://localhost:5173",
 	"http://localhost:5174",
 	"https://servpro--0ptcatldvs.expo.app",
@@ -50,10 +53,11 @@ const corsOptions = {
 	origin: (origin, callback) => {
 		// Allow server-to-server and CLI requests that do not send Origin.
 		const isTrustedServproOrigin = /^https:\/\/[a-z0-9-]+\.servpro\.(tn|local)$/i.test(origin || "");
+		const isTrustedVercelOrigin = /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin || "");
 		const isTrustedLocalhost = /^http:\/\/localhost(?::\d+)?$/i.test(origin || "");
 		const isTrustedExpoApp = /^https:\/\/[a-z0-9-]+\.expo\.app$/i.test(origin || "");
 
-		if (!origin || allowedOrigins.has(origin) || isTrustedServproOrigin || isTrustedLocalhost || isTrustedExpoApp) {
+		if (!origin || allowedOrigins.has(origin) || isTrustedServproOrigin || isTrustedVercelOrigin || isTrustedLocalhost || isTrustedExpoApp) {
 			callback(null, true);
 			return;
 		}
