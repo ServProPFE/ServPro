@@ -17,7 +17,7 @@ const configuredPythonAIService = (process.env.PYTHON_AI_SERVICE || '')
   .map(normalizeServiceUrl)
   .filter(Boolean);
 
-const primaryPythonAIService = 'https://chatbot-ai-smpu.onrender.com';
+const primaryPythonAIService = 'https://servpro-python-ai.vercel.app';
 const legacyPythonAIService = 'https://servpro-python-ai.onrender.com';
 
 const defaultPythonAIServices = isProduction
@@ -107,12 +107,49 @@ const recordFailure = (serviceUrl, error) => {
   serviceHealthStatus.set(serviceUrl, current);
 };
 
+const executePythonRequest = async ({ serviceUrl, method, endpoint, data, timeoutMs, retries }) => {
+  let lastError;
+
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      const effectiveTimeout = Math.min(timeoutMs + (attempt * 5000), 25000); // Cap timeout at 25s
+
+      const response = await axios({
+        method,
+        url: `${serviceUrl}${endpoint}`,
+        data,
+        timeout: effectiveTimeout
+      });
+
+      recordSuccess(serviceUrl);
+      return response.data;
+    } catch (error) {
+      lastError = error;
+
+      // Handle 503 Service Unavailable specifically
+      if (error.response?.status === 503) {
+        console.error(`❌ Python AI service returned 503 (unavailable) from ${serviceUrl}`);
+        recordFailure(serviceUrl, error);
+        break;
+      }
+
+      if (attempt >= retries || !isRetriableAiError(error)) {
+        recordFailure(serviceUrl, error);
+        break;
+      }
+
+      const backoffDelay = AI_RETRY_BASE_DELAY_MS * (2 ** attempt);
+      await delay(backoffDelay);
+    }
+  }
+
+  throw lastError;
+};
+
 const requestPythonAI = async ({ method = 'get', endpoint, data, timeoutMs = AI_REQUEST_TIMEOUT_MS, retries = AI_MAX_RETRIES }) => {
   if (PYTHON_AI_SERVICES.length === 0) {
     throw new Error('No PYTHON_AI_SERVICE endpoint configured');
   }
-
-  let lastError;
 
   for (const serviceUrl of PYTHON_AI_SERVICES) {
     // Skip services with open circuit breakers
@@ -121,41 +158,23 @@ const requestPythonAI = async ({ method = 'get', endpoint, data, timeoutMs = AI_
       continue;
     }
 
-    for (let attempt = 0; attempt <= retries; attempt += 1) {
-      try {
-        const effectiveTimeout = Math.min(timeoutMs + (attempt * 5000), 25000); // Cap timeout at 25s
-
-        const response = await axios({
-          method,
-          url: `${serviceUrl}${endpoint}`,
-          data,
-          timeout: effectiveTimeout
-        });
-
-        recordSuccess(serviceUrl);
-        return response.data;
-      } catch (error) {
-        lastError = error;
-        
-        // Handle 503 Service Unavailable specifically
-        if (error.response?.status === 503) {
-          console.error(`❌ Python AI service returned 503 (unavailable) from ${serviceUrl}`);
-          recordFailure(serviceUrl, error);
-          break; // Skip remaining retries for this service, try next one
-        }
-
-        if (attempt >= retries || !isRetriableAiError(error)) {
-          recordFailure(serviceUrl, error);
-          break;
-        }
-
-        const backoffDelay = AI_RETRY_BASE_DELAY_MS * (2 ** attempt);
-        await delay(backoffDelay);
+    try {
+      return await executePythonRequest({
+        serviceUrl,
+        method,
+        endpoint,
+        data,
+        timeoutMs,
+        retries,
+      });
+    } catch (error) {
+      if (!isRetriableAiError(error) && error.response?.status !== 503) {
+        throw error;
       }
     }
   }
 
-  throw lastError;
+  throw new Error('All Python AI services are unavailable');
 };
 
 const loadServiceAnalytics = async () => {

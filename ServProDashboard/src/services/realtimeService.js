@@ -1,8 +1,15 @@
 import authService from './authService';
 
+/**
+ * SSE (Server-Sent Events) Realtime Service
+ * Replaces WebSocket with HTTP-based Server-Sent Events for Vercel compatibility
+ * 
+ * SSE is one-way (server-to-client) and works perfectly with stateless serverless functions.
+ * Server pushes events to connected clients via an open HTTP connection.
+ */
 class RealtimeService {
   constructor() {
-    this.ws = null;
+    this.eventSource = null;
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
     this.reconnectDelay = 3000;
@@ -10,21 +17,22 @@ class RealtimeService {
     this.isManualClose = false;
   }
 
-  getWebSocketURL() {
+  getSSEURL() {
     const isLocalBrowser =
       globalThis.window &&
       (globalThis.window.location.hostname === 'localhost' ||
         globalThis.window.location.hostname === '127.0.0.1');
 
+    // SSE uses HTTP/HTTPS, not WS/WSS
     const baseURL = isLocalBrowser
-      ? 'ws://localhost:4000'
-      : import.meta.env.VITE_WS_BASE_URL || 'wss://api.servpro.com';
+      ? 'http://localhost:4000'
+      : import.meta.env.VITE_API_BASE_URL || 'https://api.servpro.com';
 
     return baseURL;
   }
 
   connect() {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+    if (this.eventSource && this.eventSource.readyState === EventSource.OPEN) {
       return Promise.resolve();
     }
 
@@ -36,34 +44,32 @@ class RealtimeService {
           return;
         }
 
-        const wsURL = `${this.getWebSocketURL()}/realtime?token=${token}`;
-        this.ws = new WebSocket(wsURL);
+        // SSE endpoint uses GET with token parameter
+        const sseURL = `${this.getSSEURL()}/realtime/subscribe?token=${token}`;
+        this.eventSource = new EventSource(sseURL);
 
-        this.ws.onopen = () => {
-          console.log('WebSocket connected');
+        this.eventSource.onopen = () => {
+          console.log('SSE connected to realtime server');
           this.reconnectAttempts = 0;
           resolve();
         };
 
-        this.ws.onmessage = (event) => {
+        this.eventSource.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
             this.handleMessage(data);
           } catch (error) {
-            console.error('Error parsing WebSocket message:', error);
+            console.error('Error parsing SSE message:', error);
           }
         };
 
-        this.ws.onerror = (error) => {
-          console.error('WebSocket error:', error);
-          reject(error);
-        };
-
-        this.ws.onclose = () => {
-          console.log('WebSocket disconnected');
+        this.eventSource.onerror = (error) => {
+          console.error('SSE connection error:', error);
+          this.eventSource.close();
           if (!this.isManualClose) {
             this.attemptReconnect();
           }
+          reject(error);
         };
       } catch (error) {
         reject(error);
@@ -89,6 +95,12 @@ class RealtimeService {
 
   handleMessage(data) {
     const { type, payload } = data;
+    
+    // Skip internal messages
+    if (type === 'ping' || type === 'connected' || type === 'pong') {
+      console.debug(`SSE ping/pong: ${type}`);
+      return;
+    }
     
     // Emit event to all listeners
     if (this.listeners[type]) {
@@ -132,24 +144,24 @@ class RealtimeService {
     }
   }
 
+  /**
+   * SSE is one-way (server-to-client only)
+   * For publishing events, use REST API endpoints instead
+   */
   publish(type, payload) {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type, payload }));
-    } else {
-      console.warn('WebSocket is not connected');
-    }
+    console.warn('SSE is one-way (server-to-client). To send data to server, use REST API endpoints.');
   }
 
   disconnect() {
     this.isManualClose = true;
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
+    if (this.eventSource) {
+      this.eventSource.close();
+      this.eventSource = null;
     }
   }
 
   isConnected() {
-    return this.ws && this.ws.readyState === WebSocket.OPEN;
+    return this.eventSource && this.eventSource.readyState === EventSource.OPEN;
   }
 
   // Convenience methods for specific event types

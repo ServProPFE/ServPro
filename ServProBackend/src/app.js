@@ -24,6 +24,7 @@ const notationsRoutes = require("./routes/notations");
 const transactionRoutes = require("./routes/transactions");
 const notificationsRoutes = require("./routes/notifications");
 const chatbotRoutes = require("./routes/chatbot");
+const sseRealtimeRoutes = require("./routes/sse-realtime");
 
 //Créer une application Express
 const app = express();
@@ -95,6 +96,7 @@ app.use("/notations", notationsRoutes);
 app.use("/transactions", transactionRoutes);
 app.use("/notifications", notificationsRoutes);
 app.use("/chatbot", chatbotRoutes);
+app.use("/realtime", sseRealtimeRoutes);
 
 //Configurer le middleware de gestion des erreurs
 app.use(errorHandler);
