@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import LanguageSwitcher from './LanguageSwitcher';
+import servproIcon from '../assets/servpro-icon.png';
 
 const Sidebar = () => {
   const { user, logout, isProvider, isAdmin } = useAuth();
@@ -82,7 +83,7 @@ const Sidebar = () => {
     <>
       <div className="sticky top-0 z-40 flex items-center justify-between border-b border-slate-200/70 bg-white/70 p-3 backdrop-blur lg:hidden">
         <h2 className="display-title text-xl font-bold text-slate-900">
-          <img src="/logo.png" alt="ServPro Logo" className="mr-2 inline-block h-6 w-6" />
+          <img src={servproIcon} alt="ServPro Logo" className="mr-2 inline-block h-6 w-6" />
           <span className="text-sky-300">Serv</span>
           <span className="text-emerald-300">Pro</span>
         </h2>
@@ -100,7 +101,7 @@ const Sidebar = () => {
       <aside id="dashboard-sidebar" className={`${menuOpen ? 'translate-x-0' : '-translate-x-full'} fixed inset-y-0 left-0 z-50 flex w-72 max-w-[88vw] flex-col border-r border-slate-700/40 bg-slate-950 p-4 shadow-2xl shadow-slate-900/40 transition-transform duration-300 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0`}>
         <div className="mb-4 flex items-center justify-between lg:justify-start">
           <h2 className="display-title text-2xl font-bold text-white">
-            <img src="/servpro-icon.png" alt="ServPro Logo" className="mr-2 inline-block h-20 w-20" />
+            <img src={servproIcon} alt="ServPro Logo" className="mr-2 inline-block h-20 w-20" />
           </h2>
           <button
             type="button"

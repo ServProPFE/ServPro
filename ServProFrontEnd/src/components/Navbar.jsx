@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import LanguageSwitcher from './LanguageSwitcher';
 import ProviderListNavLink from './ProviderListNavLink';
 import NotificationsPanel from './NotificationsPanel';
+import servproIcon from '../assets/servpro-icon.png';
 
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -81,7 +82,7 @@ const Navbar = () => {
     <nav className="fixed inset-x-0 top-0 z-50 border-b border-slate-700/20 bg-slate-950/80 backdrop-blur-lg">
       <div className="mx-auto flex h-[78px] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link to="/" className="display-title text-2xl font-bold text-white" onClick={closeMenu}>
-          <img src="/servpro-icon.png" alt="ServPro Logo" className="mr-2 inline-block h-20 w-20" />
+          <img src={servproIcon} alt="ServPro Logo" className="mr-2 inline-block h-20 w-20" />
         </Link>
 
         <button
