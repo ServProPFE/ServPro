@@ -1,5 +1,6 @@
 //Importer les modeles et les utilitaires nécessaires
 const { Booking } = require("../models/Booking");
+const { Availability } = require("../models/Availability");
 const { Transaction } = require("../models/Transaction");
 const { Invoice } = require("../models/Invoice");
 const { Service } = require("../models/Service");
@@ -9,6 +10,7 @@ const {
   createTransactionNotifications,
 } = require("../services/notificationService");
 const { asyncHandler } = require("../utils/asyncHandler");
+const { checkProviderAvailability } = require("../utils/availabilityHelper");
 
 const roundTo2 = (value) => Math.round((value + Number.EPSILON) * 100) / 100;
 
@@ -66,6 +68,26 @@ const getBookingPriceWithOffer = async (serviceId) => {
   };
 };
 
+// Validate if provider is available at the requested time
+const validateProviderAvailability = async (providerId, expectedAt) => {
+  const result = await checkProviderAvailability(providerId, expectedAt);
+  
+  if (!result.available) {
+    const error = new Error(result.message);
+    error.statusCode = 409;
+    error.availabilityError = true;
+    throw error;
+  }
+
+  return true;
+};
+
+// Helper function to get day name
+const getDayName = (dayIndex) => {
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  return days[dayIndex] || 'Unknown';
+};
+
 //Créer une nouvelle réservation
 const createBooking = asyncHandler(async (req, res) => {
   const {
@@ -77,6 +99,23 @@ const createBooking = asyncHandler(async (req, res) => {
     detail,
     tracking,
   } = req.body;
+
+  // Validate that expectedAt is provided and is a valid date
+  if (!expectedAt) {
+    const error = new Error("expectedAt date/time is required");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const bookingDate = new Date(expectedAt);
+  if (isNaN(bookingDate.getTime())) {
+    const error = new Error("expectedAt must be a valid date/time");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // Validate provider availability before creating the booking
+  await validateProviderAvailability(provider, expectedAt);
 
   const priceInfo = await getBookingPriceWithOffer(service);
 
