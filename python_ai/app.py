@@ -1249,19 +1249,19 @@ if DEEP_BOOTSTRAP_ON_START:
 
 @app.route('/health', methods=['GET'])
 def health():
-    """Fast health check endpoint - returns immediately without initializing heavy components"""
-    # Get initialization status without blocking
-    mongo_ready = get_mongo_context().get('enabled', False) if mongo_initialized else False
-    gemini_ready = gemini_model is not None if gemini_initialized else False
-    
+    """Fast health check endpoint - always returns 200 when the process is alive."""
+    gemini_ready = bool(gemini_initialized and gemini_model)
+    mongo_ready = bool(mongo_initialized and MONGO_CONTEXT and MONGO_CONTEXT.get('enabled'))
+
     return jsonify({
-        'status': 'AI Chatbot service is running',
+        'status': 'healthy',
+        'service': 'AI Chatbot service is running',
         'version': '1.2.0',
-        'timestamp': datetime.utcnow().isoformat(),
+        'timestamp': datetime.now().isoformat(),
         'services_available': {
-            'nlp_tfidf': True,  # Always available
-            'llm_gemini': gemini_ready if gemini_initialized else None,  # null = not yet initialized
-            'mongodb': mongo_ready if mongo_initialized else None,  # null = not yet initialized
+            'nlp_tfidf': True,
+            'llm_gemini': gemini_ready,
+            'mongodb': mongo_ready,
         },
         'startup_complete': gemini_initialized and mongo_initialized
     }), 200
