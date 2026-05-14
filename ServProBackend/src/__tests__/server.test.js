@@ -19,14 +19,18 @@ describe("server startup", () => {
     process.env.PORT = "4100";
     process.env.MONGODB_URI = "mongodb://localhost:27017/servpro-test";
 
-    const listen = jest.fn((port, callback) => callback());
+    const server = { on: jest.fn() };
+    const listen = jest.fn((port, callback) => {
+      callback();
+      return server;
+    });
     const connectDb = jest.fn().mockResolvedValue();
     const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
     const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
     const exitSpy = jest.spyOn(process, "exit").mockImplementation(() => {});
 
     jest.doMock("../app", () => ({
-      app: { listen },
+      app: { listen, locals: {} },
     }));
     jest.doMock("../config/db", () => ({ connectDb }));
 
@@ -53,7 +57,7 @@ describe("server startup", () => {
     const exitSpy = jest.spyOn(process, "exit").mockImplementation(() => {});
 
     jest.doMock("../app", () => ({
-      app: { listen },
+      app: { listen, locals: {} },
     }));
     jest.doMock("../config/db", () => ({ connectDb }));
 
