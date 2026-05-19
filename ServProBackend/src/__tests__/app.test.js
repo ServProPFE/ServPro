@@ -1,9 +1,10 @@
 const mockUse = jest.fn();
 const mockOptions = jest.fn();
+const mockDisable = jest.fn();
 const mockJson = jest.fn(() => "json-middleware");
 
 // Mocking the Express app and its methods to test the app configuration without starting an actual server
-const mockExpress = jest.fn(() => ({ use: mockUse, options: mockOptions }));
+const mockExpress = jest.fn(() => ({ use: mockUse, options: mockOptions, disable: mockDisable }));
 mockExpress.json = mockJson;
 
 // Mocking the database connection function to prevent actual database interactions during tests
@@ -34,12 +35,14 @@ jest.mock("../routes/notations", () => "notations-routes");
 jest.mock("../routes/transactions", () => "transactions-routes");
 jest.mock("../routes/notifications", () => "notifications-routes");
 jest.mock("../routes/chatbot", () => "chatbot-routes");
+jest.mock("../routes/sse-realtime", () => "sse-realtime-routes");
 
 describe("app configuration", () => {
   beforeEach(() => {
     jest.resetModules();
     mockUse.mockClear();
     mockOptions.mockClear();
+    mockDisable.mockClear();
     mockJson.mockClear();
     mockExpress.mockClear();
   });
@@ -49,31 +52,33 @@ describe("app configuration", () => {
 
     expect(app).toBeDefined();
     expect(mockExpress).toHaveBeenCalledTimes(1);
+    expect(mockDisable).toHaveBeenCalledWith("x-powered-by");
     expect(mockJson).toHaveBeenCalledTimes(1);
-    expect(mockOptions).toHaveBeenCalledWith("*", "cors-middleware");
 
-    expect(mockUse).toHaveBeenNthCalledWith(1, "cors-middleware");
-    expect(mockUse).toHaveBeenNthCalledWith(2, "json-middleware");
-    expect(mockUse).toHaveBeenNthCalledWith(3, "morgan-middleware");
-    expect(mockUse).toHaveBeenNthCalledWith(4, "/health", "health-routes");
-    expect(mockUse).toHaveBeenNthCalledWith(5, "/auth", "auth-routes");
-    expect(mockUse).toHaveBeenNthCalledWith(6, "/services", "services-routes");
-    expect(mockUse).toHaveBeenNthCalledWith(7, "/bookings", "bookings-routes");
-    expect(mockUse).toHaveBeenNthCalledWith(8, "/reviews", "reviews-routes");
-    expect(mockUse).toHaveBeenNthCalledWith(9, "/offers", "offers-routes");
-    expect(mockUse).toHaveBeenNthCalledWith(10, "/packages", "packages-routes");
-    expect(mockUse).toHaveBeenNthCalledWith(11, "/invoices", "invoices-routes");
-    expect(mockUse).toHaveBeenNthCalledWith(12, "/commissions", "commissions-routes");
-    expect(mockUse).toHaveBeenNthCalledWith(13, "/reservation-details", "reservation-details-routes");
-    expect(mockUse).toHaveBeenNthCalledWith(14, "/tracking", "tracking-routes");
-    expect(mockUse).toHaveBeenNthCalledWith(15, "/portfolios", "portfolios-routes");
-    expect(mockUse).toHaveBeenNthCalledWith(16, "/competences", "competences-routes");
-    expect(mockUse).toHaveBeenNthCalledWith(17, "/certifications", "certifications-routes");
-    expect(mockUse).toHaveBeenNthCalledWith(18, "/availability", "availability-routes");
-    expect(mockUse).toHaveBeenNthCalledWith(19, "/notations", "notations-routes");
-    expect(mockUse).toHaveBeenNthCalledWith(20, "/transactions", "transactions-routes");
-    expect(mockUse).toHaveBeenNthCalledWith(21, "/notifications", "notifications-routes");
-    expect(mockUse).toHaveBeenNthCalledWith(22, "/chatbot", "chatbot-routes");
-    expect(mockUse).toHaveBeenNthCalledWith(23, "error-handler-middleware");
+    expect(mockUse).toHaveBeenNthCalledWith(1, expect.any(Function));
+    expect(mockUse).toHaveBeenNthCalledWith(2, "cors-middleware");
+    expect(mockUse).toHaveBeenNthCalledWith(3, "json-middleware");
+    expect(mockUse).toHaveBeenNthCalledWith(4, "morgan-middleware");
+    expect(mockUse).toHaveBeenNthCalledWith(5, "/health", "health-routes");
+    expect(mockUse).toHaveBeenNthCalledWith(6, "/auth", "auth-routes");
+    expect(mockUse).toHaveBeenNthCalledWith(7, "/services", "services-routes");
+    expect(mockUse).toHaveBeenNthCalledWith(8, "/bookings", "bookings-routes");
+    expect(mockUse).toHaveBeenNthCalledWith(9, "/reviews", "reviews-routes");
+    expect(mockUse).toHaveBeenNthCalledWith(10, "/offers", "offers-routes");
+    expect(mockUse).toHaveBeenNthCalledWith(11, "/packages", "packages-routes");
+    expect(mockUse).toHaveBeenNthCalledWith(12, "/invoices", "invoices-routes");
+    expect(mockUse).toHaveBeenNthCalledWith(13, "/commissions", "commissions-routes");
+    expect(mockUse).toHaveBeenNthCalledWith(14, "/reservation-details", "reservation-details-routes");
+    expect(mockUse).toHaveBeenNthCalledWith(15, "/tracking", "tracking-routes");
+    expect(mockUse).toHaveBeenNthCalledWith(16, "/portfolios", "portfolios-routes");
+    expect(mockUse).toHaveBeenNthCalledWith(17, "/competences", "competences-routes");
+    expect(mockUse).toHaveBeenNthCalledWith(18, "/certifications", "certifications-routes");
+    expect(mockUse).toHaveBeenNthCalledWith(19, "/availability", "availability-routes");
+    expect(mockUse).toHaveBeenNthCalledWith(20, "/notations", "notations-routes");
+    expect(mockUse).toHaveBeenNthCalledWith(21, "/transactions", "transactions-routes");
+    expect(mockUse).toHaveBeenNthCalledWith(22, "/notifications", "notifications-routes");
+    expect(mockUse).toHaveBeenNthCalledWith(23, "/chatbot", "chatbot-routes");
+    expect(mockUse).toHaveBeenNthCalledWith(24, "/realtime", "sse-realtime-routes");
+    expect(mockUse).toHaveBeenNthCalledWith(25, "error-handler-middleware");
   });
 });
