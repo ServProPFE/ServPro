@@ -103,8 +103,10 @@ pipeline {
                     powershell '''
                         $ErrorActionPreference = "Stop"
                         Write-Host "Using Vercel token from Jenkins credential."
-                        # Use npx to avoid relying on global install
-                        npx vercel@latest --prod --confirm --token $env:VERCEL_TOKEN
+                        # Use npx to avoid relying on global install.
+                        # Use --yes (non-interactive) and provide a valid project name to avoid
+                        # Vercel attempting to infer a long workspace path as the project name.
+                        npx vercel@latest --prod --yes --token $env:VERCEL_TOKEN --name servpro-backend
                     '''
                 }
             }

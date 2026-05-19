@@ -47,7 +47,7 @@ export default function TransactionsScreen() {
     return transactions.filter((item) => item.status === activeFilter);
   }, [activeFilter, transactions]);
 
-  const filters: Array<'all' | TransactionItem['status']> = ['all', 'PENDING', 'SUCCESS', 'FAILED'];
+  const filters: ('all' | TransactionItem['status'])[] = ['all', 'PENDING', 'SUCCESS', 'FAILED'];
 
   return (
     <AppBackground>

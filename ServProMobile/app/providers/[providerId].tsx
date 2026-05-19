@@ -74,11 +74,7 @@ const toArray = <T,>(payload: { items?: T[] } | T[] | undefined): T[] => {
   return [];
 };
 
-const normalizeList = (value: string[] | string | undefined) => {
-  if (Array.isArray(value)) return value.filter(Boolean).map((item) => item.trim()).filter(Boolean);
-  if (typeof value === 'string') return value.split(',').map((item) => item.trim()).filter(Boolean);
-  return [];
-};
+// normalizeList removed — not used. Keep helper functions small and focused.
 
 const humanizeServiceKey = (key: string) => {
   const withoutPrefix = key.replace(/^services?Names\./, '');
@@ -119,7 +115,7 @@ const hasValue = (value: unknown) => {
   return true;
 };
 
-const firstNonEmpty = (...values: Array<unknown>) => values.find((value) => hasValue(value));
+const firstNonEmpty = (...values: unknown[]) => values.find((value) => hasValue(value));
 
 const formatLocation = (provider: ProviderApiItem | null, fallback: string) => {
   const raw = firstNonEmpty(

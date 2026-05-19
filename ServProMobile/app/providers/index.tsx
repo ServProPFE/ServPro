@@ -74,7 +74,7 @@ const hasValue = (value: unknown) => {
   return true;
 };
 
-const firstNonEmpty = (...values: Array<unknown>) => values.find((value) => hasValue(value));
+const firstNonEmpty = (...values: unknown[]) => values.find((value) => hasValue(value));
 
 const normalizeText = (value: string) => value.normalize('NFD').replaceAll(/\p{Diacritic}/gu, '').toLowerCase().trim();
 
