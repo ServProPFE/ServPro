@@ -50,15 +50,44 @@ const allowedOrigins = new Set(
 	.filter(Boolean)
 );
 
+const isAllowedOrigin = (origin) => {
+	if (!origin) {
+		return true;
+	}
+
+	const normalizedOrigin = origin.trim();
+	const isTrustedServproOrigin = /^https:\/\/[a-z0-9-]+\.servpro\.(tn|local)$/i.test(normalizedOrigin);
+	const isTrustedVercelOrigin = /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(normalizedOrigin);
+	const isTrustedLocalhost = /^http:\/\/localhost(?::\d+)?$/i.test(normalizedOrigin);
+	const isTrustedExpoApp = /^https:\/\/[a-z0-9-]+\.expo\.app$/i.test(normalizedOrigin);
+
+	return allowedOrigins.has(normalizedOrigin) || isTrustedServproOrigin || isTrustedVercelOrigin || isTrustedLocalhost || isTrustedExpoApp;
+};
+
+app.use((req, res, next) => {
+	const origin = req.headers.origin;
+
+	if (isAllowedOrigin(origin)) {
+		if (origin) {
+			res.setHeader("Access-Control-Allow-Origin", origin);
+			res.setHeader("Vary", "Origin");
+		}
+		res.setHeader("Access-Control-Allow-Credentials", "true");
+		res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+		res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
+	}
+
+	if (req.method === "OPTIONS") {
+		res.status(204).end();
+		return;
+	}
+
+	next();
+});
+
 const corsOptions = {
 	origin: (origin, callback) => {
-		// Allow server-to-server and CLI requests that do not send Origin.
-		const isTrustedServproOrigin = /^https:\/\/[a-z0-9-]+\.servpro\.(tn|local)$/i.test(origin || "");
-		const isTrustedVercelOrigin = /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin || "");
-		const isTrustedLocalhost = /^http:\/\/localhost(?::\d+)?$/i.test(origin || "");
-		const isTrustedExpoApp = /^https:\/\/[a-z0-9-]+\.expo\.app$/i.test(origin || "");
-
-		if (!origin || allowedOrigins.has(origin) || isTrustedServproOrigin || isTrustedVercelOrigin || isTrustedLocalhost || isTrustedExpoApp) {
+		if (isAllowedOrigin(origin)) {
 			callback(null, true);
 			return;
 		}
@@ -72,7 +101,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
 app.use(express.json());
 app.use(morgan("dev"));
 

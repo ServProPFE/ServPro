@@ -1,5 +1,4 @@
 require("dotenv").config();
-const serverless = require("serverless-http");
 const axios = require("axios");
 
 const { app } = require("../src/app");
@@ -10,8 +9,6 @@ const pythonAiService = (process.env.PYTHON_AI_SERVICE || "").replace(/\/$/, "")
 const aiWarmupEnabled = String(process.env.PYTHON_AI_WARMUP_ON_START || "false").toLowerCase() === "true";
 const aiWarmupEndpoint = process.env.PYTHON_AI_WARMUP_ENDPOINT || "/health";
 const aiWarmupTimeoutMs = Number(process.env.PYTHON_AI_WARMUP_TIMEOUT_MS) || 30000;
-
-const lambda = serverless(app);
 
 let dbConnectionPromise = null;
 let aiWarmupDone = false;
@@ -57,12 +54,13 @@ async function bootstrapIfNeeded() {
   return dbConnectionPromise;
 }
 
-module.exports = async (req, res) => {
-  try {
-    await bootstrapIfNeeded();
-    return lambda(req, res);
-  } catch (error) {
-    console.error("Vercel handler bootstrap failed:", error);
-    res.status(500).json({ success: false, message: "Server bootstrap failed", error: process.env.NODE_ENV === "production" ? undefined : error?.message });
-  }
-};
+function handler(req, res) {
+  bootstrapIfNeeded()
+    .then(() => app(req, res))
+    .catch((error) => {
+      console.error("Vercel handler bootstrap failed:", error);
+      res.status(500).json({ success: false, message: "Server bootstrap failed", error: process.env.NODE_ENV === "production" ? undefined : error?.message });
+    });
+}
+
+module.exports = handler;
