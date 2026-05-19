@@ -138,7 +138,7 @@ const Navbar = () => {
                   <NotificationsPanel open={notificationsOpen} onClose={closeNotifications} />
                 </div>
                 <Link to="/profile" className="rounded-full border border-white/25 px-2 py-2 text-sm font-semibold text-white transition hover:bg-white/10" onClick={closeMenu}>
-                  <svg viewBox="0 0 24 24" fill="none" className="mr-1 inline-block h-4 w-4" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" aria-hidden="true">
                     <path d="M12 4a5 5 0 1 0 0 10 5 5 0 0 0 0-10Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                     <path d="M4 20c0-4 4-6 8-6s8 2 8 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
