@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     parameters {
-        booleanParam(name: 'deploy_render', defaultValue: true, description: 'Trigger Render deployment after successful smoke test')
-        string(name: 'render_deploy_hook_credential_id', defaultValue: '', description: 'Optional Jenkins secret text credential ID for the Render deploy hook URL')
+        booleanParam(name: 'deploy_vercel', defaultValue: true, description: 'Trigger Vercel deployment after successful smoke test')
+        string(name: 'vercel_token_credential_id', defaultValue: '', description: 'Jenkins secret text credential ID that contains the Vercel token')
     }
 
     triggers {
@@ -90,47 +90,21 @@ pipeline {
             }
         }
 
-        stage('Deploy To Render') {
+        stage('Deploy To Vercel') {
             when {
                 allOf {
-                    expression { params.deploy_render }
-                    expression { params.render_deploy_hook_credential_id?.trim() }
+                    expression { params.deploy_vercel }
+                    expression { params.vercel_token_credential_id?.trim() }
                 }
             }
             steps {
-                echo 'Triggering Render deployment for backend...'
-                withCredentials([string(credentialsId: params.render_deploy_hook_credential_id.trim(), variable: 'RENDER_DEPLOY_HOOK_URL')]) {
+                echo 'Deploying backend to Vercel (serverless) ...'
+                withCredentials([string(credentialsId: params.vercel_token_credential_id.trim(), variable: 'VERCEL_TOKEN')]) {
                     powershell '''
                         $ErrorActionPreference = "Stop"
-
-                        function Invoke-RenderDeployHook {
-                            param([string]$Url)
-
-                            if ([string]::IsNullOrWhiteSpace($Url)) {
-                                throw "Render deploy hook URL is empty"
-                            }
-
-                            for ($i = 1; $i -le 3; $i++) {
-                                try {
-                                    $response = Invoke-WebRequest -Uri $Url -Method Post -UseBasicParsing -TimeoutSec 60
-                                    if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 300) {
-                                        Write-Host "Render deployment triggered successfully on attempt $i."
-                                        return
-                                    }
-
-                                    throw "Unexpected Render response status: $($response.StatusCode)"
-                                } catch {
-                                    Write-Host "Render deploy attempt $i failed: $($_.Exception.Message)"
-                                    if ($i -eq 3) {
-                                        throw
-                                    }
-
-                                    Start-Sleep -Seconds 5
-                                }
-                            }
-                        }
-
-                        Invoke-RenderDeployHook -Url $env:RENDER_DEPLOY_HOOK_URL
+                        Write-Host "Using Vercel token from Jenkins credential."
+                        # Use npx to avoid relying on global install
+                        npx vercel@latest --prod --confirm --token $env:VERCEL_TOKEN
                     '''
                 }
             }
