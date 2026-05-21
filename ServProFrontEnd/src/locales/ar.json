@@ -382,6 +382,8 @@
     "availabilityTitle": "التوفر (الجدول)",
     "calendarTitle": "عرض التقويم",
     "calendarSubtitle": "يتم عرض الجدول الأسبوعي في شكل شبكة تقويم.",
+    "availability": "التوفر (الجدول)",
+    "noAvailabilityShort": "لا توجد أوقات",
     "noAvailability": "لا توجد أوقات متاحة",
     "notProvided": "غير متوفر",
     "license": "الرخصة",

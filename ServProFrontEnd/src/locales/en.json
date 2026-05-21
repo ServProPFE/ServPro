@@ -382,6 +382,8 @@
     "availabilityTitle": "Availability (schedule)",
     "calendarTitle": "Calendar view",
     "calendarSubtitle": "Weekly schedule shown as a calendar-style grid.",
+    "availability": "Availability (schedule)",
+    "noAvailabilityShort": "No availability",
     "noAvailability": "No availability provided",
     "notProvided": "Not provided",
     "license": "License",

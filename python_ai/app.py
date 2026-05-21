@@ -67,6 +67,21 @@ LLM_MIN_CONFIDENCE = get_env_float('LLM_MIN_CONFIDENCE', 0.15)
 LLM_BLEND_ALPHA = min(max(get_env_float('LLM_BLEND_ALPHA', 0.6), 0.0), 1.0)
 LLM_TIMEOUT_SECONDS = get_env_float('LLM_TIMEOUT_SECONDS', 8.0)
 
+AGENT_MODE_ENABLED = get_env_bool('AGENT_MODE_ENABLED', True)
+AGENT_MAX_STEPS = max(2, get_env_int('AGENT_MAX_STEPS', 4))
+AGENT_CLARIFICATION_THRESHOLD = get_env_float('AGENT_CLARIFICATION_THRESHOLD', 0.25)
+EMPTY_INPUT_ERROR = 'Empty input'
+AGENT_GENERIC_SERVICE_KEYWORDS = {
+    'what', 'which', 'list', 'all', 'services', 'offer', 'provide', 'have', 'available'
+}
+AGENT_PREFERENCE_TOKEN_ALIASES = {
+    'cheapest': ['cheap', 'cheapest', 'low cost', 'budget', 'ارخص', 'الأرخص', 'اقل سعر'],
+    'most_expensive': ['expensive', 'premium', 'most expensive', 'اغلى', 'الأغلى'],
+    'closest': ['close', 'closest', 'near', 'nearest', 'nearby', 'اقرب', 'الأقرب'],
+    'farthest': ['far', 'farthest', 'furthest', 'ابعد', 'الأبعد'],
+    'fastest': ['fast', 'fastest', 'quick', 'urgent', 'soonest', 'اسرع', 'الأسرع'],
+}
+
 DEEP_ENABLED = get_env_bool('DEEP_ENABLED', True)
 DEEP_MIN_CONFIDENCE = get_env_float('DEEP_MIN_CONFIDENCE', 0.15)
 DEEP_BLEND_ALPHA = min(max(get_env_float('DEEP_BLEND_ALPHA', 0.25), 0.0), 1.0)
@@ -167,6 +182,277 @@ def get_gemini_model():
     except Exception as e:
         print(f"⚠️  Gemini API initialization failed: {e} - fallback to local NLP")
         return None
+
+
+def build_agent_trace_step(step, status, details):
+    return {
+        'step': step,
+        'status': status,
+        'details': details,
+    }
+
+
+def summarize_agent_scores(scores, limit=3):
+    if not isinstance(scores, dict):
+        return []
+
+    ranked_scores = []
+    for service_key, score_data in scores.items():
+        if not isinstance(score_data, dict):
+            continue
+
+        combined_score = score_data.get('combined_score')
+        if combined_score is None:
+            combined_score = score_data.get('score', score_data.get('similarity', 0.0))
+
+        try:
+            ranked_scores.append({
+                'service': service_key,
+                'score': float(combined_score),
+            })
+        except (TypeError, ValueError):
+            continue
+
+    ranked_scores.sort(key=lambda item: item['score'], reverse=True)
+    return ranked_scores[:max(1, limit)]
+
+
+def generate_agent_clarification(language='en', confidence=0.0):
+    if language == 'ar':
+        return (
+            "أنا أستطيع متابعة الطلب كوكيل ذكي، لكن أحتاج توضيحًا واحدًا قبل المتابعة: "
+            "هل يتعلق الطلب بالسباكة أو الكهرباء أو التكييف أو التنظيف؟"
+        )
+
+    if confidence < AGENT_CLARIFICATION_THRESHOLD:
+        return (
+            "I can act on this as an agent, but I need one more detail first: "
+            "is this about plumbing, electrical work, HVAC, or cleaning?"
+        )
+
+    return (
+        "I have enough context to continue as an agent, but please confirm the exact service "
+        "if you want a more precise recommendation."
+    )
+
+
+def is_agent_service_catalog_request(cleaned_input):
+    user_tokens = set(normalize_tokens(cleaned_input))
+    generic_count = len(user_tokens & AGENT_GENERIC_SERVICE_KEYWORDS)
+    return generic_count >= 2 and cleaned_input.lower().count('?') > 0
+
+
+def strip_agent_preference_terms(cleaned_input, preference):
+    if not preference:
+        return str(cleaned_input).strip()
+
+    cleaned_text = str(cleaned_input)
+    for tok in AGENT_PREFERENCE_TOKEN_ALIASES.get(preference, []):
+        cleaned_text = re.sub(r"\\b" + re.escape(tok) + r"\\b", '', cleaned_text, flags=re.IGNORECASE)
+    return ' '.join(cleaned_text.split()).strip()
+
+
+def build_agent_service_catalog_response(user_input, language, agent_plan, agent_trace, services_list):
+    if language == 'ar':
+        services_str = '، '.join(services_list)
+        message = f"الخدمات المتاحة لدينا هي: {services_str}. أي خدمة تحتاج؟"
+    else:
+        services_str = ', '.join(services_list)
+        message = f"Our available services are: {services_str}. Which one do you need?"
+
+    return {
+        'user_input': user_input,
+        'language': language,
+        'message': message,
+        'detected_service': None,
+        'confidence': 0.0,
+        'recommendations': [],
+        'needs_preference': False,
+        'preference_options': [],
+        'all_scores': {},
+        'agent_mode': True,
+        'agent_plan': agent_plan,
+        'agent_trace': agent_trace,
+        'next_action': 'list_services',
+        'source': 'service_catalog',
+        'fallback_used': False,
+    }
+
+
+def build_agent_selected_service_response(
+    user_input,
+    language,
+    preference,
+    is_first_prompt,
+    agent_plan,
+    agent_trace,
+    result,
+    llm_result,
+    prompt_context,
+    deep_result,
+):
+    response = {
+        'user_input': user_input,
+        'preference': preference,
+        'detected_service': result['detected_service'],
+        'confidence': result['confidence'],
+        'language': language,
+        'recommendations': [],
+        'agent_mode': True,
+        'agent_plan': agent_plan,
+        'agent_trace': agent_trace,
+        'next_action': 'recommend',
+        'source': result.get('source', 'tfidf'),
+        'fallback_used': False,
+    }
+
+    service_data = SERVICES_DB.get(result['detected_service'])
+    if not service_data:
+        return response
+
+    best_score = result['all_scores'].get(result['detected_service'], {})
+    matched_keywords = best_score.get('matched_keywords', [])
+    issue_type = llm_result.get('issue_type') if llm_result.get('used') else detect_issue_type(result['detected_service'], user_input)
+    if not issue_type or issue_type == 'general':
+        issue_type = detect_issue_type(result['detected_service'], user_input)
+
+    recommendation_message = llm_result.get('assistant_message') if llm_result.get('used') else None
+    if not recommendation_message:
+        recommendation_message = generate_response(
+            result['detected_service'],
+            language,
+            issue_type,
+            preference
+        )
+
+    response['recommendations'].append({
+        'service_name': service_data['service_name'],
+        'category': service_data['category'],
+        'confidence': result['confidence'],
+        'matched_keywords': matched_keywords,
+        'issue_type': issue_type,
+        'message': recommendation_message
+    })
+    response['message'] = response['recommendations'][0]['message']
+
+    should_ask_preference = is_first_prompt and not (preference or has_preference_hint(user_input))
+    if preference:
+        should_ask_preference = False
+
+    if should_ask_preference:
+        preference_message = build_preference_followup_message(language)
+        response['message'] = preference_message
+        response['recommendations'][0]['message'] = preference_message
+        response['needs_preference'] = True
+        response['preference_options'] = PREFERENCE_OPTION_KEYS
+        response['next_action'] = 'collect_preference'
+    else:
+        response['needs_preference'] = False
+        response['preference_options'] = []
+
+    response['all_scores'] = result['all_scores']
+    response['llm_used'] = bool(llm_result.get('used'))
+    response['deep_used'] = bool(deep_result.get('used'))
+    response['backend_context_used'] = bool(prompt_context.get('used'))
+    response['backend_context_match_count'] = len(prompt_context.get('matched_services') or [])
+    response['backend_context_error'] = prompt_context.get('error')
+    response['service_rank_preview'] = summarize_agent_scores(result.get('all_scores', {}))
+    return response
+
+
+def build_agent_fallback_response(user_input, language, confidence, agent_plan, agent_trace):
+    agent_trace.append(build_agent_trace_step(
+        'fallback',
+        'clarify',
+        'the agent asked for a narrower service description instead of guessing',
+    ))
+
+    return {
+        'user_input': user_input,
+        'language': language,
+        'message': generate_agent_clarification(language, confidence),
+        'detected_service': None,
+        'confidence': confidence,
+        'recommendations': [],
+        'needs_preference': False,
+        'preference_options': [],
+        'all_scores': {},
+        'agent_mode': True,
+        'agent_plan': agent_plan,
+        'agent_trace': agent_trace,
+        'next_action': 'clarify',
+        'source': 'agent_clarification',
+        'fallback_used': True,
+        'suggestions': [s['service_name'] for s in SERVICES_DB.values()],
+        'llm_used': False,
+        'deep_used': False,
+        'backend_context_used': False,
+        'backend_context_match_count': 0,
+        'backend_context_error': None,
+        'service_rank_preview': [],
+    }
+
+
+def execute_agentic_recommendation(user_input, language='en', is_first_prompt=False, preference=None, conversation_history=None):
+    conversation_history = conversation_history or []
+    agent_trace = []
+    agent_plan = [
+        'normalize the request',
+        'classify the service intent',
+        'rank candidate services',
+        'decide whether to clarify or recommend',
+    ]
+
+    cleaned_input = str(user_input or '').strip()
+    context_summary = ''
+    recent_messages = [
+        msg for msg in conversation_history[-3:]
+        if isinstance(msg, dict) and msg.get('type') == 'user'
+    ]
+    if recent_messages:
+        context_summary = ' '.join([msg.get('text', '') for msg in recent_messages if msg.get('text')])
+
+    if context_summary:
+        cleaned_input = f"{context_summary} {cleaned_input}".strip()
+        agent_trace.append(build_agent_trace_step('context', 'used', 'folded recent conversation context into the current request'))
+
+    if preference:
+        agent_trace.append(build_agent_trace_step('preference', 'used', f'preference set to {preference}'))
+
+    if is_agent_service_catalog_request(cleaned_input):
+        agent_trace.append(build_agent_trace_step('route', 'list-services', 'user asked for the available services instead of a specific request'))
+        services_list = [service_data['service_name'] for service_data in SERVICES_DB.values()]
+        return build_agent_service_catalog_response(user_input, language, agent_plan, agent_trace, services_list)
+
+    cleaned_input = strip_agent_preference_terms(cleaned_input, preference)
+    prompt_context = fetch_backend_prompt_context(cleaned_input)
+    tfidf_result = recommender.recommend_service(cleaned_input)
+    llm_result = llm_nlp_classify(cleaned_input, language, prompt_context=prompt_context, preference=preference)
+    result = merge_tfidf_llm_scores(tfidf_result, llm_result)
+    deep_result = deep_nlp_classify(cleaned_input)
+    result = merge_with_deep_scores(result, deep_result)
+
+    agent_trace.append(build_agent_trace_step(
+        'decision',
+        'clarify' if result['confidence'] < AGENT_CLARIFICATION_THRESHOLD and not result['detected_service'] else 'recommend',
+        f"selected {result['detected_service']} with confidence {result['confidence']:.3f}" if result['detected_service'] else 'confidence stayed below the agent threshold and no service was selected',
+    ))
+
+    if result['confidence'] < AGENT_CLARIFICATION_THRESHOLD and not result['detected_service']:
+        return build_agent_fallback_response(user_input, language, result['confidence'], agent_plan, agent_trace)
+
+    return build_agent_selected_service_response(
+        user_input=user_input,
+        language=language,
+        preference=preference,
+        is_first_prompt=is_first_prompt,
+        agent_plan=agent_plan,
+        agent_trace=agent_trace,
+        result=result,
+        llm_result=llm_result,
+        prompt_context=prompt_context,
+        deep_result=deep_result,
+    )
 
 # Service keywords database
 SERVICES_DB = {
@@ -1255,15 +1541,16 @@ def health():
 
     return jsonify({
         'status': 'healthy',
-        'service': 'AI Chatbot service is running',
-        'version': '1.2.0',
+        'service': 'AI Agent service is running',
+        'version': '1.3.0',
         'timestamp': datetime.now().isoformat(),
         'services_available': {
             'nlp_tfidf': True,
             'llm_gemini': gemini_ready,
             'mongodb': mongo_ready,
         },
-        'startup_complete': gemini_initialized and mongo_initialized
+        'startup_complete': gemini_initialized and mongo_initialized,
+        'agent_mode': AGENT_MODE_ENABLED,
     }), 200
 
 @app.route('/services', methods=['GET'])
@@ -1288,180 +1575,38 @@ def list_services():
     return jsonify({
         'services': services_list,
         'message': response_text,
-        'language': language,
         'count': len(services_list)
     }), 200
 
+
 @app.route('/recommend', methods=['POST'])
 def recommend():
-    """
-    Recommend service based on user input
-        Expected JSON: {
-            "text": "user message",
-            "language": "en" or "ar",
-            "is_first_prompt": true|false (optional),
-            "preference": "cheapest"|"fastest"|"closest"|"most_expensive"|"farthest" (optional),
-            "conversation_history": [...] (optional - array of previous messages for context)
-        }
-    """
+    """Compatibility endpoint that now runs the agentic service orchestrator."""
     language = 'en'
     try:
-        data = request.get_json()
-        user_input = data.get('text', '').strip()
+        data = request.get_json() or {}
+        user_input = str(data.get('text', '')).strip()
         language = data.get('language', 'en')
         is_first_prompt = bool(data.get('is_first_prompt', False))
-        # Allow explicit structured preference from caller; otherwise infer from text
         preference = data.get('preference') or None
         conversation_history = data.get('conversation_history', [])
-        
+
         if not preference:
             preference = extract_preference(user_input)
-        
+
         if not user_input:
             return jsonify({
-                'error': 'Empty input',
+                'error': EMPTY_INPUT_ERROR,
                 'message': 'الرجاء توفير نص' if language == 'ar' else 'Please provide some text'
             }), 400
-        
-        # Build context from conversation history if available
-        context_summary = ''
-        if conversation_history and len(conversation_history) > 0:
-            # Take last 2-3 meaningful messages for context
-            recent_messages = [msg for msg in conversation_history[-3:] if msg.get('type') == 'user']
-            if recent_messages:
-                context_summary = ' '.join([msg.get('text', '') for msg in recent_messages])
-        
-        # Check if user is asking for service list/information (generic query)
-        generic_service_keywords = [
-            'what', 'which', 'list', 'all', 'services', 'offer', 'provide', 'have', 'available', 'what are',
-            'ماذا', 'قائمة', 'خدمات', 'كل', 'توفيرون', 'تقدمون', 'لديكم', 'المتاحة'
-        ]
-        user_tokens = set(normalize_tokens(user_input))
-        generic_count = len(user_tokens & set(generic_service_keywords))
-        
-        # If query looks like asking for service list (has multiple generic terms)
-        if generic_count >= 2 and user_input.lower().count('?') > 0:
-            # Return list of services instead of trying to match
-            services_list = []
-            for service_key, service_data in SERVICES_DB.items():
-                services_list.append(service_data['service_name'])
-            
-            if language == 'ar':
-                services_str = '، '.join(services_list)
-                message = f"الخدمات المتاحة لدينا هي: {services_str}. أي خدمة تحتاج؟"
-            else:
-                services_str = ', '.join(services_list)
-                message = f"Our available services are: {services_str}. Which one do you need?"
-            
-            return jsonify({
-                'user_input': user_input,
-                'detected_service': None,
-                'confidence': 0.0,
-                'language': language,
-                'message': message,
-                'recommendations': [],
-                'source': 'services_list',
-                'fallback_used': False,
-                'all_scores': {}
-            }), 200
-        
-        # If a preference token was present, strip preference terms from the free-text
-        cleaned_input = str(user_input)
-        if preference:
-            pref_tokens = {
-                'cheapest': ['cheap', 'cheapest', 'low cost', 'budget', 'ارخص', 'الأرخص', 'اقل سعر'],
-                'most_expensive': ['expensive', 'premium', 'most expensive', 'اغلى', 'الأغلى'],
-                'closest': ['close', 'closest', 'near', 'nearest', 'nearby', 'اقرب', 'الأقرب'],
-                'farthest': ['far', 'farthest', 'furthest', 'ابعد', 'الأبعد'],
-                'fastest': ['fast', 'fastest', 'quick', 'urgent', 'soonest', 'اسرع', 'الأسرع']
-            }
-            tokens_to_remove = pref_tokens.get(preference, [])
-            for tok in tokens_to_remove:
-                cleaned_input = re.sub(r"\\b" + re.escape(tok) + r"\\b", '', cleaned_input, flags=re.IGNORECASE)
-            cleaned_input = ' '.join(cleaned_input.split()).strip()
 
-        prompt_context = fetch_backend_prompt_context(cleaned_input)
-
-        # Get baseline NLP recommendation then blend with structured LLM and deep model classification.
-        tfidf_result = recommender.recommend_service(cleaned_input)
-        llm_result = llm_nlp_classify(cleaned_input, language, prompt_context=prompt_context, preference=preference)
-        result = merge_tfidf_llm_scores(tfidf_result, llm_result)
-        deep_result = deep_nlp_classify(cleaned_input)
-        result = merge_with_deep_scores(result, deep_result)
-        
-        # Prepare response
-        response = {
-            'user_input': user_input,
-            'preference': preference,
-            'detected_service': result['detected_service'],
-            'confidence': result['confidence'],
-            'language': language,
-            'recommendations': []
-        }
-        
-        if result['detected_service'] and result['confidence'] > 0:
-            service_data = SERVICES_DB.get(result['detected_service'])
-            best_score = result['all_scores'].get(result['detected_service'], {})
-            matched_keywords = best_score.get('matched_keywords', [])
-            issue_type = llm_result.get('issue_type') if llm_result.get('used') else detect_issue_type(result['detected_service'], user_input)
-            if not issue_type or issue_type == 'general':
-                issue_type = detect_issue_type(result['detected_service'], user_input)
-
-            recommendation_message = llm_result.get('assistant_message') if llm_result.get('used') else None
-            if not recommendation_message:
-                recommendation_message = generate_response(
-                    result['detected_service'],
-                    language,
-                    issue_type,
-                    preference
-                )
-
-            response['recommendations'].append({
-                'service_name': service_data['service_name'],
-                'category': service_data['category'],
-                'confidence': result['confidence'],
-                'matched_keywords': matched_keywords,
-                'issue_type': issue_type,
-                'message': recommendation_message
-            })
-            response['message'] = response['recommendations'][0]['message']
-
-            # Do not ask preference if caller provided it or it was inferred from text
-            should_ask_preference = is_first_prompt and not (preference or has_preference_hint(user_input))
-            # If an explicit preference was provided, ensure we don't mark needs_preference
-            if preference:
-                should_ask_preference = False
-
-            if should_ask_preference:
-                preference_message = build_preference_followup_message(language)
-                response['message'] = preference_message
-                response['recommendations'][0]['message'] = preference_message
-                response['needs_preference'] = True
-                response['preference_options'] = PREFERENCE_OPTION_KEYS
-        else:
-            # Use Gemini API for fallback when confidence is too low
-            gemini_response = generate_gemini_response(user_input, language, result['confidence'])
-            response['message'] = gemini_response
-            response['suggestions'] = [s['service_name'] for s in SERVICES_DB.values()]
-            response['source'] = 'gemini_fallback'
-            response['fallback_used'] = True
-
-        if 'needs_preference' not in response:
-            response['needs_preference'] = False
-            response['preference_options'] = []
-        
-        response['all_scores'] = result['all_scores']
-        response['llm_used'] = bool(llm_result.get('used'))
-        response['deep_used'] = bool(deep_result.get('used'))
-        response['backend_context_used'] = bool(prompt_context.get('used'))
-        response['backend_context_match_count'] = len(prompt_context.get('matched_services') or [])
-        response['backend_context_error'] = prompt_context.get('error')
-        
-        # Add source metadata
-        if 'source' not in response:
-            response['source'] = result.get('source', 'tfidf')
-            response['fallback_used'] = False
-        
+        response = execute_agentic_recommendation(
+            user_input=user_input,
+            language=language,
+            is_first_prompt=is_first_prompt,
+            preference=preference,
+            conversation_history=conversation_history,
+        )
         return jsonify(response), 200
 
     except Exception as e:
@@ -1473,6 +1618,34 @@ def recommend():
             'message': 'حدث خطأ في معالجة طلبك' if language == 'ar' else 'An error occurred processing your request',
             'suggestions': [s['service_name'] for s in SERVICES_DB.values()]
         }), 500
+
+
+@app.route('/agent', methods=['POST'])
+def agent():
+    """Agent-first endpoint that returns the same orchestrated response as /recommend."""
+    data = request.get_json() or {}
+    user_input = str(data.get('text', '')).strip()
+    language = data.get('language', 'en')
+    is_first_prompt = bool(data.get('is_first_prompt', False))
+    preference = data.get('preference') or extract_preference(user_input)
+    conversation_history = data.get('conversation_history', [])
+
+    if not user_input:
+        return jsonify({
+            'error': EMPTY_INPUT_ERROR,
+            'message': 'الرجاء توفير نص' if language == 'ar' else 'Please provide some text'
+        }), 400
+
+    response = execute_agentic_recommendation(
+        user_input=user_input,
+        language=language,
+        is_first_prompt=is_first_prompt,
+        preference=preference,
+        conversation_history=conversation_history,
+    )
+    response['endpoint'] = 'agent'
+    response['agent_mode'] = True
+    return jsonify(response), 200
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
@@ -1486,7 +1659,7 @@ def analyze():
         language = data.get('language', 'en')
         
         if not user_input:
-            return jsonify({'error': 'Empty input'}), 400
+            return jsonify({'error': EMPTY_INPUT_ERROR}), 400
         
         # Consider explicit or inferred preference for analysis
         preference = data.get('preference') or extract_preference(user_input)
@@ -1558,7 +1731,7 @@ def feedback():
             epochs = 4
 
         if not user_input:
-            return jsonify({'error': 'Empty input'}), 400
+            return jsonify({'error': EMPTY_INPUT_ERROR}), 400
 
         if expected_service not in SERVICES_DB:
             return jsonify({'error': 'Invalid expected_service', 'allowed': list(SERVICES_DB.keys())}), 400
@@ -1820,9 +1993,10 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     host = os.environ.get('HOST', '0.0.0.0')
 
-    print("🤖 Starting Python AI Chatbot Service...")
+    print("🤖 Starting Python AI Agent Service...")
     print(f"📍 Python AI Service running on http://{host}:{port}")
     print("   ⚡ Optimization: Heavy components (Gemini, MongoDB) lazy-loaded on first use")
+    print("   🧭 Agent mode: planning, classification, and clarification are orchestrated per request")
     print("   ✅ /health endpoint responds immediately (< 100ms)")
     print("   📚 No ML libraries required - Pure Python TF-IDF!")
     app.run(debug=False, host=host, port=port, use_reloader=False)

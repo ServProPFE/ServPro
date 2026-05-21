@@ -355,7 +355,7 @@ export default function ProviderPortfolioScreen() {
             {/* Availability Section - Real Calendar */}
             {hasAvailability && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>{t('providers.availability')}</Text>
+                <Text style={styles.sectionTitle}>{t('providerPortfolio.availability')}</Text>
                 <View style={styles.weekHeaderRow}>
                   {dayLabels.map((label) => (
                     <Text key={label} style={styles.weekHeaderText}>{label}</Text>

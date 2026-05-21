@@ -1,6 +1,6 @@
 # Python AI Chatbot Service
 
-This is a Flask-based microservice that provides intent detection for the chatbot using a hybrid NLP pipeline:
+This is a Flask-based microservice that provides agentic service routing using a hybrid NLP pipeline:
 
 - Pure-Python TF-IDF + cosine similarity (no scikit-learn / numpy required)
 - Structured LLM classification with Google Gemini
@@ -23,7 +23,8 @@ MongoDB (Services Database)
 - **Pure Python NLP Engine**: TF-IDF + cosine similarity implemented without external ML libraries
 - **Structured LLM NLP Classification**: Gemini extracts service intent, issue type, and confidence in JSON format
 - **Hybrid Score Fusion**: Combines TF-IDF and LLM scores for final routing decisions
-- **Actionable Responses**: Returns service-specific guidance (not confidence only)
+- **Agent-Oriented Routing**: Plans, clarifies, and recommends instead of only replying like a chatbot
+- **Actionable Responses**: Returns service-specific guidance and next-step decisions
 - **Issue Type Detection**: Detects subtype hints (e.g., leak, wiring, no cooling, dust)
 - **Bilingual Support**: English and Arabic response generation, with multilingual keyword sets (EN/FR/AR)
 - **Arabic Token Normalization**: Handles common prefixes to improve matching quality
@@ -140,12 +141,22 @@ python app.py
 
 ### Expected Output
 ```
-🤖 Starting Python AI Chatbot Service...
+🤖 Starting Python AI Agent Service...
 📍 Python AI Service running on http://localhost:5000
  * Serving Flask app 'app'
  * Debug mode: on
  * Running on http://0.0.0.0:5000
 ```
+
+### Agent Endpoint
+
+The service exposes an agent-first endpoint alongside the compatibility route:
+
+```bash
+POST /agent
+```
+
+Both `/agent` and `/recommend` return the same orchestrated response shape, but `/agent` is the preferred endpoint for new integrations.
 
 ## Deploy on Render
 
@@ -180,11 +191,11 @@ curl https://servpro-python-ai.onrender.com/health
 Expected response:
 ```json
 {
-  "status": "AI Chatbot service is running",
-  "model": "Hybrid NLP: TF-IDF + LLM (Gemini)",
-  "version": "1.1.0",
+  "status": "healthy",
+  "service": "AI Agent service is running",
+  "version": "1.3.0",
   "llm_enabled": true,
-  "llm_blend_alpha": 0.6
+  "agent_mode": true
 }
 ```
 

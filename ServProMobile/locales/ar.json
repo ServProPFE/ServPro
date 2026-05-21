@@ -329,6 +329,7 @@
     "certificateFallback": "شهادة",
     "unknownAuthority": "جهة إصدار",
     "expiresOn": "ينتهي في",
+    "availability": "التوفر",
     "noAvailability": "لا توجد توفرية"
   }
 }

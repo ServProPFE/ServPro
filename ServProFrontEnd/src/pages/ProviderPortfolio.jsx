@@ -314,7 +314,7 @@ const ProviderPortfolio = () => {
             {availabilityByDay.some((day) => day.slots.length > 0) && (
               <div>
                 <div className="mb-6">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600">{t('providerPortfolio.availabilityTitle')}</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600">{t('providerPortfolio.availability')}</p>
                   <h2 className="mt-1 text-xl font-semibold text-slate-900">{t('providerPortfolio.calendarTitle', { defaultValue: 'Calendar view' })}</h2>
                   <p className="mt-1 text-sm text-slate-600">{t('providerPortfolio.calendarSubtitle', { defaultValue: 'Calendar aligned by weekday — tap a day to view slots.' })}</p>
                 </div>

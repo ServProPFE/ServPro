@@ -330,6 +330,7 @@
     "certificateFallback": "Certification",
     "unknownAuthority": "Issuing Authority",
     "expiresOn": "Expires on",
+    "availability": "Availability",
     "noAvailability": "No availability"
   }
 }
