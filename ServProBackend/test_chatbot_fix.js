@@ -10,7 +10,7 @@ const payload1 = JSON.stringify({
 const options = {
   hostname: 'localhost',
   port: 5000,
-  path: '/recommend',
+  path: '/agent',
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',

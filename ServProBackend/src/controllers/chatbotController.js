@@ -235,7 +235,7 @@ const getChatbotResponse = asyncHandler(async (req, res) => {
     // Call Python AI service for NLP analysis
     aiAnalysis = await requestPythonAI({
       method: 'post',
-      endpoint: '/recommend',
+      endpoint: '/agent',
       data: {
         text: message,
         language: language,
