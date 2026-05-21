@@ -71,6 +71,8 @@ AGENT_MODE_ENABLED = get_env_bool('AGENT_MODE_ENABLED', True)
 AGENT_MAX_STEPS = max(2, get_env_int('AGENT_MAX_STEPS', 4))
 AGENT_CLARIFICATION_THRESHOLD = get_env_float('AGENT_CLARIFICATION_THRESHOLD', 0.25)
 EMPTY_INPUT_ERROR = 'Empty input'
+EMPTY_INPUT_MESSAGE_EN = 'Please provide some text'
+EMPTY_INPUT_MESSAGE_AR = 'الرجاء توفير نص'
 AGENT_GENERIC_SERVICE_KEYWORDS = {
     'what', 'which', 'list', 'all', 'services', 'offer', 'provide', 'have', 'available'
 }
@@ -80,6 +82,13 @@ AGENT_PREFERENCE_TOKEN_ALIASES = {
     'closest': ['close', 'closest', 'near', 'nearest', 'nearby', 'اقرب', 'الأقرب'],
     'farthest': ['far', 'farthest', 'furthest', 'ابعد', 'الأبعد'],
     'fastest': ['fast', 'fastest', 'quick', 'urgent', 'soonest', 'اسرع', 'الأسرع'],
+}
+AGENT_ACTIONS = {
+    'inspect_request',
+    'list_services',
+    'fetch_backend_context',
+    'search_services',
+    'draft_answer',
 }
 
 DEEP_ENABLED = get_env_bool('DEEP_ENABLED', True)
@@ -184,11 +193,12 @@ def get_gemini_model():
         return None
 
 
-def build_agent_trace_step(step, status, details):
+def build_agent_trace_step(step, status, details, payload=None):
     return {
         'step': step,
         'status': status,
         'details': details,
+        'payload': payload,
     }
 
 
@@ -277,6 +287,265 @@ def build_agent_service_catalog_response(user_input, language, agent_plan, agent
         'source': 'service_catalog',
         'fallback_used': False,
     }
+
+
+def analyze_service_request(user_input, language='en', preference=None, prompt_context=None):
+    cleaned_input = strip_agent_preference_terms(user_input, preference)
+    tfidf_result = recommender.recommend_service(cleaned_input)
+    llm_result = llm_nlp_classify(cleaned_input, language, prompt_context=prompt_context, preference=preference)
+    merged_result = merge_tfidf_llm_scores(tfidf_result, llm_result)
+    deep_result = deep_nlp_classify(cleaned_input)
+    merged_result = merge_with_deep_scores(merged_result, deep_result)
+
+    return {
+        'cleaned_input': cleaned_input,
+        'tfidf_result': tfidf_result,
+        'llm_result': llm_result,
+        'deep_result': deep_result,
+        'merged_result': merged_result,
+    }
+
+
+def serialize_agent_state(state):
+    return {
+        'user_input': state.get('user_input'),
+        'language': state.get('language'),
+        'preference': state.get('preference'),
+        'step': state.get('step'),
+        'available_tools': sorted(AGENT_ACTIONS),
+        'have_inspection': bool(state.get('inspection')),
+        'have_context': bool(state.get('prompt_context')),
+        'have_analysis': bool(state.get('analysis')),
+        'service_catalog_request': bool(state.get('service_catalog_request')),
+        'recent_observations': state.get('agent_trace', [])[-4:],
+    }
+
+
+def normalize_agent_action(action):
+    if not action:
+        return None
+    candidate = str(action).strip().lower()
+    return candidate if candidate in AGENT_ACTIONS else None
+
+
+def plan_agent_action(state):
+    heuristic_action = None
+    if not state.get('inspection'):
+        heuristic_action = 'inspect_request'
+    elif state.get('service_catalog_request'):
+        heuristic_action = 'list_services'
+    elif not state.get('prompt_context'):
+        heuristic_action = 'fetch_backend_context'
+    elif not state.get('analysis'):
+        heuristic_action = 'search_services'
+    else:
+        heuristic_action = 'draft_answer'
+
+    model = get_gemini_model()
+    if not model:
+        return {
+            'action': heuristic_action,
+            'reason': 'heuristic fallback because Gemini is unavailable',
+            'tool_input': {},
+        }
+
+    prompt = f"""You are a tool-using AI agent for a home-services platform.
+Choose exactly one next action from: inspect_request, list_services, fetch_backend_context, search_services, draft_answer.
+Return strict JSON only.
+
+Agent state:
+{json.dumps(serialize_agent_state(state), ensure_ascii=False, indent=2)}
+
+Rules:
+- Use inspect_request first if the request still needs normalization.
+- Use list_services when the user is asking what services exist.
+- Use fetch_backend_context when live service catalog matches might help.
+- Use search_services to classify and rank candidate services.
+- Use draft_answer only when enough evidence exists to answer.
+
+Return this schema:
+{{"action":"inspect_request|list_services|fetch_backend_context|search_services|draft_answer","reason":"short reason","tool_input":{{}}}}
+"""
+
+    try:
+        response = model.generate_content(prompt, request_options={"timeout": LLM_TIMEOUT_SECONDS})
+        text = response.text if response and hasattr(response, 'text') else ''
+        payload = extract_json_object(text)
+        action = normalize_agent_action(payload.get('action') if isinstance(payload, dict) else None)
+        if action:
+            return {
+                'action': action,
+                'reason': str(payload.get('reason', '')).strip() if isinstance(payload, dict) else '',
+                'tool_input': payload.get('tool_input', {}) if isinstance(payload, dict) else {},
+            }
+    except Exception as exc:
+        print(f"⚠️ Agent planner failed, using heuristic plan: {exc}")
+
+    return {
+        'action': heuristic_action,
+        'reason': 'heuristic fallback plan',
+        'tool_input': {},
+    }
+
+
+def build_agent_empty_input_response(language):
+    return {
+        'error': EMPTY_INPUT_ERROR,
+        'message': EMPTY_INPUT_MESSAGE_AR if language == 'ar' else EMPTY_INPUT_MESSAGE_EN,
+        'agent_mode': True,
+        'agent_type': 'tool_using_ai_agent',
+        'tool_calls': [],
+        'agent_trace': [],
+        'next_action': 'clarify',
+    }
+
+
+def tool_inspect_request(state):
+    cleaned_input = str(state['user_input']).strip()
+    if state.get('conversation_summary'):
+        cleaned_input = f"{state['conversation_summary']} {cleaned_input}".strip()
+    preference = state.get('preference') or extract_preference(cleaned_input)
+    service_catalog_request = is_agent_service_catalog_request(cleaned_input)
+    inspection = {
+        'cleaned_input': cleaned_input,
+        'preference': preference,
+        'service_catalog_request': service_catalog_request,
+        'context_summary': state.get('conversation_summary', ''),
+    }
+    state['inspection'] = inspection
+    state['cleaned_input'] = cleaned_input
+    state['preference'] = preference
+    state['service_catalog_request'] = service_catalog_request
+    return inspection
+
+
+def tool_list_services(state):
+    services_list = [service_data['service_name'] for service_data in SERVICES_DB.values()]
+    catalog = build_agent_service_catalog_response(
+        state['user_input'],
+        state['language'],
+        state['agent_plan'],
+        state['agent_trace'],
+        services_list,
+    )
+    state['catalog'] = catalog
+    return catalog
+
+
+def tool_fetch_backend_context(state):
+    context = fetch_backend_prompt_context(state.get('cleaned_input') or state['user_input'])
+    state['prompt_context'] = context
+    return context
+
+
+def tool_search_services(state):
+    prompt_context = state.get('prompt_context') or fetch_backend_prompt_context(state.get('cleaned_input') or state['user_input'])
+    state['prompt_context'] = prompt_context
+    analysis = analyze_service_request(
+        state.get('cleaned_input') or state['user_input'],
+        language=state['language'],
+        preference=state.get('preference'),
+        prompt_context=prompt_context,
+    )
+    state['analysis'] = analysis
+    return analysis
+
+
+def tool_draft_answer(state):
+    if state.get('service_catalog_request') and not state.get('analysis'):
+        catalog = state.get('catalog') or tool_list_services(state)
+        state['final_response'] = catalog
+        return catalog
+
+    analysis = state.get('analysis') or tool_search_services(state)
+    merged = analysis['merged_result']
+    llm_result = analysis['llm_result']
+    deep_result = analysis['deep_result']
+    prompt_context = state.get('prompt_context') or {'used': False, 'matched_services': [], 'error': None}
+
+    if merged.get('detected_service') and merged.get('confidence', 0.0) > 0:
+        final_response = build_agent_selected_service_response(
+            user_input=state['user_input'],
+            language=state['language'],
+            preference=state.get('preference'),
+            is_first_prompt=state.get('is_first_prompt', False),
+            agent_plan=state['agent_plan'],
+            agent_trace=state['agent_trace'],
+            result=merged,
+            llm_result=llm_result,
+            prompt_context=prompt_context,
+            deep_result=deep_result,
+        )
+    else:
+        final_response = build_agent_fallback_response(
+            state['user_input'],
+            state['language'],
+            merged.get('confidence', 0.0),
+            state['agent_plan'],
+            state['agent_trace'],
+        )
+
+    final_response['agent_mode'] = True
+    final_response['agent_type'] = 'tool_using_ai_agent'
+    final_response['tool_calls'] = state.get('tool_calls', [])
+    state['final_response'] = final_response
+    return final_response
+
+
+def finalize_agent_response(state, response):
+    response['tool_calls'] = state.get('tool_calls', [])
+    response['agent_trace'] = state.get('agent_trace', [])
+    response['agent_plan'] = state.get('agent_plan', [])
+    response['agent_mode'] = True
+    response['agent_type'] = 'tool_using_ai_agent'
+    response['next_action'] = response.get('next_action', 'final')
+    response['source'] = response.get('source', 'agent')
+    return response
+
+
+def run_agent_step(state):
+    plan = plan_agent_action(state)
+    action = normalize_agent_action(plan.get('action'))
+    if not action:
+        action = 'inspect_request' if not state.get('inspection') else 'draft_answer'
+
+    tool_input = plan.get('tool_input') or {}
+    state['agent_trace'].append(build_agent_trace_step(
+        'planner',
+        action,
+        plan.get('reason', ''),
+        {'step': state['step'], 'tool_input': tool_input},
+    ))
+
+    tool_map = {
+        'inspect_request': tool_inspect_request,
+        'list_services': tool_list_services,
+        'fetch_backend_context': tool_fetch_backend_context,
+        'search_services': tool_search_services,
+        'draft_answer': tool_draft_answer,
+    }
+    tool_output = tool_map[action](state)
+    state['tool_calls'].append({
+        'step': state['step'],
+        'action': action,
+        'tool_input': tool_input,
+        'tool_output_type': type(tool_output).__name__,
+    })
+    state['agent_trace'].append(build_agent_trace_step(
+        action,
+        'done',
+        f'completed {action}',
+        {'output_type': type(tool_output).__name__},
+    ))
+
+    if action in {'list_services', 'draft_answer'}:
+        return finalize_agent_response(state, state.get('final_response') or tool_output)
+
+    return None
+
+
+def execute_agent_tool(state):
+    return run_agent_step(state)
 
 
 def build_agent_selected_service_response(
@@ -395,64 +664,46 @@ def build_agent_fallback_response(user_input, language, confidence, agent_plan, 
 
 def execute_agentic_recommendation(user_input, language='en', is_first_prompt=False, preference=None, conversation_history=None):
     conversation_history = conversation_history or []
-    agent_trace = []
-    agent_plan = [
-        'normalize the request',
-        'classify the service intent',
-        'rank candidate services',
-        'decide whether to clarify or recommend',
-    ]
-
-    cleaned_input = str(user_input or '').strip()
-    context_summary = ''
     recent_messages = [
         msg for msg in conversation_history[-3:]
         if isinstance(msg, dict) and msg.get('type') == 'user'
     ]
-    if recent_messages:
-        context_summary = ' '.join([msg.get('text', '') for msg in recent_messages if msg.get('text')])
+    conversation_summary = ' '.join([msg.get('text', '') for msg in recent_messages if msg.get('text')])
 
-    if context_summary:
-        cleaned_input = f"{context_summary} {cleaned_input}".strip()
-        agent_trace.append(build_agent_trace_step('context', 'used', 'folded recent conversation context into the current request'))
+    state = {
+        'user_input': str(user_input or '').strip(),
+        'language': language or 'en',
+        'is_first_prompt': bool(is_first_prompt),
+        'preference': preference or extract_preference(user_input),
+        'conversation_summary': conversation_summary,
+        'conversation_history': conversation_history,
+        'step': 0,
+        'agent_plan': [
+            'inspect the request',
+            'choose and run tools',
+            'decide whether to answer or clarify',
+        ],
+        'agent_trace': [],
+        'tool_calls': [],
+    }
 
-    if preference:
-        agent_trace.append(build_agent_trace_step('preference', 'used', f'preference set to {preference}'))
+    if not state['user_input']:
+        return build_agent_empty_input_response(state['language'])
 
-    if is_agent_service_catalog_request(cleaned_input):
-        agent_trace.append(build_agent_trace_step('route', 'list-services', 'user asked for the available services instead of a specific request'))
-        services_list = [service_data['service_name'] for service_data in SERVICES_DB.values()]
-        return build_agent_service_catalog_response(user_input, language, agent_plan, agent_trace, services_list)
+    for step_index in range(AGENT_MAX_STEPS):
+        state['step'] = step_index + 1
+        response = run_agent_step(state)
+        if response:
+            return response
 
-    cleaned_input = strip_agent_preference_terms(cleaned_input, preference)
-    prompt_context = fetch_backend_prompt_context(cleaned_input)
-    tfidf_result = recommender.recommend_service(cleaned_input)
-    llm_result = llm_nlp_classify(cleaned_input, language, prompt_context=prompt_context, preference=preference)
-    result = merge_tfidf_llm_scores(tfidf_result, llm_result)
-    deep_result = deep_nlp_classify(cleaned_input)
-    result = merge_with_deep_scores(result, deep_result)
+    final_response = state.get('final_response')
+    if final_response:
+        return finalize_agent_response(state, final_response)
 
-    agent_trace.append(build_agent_trace_step(
-        'decision',
-        'clarify' if result['confidence'] < AGENT_CLARIFICATION_THRESHOLD and not result['detected_service'] else 'recommend',
-        f"selected {result['detected_service']} with confidence {result['confidence']:.3f}" if result['detected_service'] else 'confidence stayed below the agent threshold and no service was selected',
-    ))
-
-    if result['confidence'] < AGENT_CLARIFICATION_THRESHOLD and not result['detected_service']:
-        return build_agent_fallback_response(user_input, language, result['confidence'], agent_plan, agent_trace)
-
-    return build_agent_selected_service_response(
-        user_input=user_input,
-        language=language,
-        preference=preference,
-        is_first_prompt=is_first_prompt,
-        agent_plan=agent_plan,
-        agent_trace=agent_trace,
-        result=result,
-        llm_result=llm_result,
-        prompt_context=prompt_context,
-        deep_result=deep_result,
-    )
+    fallback = build_agent_fallback_response(state['user_input'], state['language'], 0.0, state['agent_plan'], state['agent_trace'])
+    fallback['tool_calls'] = state['tool_calls']
+    fallback['agent_type'] = 'tool_using_ai_agent'
+    return fallback
 
 # Service keywords database
 SERVICES_DB = {
