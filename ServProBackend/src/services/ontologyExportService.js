@@ -319,6 +319,7 @@ module.exports = {
   iriFor,
   safeObjectId,
 };
+/*
 const { User } = require("../models/User");
 const { Service } = require("../models/Service");
 const { Booking } = require("../models/Booking");
@@ -624,3 +625,4 @@ module.exports = {
   resourceRef,
   buildOntologyTurtle: fetchOntologySnapshot,
 };
+*/
