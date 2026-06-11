@@ -10,14 +10,14 @@ Customer-facing web app for browsing services, viewing details, and booking prov
 
 ## Features
 - 🌍 **Bilingual Support**: Full Arabic & English interface with RTL (Right-to-Left) layout
-- 🔍 Service discovery and filtering with relevance-ranked search
+- 🔍 Service discovery and filtering via Fuseki-backed ontology queries
 - 📅 Online booking system
 - 📈 Booking history with status tracking
 - ⭐ Customer reviews and ratings
 - 👤 User profile management
 - 💳 **Transaction history** (new)
 - 🤖 **AI Chatbot Assistant**: Detects service intent and returns actionable recommendations in EN/AR
-- 💡 **Smart suggestions**: Home page suggestions loaded from the chatbot endpoint and used to refine search instantly
+- 💡 **Smart suggestions**: Home page suggestions loaded from the chatbot endpoint and used to refine ontology queries instantly
 - 🌙 Auto language detection with localStorage persistence
 - 🧑‍🔧 **Providers directory** with portfolio browsing
 - 🧾 **Provider portfolio sections**: info artisant, realisations, localisation, equipe, equipements, certificats, chiffrement, disponibilites
@@ -112,7 +112,7 @@ Located in `src/locales/`:
 
 ## Discovery UX
 
-- Search across services uses a ranking helper that scores better matches higher instead of returning a flat alphabetical list.
+- Service discovery now reads as ontology-based exploration backed by Fuseki-compatible queries.
 - The providers page includes quick filters and analytics cards to highlight verified, active, and portfolio-rich providers.
 - Provider map/direction links remain available for fast location-based exploration.
 

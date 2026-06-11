@@ -1,0 +1,14 @@
+PREFIX : <http://servpro.local/ontology#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT ?service ?serviceName ?category ?providerName ?priceMin ?duration
+WHERE {
+  ?service a :Service ;
+           :name ?serviceName ;
+           :category ?category ;
+           :priceMin ?priceMin ;
+           :duration ?duration ;
+           :hasProvider ?provider .
+  ?provider :name ?providerName .
+}
+ORDER BY LCASE(STR(?serviceName))

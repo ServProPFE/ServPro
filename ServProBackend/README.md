@@ -31,6 +31,7 @@ Backend API for ServPro - an on-demand services platform connecting clients with
 - **Notifications**: Multi-channel notification system (Email, Push, In-App)
 - **Internationalization**: Support for bilingual responses (AR/EN)
 - **AI Chatbot Integration**: Node.js delegates intent analysis to Python microservice and returns actionable service guidance
+- **Ontology and SPARQL**: Project ontology export and Fuseki query/update proxy for semantic search
 
 ## 🛠 Tech Stack
 
@@ -124,6 +125,10 @@ NODE_ENV=development
 JWT_SECRET=your_super_secret_key_change_this
 JWT_EXPIRES_IN=7d
 PYTHON_AI_SERVICE=http://localhost:5000
+FUSEKI_QUERY_ENDPOINT=http://localhost:3030/servpro/query
+FUSEKI_UPDATE_ENDPOINT=http://localhost:3030/servpro/update
+ONTOLOGY_RESOURCE_BASE_IRI=http://servpro.local/resource/
+ONTOLOGY_EXPORT_PATH=../ontology/generated/servpro-export.ttl
 GEMINI_API_KEY=your_api_key_optional
 ```
 
@@ -157,6 +162,10 @@ PRODUCTION_SEED_DEFAULT_PASSWORD=replace_with_strong_password
 | `PYTHON_AI_RETRY_BASE_DELAY_MS` | Exponential backoff base delay (ms) | `1500` |
 | `PYTHON_AI_HEALTH_TIMEOUT_MS` | Timeout for `/chatbot/health` probe (ms) | `5000` |
 | `PYTHON_AI_HEALTH_RETRIES` | Retry attempts for health probe | `1` |
+| `FUSEKI_QUERY_ENDPOINT` | Fuseki SPARQL query endpoint | *Optional* |
+| `FUSEKI_UPDATE_ENDPOINT` | Fuseki SPARQL update endpoint | *Optional* |
+| `ONTOLOGY_RESOURCE_BASE_IRI` | Base IRI used when exporting MongoDB data to RDF | `http://servpro.local/resource/` |
+| `ONTOLOGY_EXPORT_PATH` | File path used by the export script | `../ontology/generated/servpro-export.ttl` |
 | `PRODUCTION_AUTO_SEED` | Auto-create baseline users/services at startup in production | `true` in production if unset |
 | `PRODUCTION_SEED_DEFAULT_PASSWORD` | Default password used for seeded accounts on first creation | `ChangeMe123!` |
 
@@ -178,6 +187,57 @@ Example:
 ```http
 GET /chatbot/health
 ```
+
+### Ontology and Fuseki
+
+The backend exposes ontology and SPARQL endpoints under `/ontology`:
+
+- `GET /ontology/config` returns the configured Fuseki endpoints.
+- `GET /ontology/export` returns a Turtle snapshot of the current MongoDB data.
+- `POST /ontology/export` writes the snapshot to `ontology/generated/servpro-export.ttl`.
+- `POST /ontology/query` forwards a SPARQL query to Fuseki.
+- `POST /ontology/update` forwards a SPARQL update to Fuseki.
+
+Example query payload:
+
+```json
+{
+  "query": "SELECT * WHERE { ?s ?p ?o } LIMIT 10"
+}
+```
+
+### Ontology and Fuseki
+
+#### Export ontology from MongoDB
+```http
+GET /ontology/export
+```
+
+Returns a Turtle snapshot generated from the current database state. Requires an admin JWT.
+
+#### Query Fuseki
+```http
+POST /ontology/query
+Content-Type: application/json
+
+{
+  "query": "SELECT * WHERE { ?s ?p ?o } LIMIT 10"
+}
+```
+
+Forwards a SPARQL query to the configured Fuseki query endpoint.
+
+#### Update Fuseki
+```http
+POST /ontology/update
+Content-Type: application/json
+
+{
+  "update": "INSERT DATA { ... }"
+}
+```
+
+Requires an admin JWT and forwards a SPARQL update to Fuseki.
 
 ## 📚 API Documentation
 

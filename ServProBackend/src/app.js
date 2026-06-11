@@ -23,6 +23,7 @@ const availabilityRoutes = require("./routes/availability");
 const notationsRoutes = require("./routes/notations");
 const transactionRoutes = require("./routes/transactions");
 const notificationsRoutes = require("./routes/notifications");
+const ontologyRoutes = require("./routes/ontology");
 const chatbotRoutes = require("./routes/chatbot");
 const sseRealtimeRoutes = require("./routes/sse-realtime");
 
@@ -123,6 +124,7 @@ app.use("/availability", availabilityRoutes);
 app.use("/notations", notationsRoutes);
 app.use("/transactions", transactionRoutes);
 app.use("/notifications", notificationsRoutes);
+app.use("/ontology", ontologyRoutes);
 app.use("/chatbot", chatbotRoutes);
 app.use("/realtime", sseRealtimeRoutes);
 

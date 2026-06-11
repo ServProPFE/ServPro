@@ -1,0 +1,17 @@
+PREFIX : <http://servpro.local/ontology#>
+
+SELECT ?booking ?status ?expectedAt ?totalPrice ?currency ?clientName ?providerName ?serviceName
+WHERE {
+  ?booking a :Booking ;
+           :status ?status ;
+           :expectedAt ?expectedAt ;
+           :totalPrice ?totalPrice ;
+           :currency ?currency ;
+           :bookedBy ?client ;
+           :servedBy ?provider ;
+           :booksService ?service .
+  ?client :name ?clientName .
+  ?provider :name ?providerName .
+  ?service :name ?serviceName .
+}
+ORDER BY DESC(?expectedAt)

@@ -52,12 +52,12 @@ const SearchBar = ({ onSearch }) => {
 
       <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 shadow-sm">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-          {t('search.tipLabel', { defaultValue: 'Search tips' })}
+          {t('search.tipLabel', { defaultValue: 'Ontology tips' })}
         </p>
         <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm leading-6 text-slate-700">
             {t('search.scopeHint', {
-              defaultValue: 'Search by service name, category, price, or duration.',
+              defaultValue: 'Query the Fuseki-backed ontology by service name, class, price, or duration.',
             })}
           </p>
 

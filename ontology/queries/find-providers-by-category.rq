@@ -1,0 +1,14 @@
+PREFIX : <http://servpro.local/ontology#>
+
+SELECT DISTINCT ?provider ?providerName ?email ?phone ?category ?serviceName
+WHERE {
+  ?service a :Service ;
+           :category ?category ;
+           :name ?serviceName ;
+           :hasProvider ?provider .
+  ?provider a :Provider ;
+            :name ?providerName .
+  OPTIONAL { ?provider :email ?email . }
+  OPTIONAL { ?provider :phone ?phone . }
+}
+ORDER BY LCASE(STR(?providerName))

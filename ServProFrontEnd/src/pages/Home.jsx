@@ -175,13 +175,13 @@ const Home = () => {
 
           <div className="w-full rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-100/80">
-              {t('home.quickSearch', { defaultValue: 'Quick Search' })}
+              {t('home.quickSearch', { defaultValue: 'Ontology Query' })}
             </p>
             <div className="mt-3 rounded-2xl border border-white/15 bg-white/10 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-white">{t('home.smartTitle', { defaultValue: 'Smart suggestions' })}</p>
-                  <p className="text-xs text-slate-100/80">{t('home.smartSubtitle', { defaultValue: 'Tap a suggestion to refine your search instantly' })}</p>
+                  <p className="text-xs text-slate-100/80">{t('home.smartSubtitle', { defaultValue: 'Tap a suggestion to refine your Fuseki ontology query instantly' })}</p>
                 </div>
                 {suggestionsLoading ? (
                   <span className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-100">

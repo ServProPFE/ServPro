@@ -1,0 +1,257 @@
+@prefix : <http://servpro.local/ontology#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+:sample-client-1 a :Client ;
+  :name "Ahmed Ben Ali" ;
+  :email "ahmed@client.com" ;
+  :phone "+21698123456" ;
+  :hasBooking :sample-booking-1 .
+
+:sample-provider-1 a :Provider ;
+  :name "Hassan El Plombier" ;
+  :email "hassan@provider.com" ;
+  :phone "+21698456789" ;
+  :companyName "Hassan Plomberie Services" ;
+  :location "El Marsa, Tunis" ;
+  :address "El Marsa, Tunis" ;
+  :verificationStatus "VERIFIED" ;
+  :experienceYears "8"^^xsd:integer ;
+  :hasNotation :sample-notation-1 ;
+  :hasPortfolio :sample-portfolio-1 ;
+  :hasCertification :sample-certification-1 ;
+  :hasCompetence :sample-competence-1 ;
+  :hasAvailability :sample-availability-1 .
+
+:sample-service-1 a :Service ;
+  :name "serviceNames.waterLeakRepair" ;
+  :category "PLOMBERIE" ;
+  :priceMin "50"^^xsd:decimal ;
+  :duration "60"^^xsd:integer ;
+  :currency "TND" ;
+  :hasProvider :sample-provider-1 ;
+  :hasOffer :sample-offer-1 .
+
+:sample-reservation-detail-1 a :ReservationDetail ;
+  :description "Kitchen leak near the sink" ;
+  :address "Ariana, Tunis" ;
+  :urgent "true"^^xsd:boolean .
+
+:sample-booking-1 a :Booking ;
+  :status "CONFIRMED" ;
+  :expectedAt "2026-06-11T14:00:00Z"^^xsd:dateTime ;
+  :totalPrice "70"^^xsd:decimal ;
+  :currency "TND" ;
+  :bookedBy :sample-client-1 ;
+  :servedBy :sample-provider-1 ;
+  :booksService :sample-service-1 ;
+  :hasDetail :sample-reservation-detail-1 ;
+  :hasTracking :sample-tracking-1 ;
+  :hasTransaction :sample-transaction-1 ;
+  :hasReview :sample-review-1 .
+
+:sample-offer-1 a :Offer ;
+  :title "Summer plumbing discount" ;
+  :basePrice "60"^^xsd:decimal ;
+  :discount "10"^^xsd:decimal ;
+  :validUntil "2026-12-31T00:00:00Z"^^xsd:dateTime ;
+  :active "true"^^xsd:boolean ;
+  :hasService :sample-service-1 .
+
+:sample-review-1 a :Review ;
+  :score "5"^^xsd:integer ;
+  :comment "Fast and professional." ;
+  :reviewBooking :sample-booking-1 ;
+  :reviewedBy :sample-client-1 ;
+  :reviewedProvider :sample-provider-1 .
+
+:sample-portfolio-1 a :Portfolio ;
+  :title "Plumbing portfolio" ;
+  :description "Recent leak repairs and installations." ;
+  :hasProvider :sample-provider-1 .
+
+:sample-certification-1 a :Certification ;
+  :name "Certified Plumber" ;
+  :title "Water systems" ;
+  :description "Certificate image placeholder" ;
+  :validUntil "2027-01-01T00:00:00Z"^^xsd:dateTime ;
+  :hasProvider :sample-provider-1 .
+
+:sample-competence-1 a :Competence ;
+  :name "PLOMBERIE" ;
+  :level "EXPERT" ;
+  :hasProvider :sample-provider-1 .
+
+:sample-availability-1 a :Availability ;
+  :day "1"^^xsd:integer ;
+  :start "08:00" ;
+  :end "17:00" ;
+  :hasProvider :sample-provider-1 .
+
+:sample-notation-1 a :Notation ;
+  :average "4.9"^^xsd:decimal ;
+  :total "18"^^xsd:integer ;
+  :hasProvider :sample-provider-1 .
+
+:sample-transaction-1 a :Transaction ;
+  :amount "70"^^xsd:decimal ;
+  :currency "TND" ;
+  :method "CARD" ;
+  :status "SUCCESS" ;
+  :provider "STRIPE" ;
+  :providerAmount "63"^^xsd:decimal ;
+  :providerPayoutStatus "PAID" ;
+  :transactionBooking :sample-booking-1 .
+
+:sample-invoice-1 a :Invoice ;
+  :name "INV-2026-0001" ;
+  :totalPrice "70"^^xsd:decimal ;
+  :issuedAt "2026-06-11T14:05:00Z"^^xsd:dateTime ;
+  :invoiceBooking :sample-booking-1 .
+
+:sample-commission-1 a :Commission ;
+  :percentage "10"^^xsd:decimal ;
+  :amount "7"^^xsd:decimal ;
+  :commissionBooking :sample-booking-1 .
+
+:sample-tracking-1 a :Tracking ;
+  :position "Provider on the way" ;
+  :at "2026-06-11T13:30:00Z"^^xsd:dateTime ;
+  :belongsToBooking :sample-booking-1 .
+
+:sample-notification-1 a :Notification ;
+  :title "Booking received" ;
+  :type "BOOKING_CREATED" ;
+  :content "Your booking for plumbing has been received." ;
+  :destination "/bookings/sample-booking-1" ;
+  :hasRecipient :sample-client-1 ;
+  :hasActor :sample-provider-1 .
+
+:sample-package-1 a :Package ;
+  :name "Premium support" ;
+  :months "6"^^xsd:integer ;
+  :numberVisits "12"^^xsd:integer ;
+  :monthlyPrice "120"^^xsd:decimal .
+@prefix : <http://servpro.local/ontology#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<http://servpro.local/resource/user/66a100000000000000000001> a :Provider ;
+  :name "Hassan El Plombier" ;
+  :email "hassan@provider.com" ;
+  :phone "+216 98 456 789" ;
+  :companyName "Hassan Plomberie Services" ;
+  :location "El Marsa, Tunis" ;
+  :experienceYears "8"^^xsd:integer ;
+  :verificationStatus "VERIFIED" .
+
+<http://servpro.local/resource/user/66a100000000000000000002> a :Client ;
+  :name "Ahmed Ben Ali" ;
+  :email "ahmed@client.com" ;
+  :phone "+216 98 123 456" .
+
+<http://servpro.local/resource/service/66a100000000000000000010> a :Service ;
+  :name "serviceNames.waterLeakRepair" ;
+  :category "PLOMBERIE" ;
+  :priceMin "50"^^xsd:decimal ;
+  :duration "60"^^xsd:integer ;
+  :currency "TND" ;
+  :hasProvider <http://servpro.local/resource/user/66a100000000000000000001> .
+
+<http://servpro.local/resource/reservation-detail/66a100000000000000000020> a :ReservationDetail ;
+  :description "Kitchen leak near the sink" ;
+  :address "El Marsa, Tunis" ;
+  :urgent "true"^^xsd:boolean .
+
+<http://servpro.local/resource/booking/66a100000000000000000030> a :Booking ;
+  :bookedBy <http://servpro.local/resource/user/66a100000000000000000002> ;
+  :servedBy <http://servpro.local/resource/user/66a100000000000000000001> ;
+  :booksService <http://servpro.local/resource/service/66a100000000000000000010> ;
+  :hasDetail <http://servpro.local/resource/reservation-detail/66a100000000000000000020> ;
+  :status "CONFIRMED" ;
+  :expectedAt "2026-06-12T10:00:00.000Z"^^xsd:dateTime ;
+  :totalPrice "75"^^xsd:decimal ;
+  :currency "TND" .
+
+<http://servpro.local/resource/review/66a100000000000000000040> a :Review ;
+  :forBooking <http://servpro.local/resource/booking/66a100000000000000000030> ;
+  :reviewedBy <http://servpro.local/resource/user/66a100000000000000000002> ;
+  :reviewedProvider <http://servpro.local/resource/user/66a100000000000000000001> ;
+  :score "5"^^xsd:integer ;
+  :content "Fast and professional" .
+
+<http://servpro.local/resource/offer/66a100000000000000000050> a :Offer ;
+  :title "Summer plumbing discount" ;
+  :basePrice "80"^^xsd:decimal ;
+  :discount "15"^^xsd:decimal ;
+  :active "true"^^xsd:boolean ;
+  :service <http://servpro.local/resource/service/66a100000000000000000010> .
+
+<http://servpro.local/resource/notation/66a100000000000000000060> a :Notation ;
+  :average "4.8"^^xsd:decimal ;
+  :total "26"^^xsd:integer ;
+  :hasProvider <http://servpro.local/resource/user/66a100000000000000000001> .
+
+<http://servpro.local/resource/commission/66a100000000000000000070> a :Commission ;
+  :percentage "10"^^xsd:decimal ;
+  :amount "7.5"^^xsd:decimal ;
+  :forBooking <http://servpro.local/resource/booking/66a100000000000000000030> .
+
+<http://servpro.local/resource/invoice/66a100000000000000000080> a :Invoice ;
+  :number "INV-2026-0001" ;
+  :total "75"^^xsd:decimal ;
+  :issuedAt "2026-06-11T12:00:00.000Z"^^xsd:dateTime ;
+  :forInvoiceBooking <http://servpro.local/resource/booking/66a100000000000000000030> .
+
+<http://servpro.local/resource/transaction/66a100000000000000000090> a :Transaction ;
+  :hasBooking <http://servpro.local/resource/booking/66a100000000000000000030> ;
+  :amount "75"^^xsd:decimal ;
+  :currency "TND" ;
+  :method "CASH" ;
+  :status "SUCCESS" ;
+  :provider "STRIPE" ;
+  :fees "7.5"^^xsd:decimal ;
+  :providerAmount "67.5"^^xsd:decimal ;
+  :providerPayoutStatus "PAID" ;
+  :hasCommission <http://servpro.local/resource/commission/66a100000000000000000070> ;
+  :hasInvoice <http://servpro.local/resource/invoice/66a100000000000000000080> .
+
+<http://servpro.local/resource/tracking/66a100000000000000000091> a :Tracking ;
+  :belongsToBooking <http://servpro.local/resource/booking/66a100000000000000000030> ;
+  :position "On the way" ;
+  :at "2026-06-11T09:45:00.000Z"^^xsd:dateTime .
+
+<http://servpro.local/resource/portfolio/66a100000000000000000092> a :Portfolio ;
+  :title "Plumbing portfolio" ;
+  :description "Selected repair and installation projects" ;
+  :hasProvider <http://servpro.local/resource/user/66a100000000000000000001> .
+
+<http://servpro.local/resource/certification/66a100000000000000000093> a :Certification ;
+  :name "Certified Plumber" ;
+  :authority "Tunis Training Center" ;
+  :hasProvider <http://servpro.local/resource/user/66a100000000000000000001> .
+
+<http://servpro.local/resource/competence/66a100000000000000000094> a :Competence ;
+  :serviceId "PLB-001" ;
+  :level "EXPERT" ;
+  :hasProvider <http://servpro.local/resource/user/66a100000000000000000001> .
+
+<http://servpro.local/resource/availability/66a100000000000000000095> a :Availability ;
+  :day "1"^^xsd:integer ;
+  :start "08:00" ;
+  :end "17:00" ;
+  :hasProvider <http://servpro.local/resource/user/66a100000000000000000001> .
+
+<http://servpro.local/resource/package/66a100000000000000000096> a :Package ;
+  :name "Starter Package" ;
+  :months "6"^^xsd:integer ;
+  :numberVisits "12"^^xsd:integer ;
+  :monthlyPrice "49.9"^^xsd:decimal .
+
+<http://servpro.local/resource/notification/66a100000000000000000097> a :Notification ;
+  :hasRecipient <http://servpro.local/resource/user/66a100000000000000000002> ;
+  :hasActor <http://servpro.local/resource/user/66a100000000000000000001> ;
+  :title "Booking received" ;
+  :type "BOOKING_CREATED" ;
+  :content "Your booking has been received." ;
+  :destination "/bookings/66a100000000000000000030" ;
+  :metadata "{\"bookingId\":\"66a100000000000000000030\"}" ;
+  :readAt "2026-06-11T12:10:00.000Z"^^xsd:dateTime .

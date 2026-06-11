@@ -1,0 +1,237 @@
+@prefix : <http://servpro.local/ontology#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+:ServProOntology a owl:Ontology ;
+  rdfs:label "ServPro Ontology" ;
+  rdfs:comment "Ontology for the ServPro platform covering services, providers, bookings, offers, reviews, portfolios, and transactions." .
+
+:Account a owl:Class .
+:Client a owl:Class ;
+  rdfs:subClassOf :Account .
+:Provider a owl:Class ;
+  rdfs:subClassOf :Account .
+:Admin a owl:Class ;
+  rdfs:subClassOf :Account .
+
+:Service a owl:Class .
+:ServiceCategory a owl:Class .
+:Booking a owl:Class .
+:ReservationDetail a owl:Class .
+:Transaction a owl:Class .
+:Offer a owl:Class .
+:Review a owl:Class .
+:Portfolio a owl:Class .
+:Certification a owl:Class .
+:Competence a owl:Class .
+:Availability a owl:Class .
+:Notation a owl:Class .
+:Commission a owl:Class .
+:Invoice a owl:Class .
+:Package a owl:Class .
+:Notification a owl:Class .
+:Tracking a owl:Class .
+
+:isProviderOf a owl:ObjectProperty ;
+  rdfs:domain :Provider ;
+  rdfs:range :Service .
+
+:hasProvider a owl:ObjectProperty ;
+  rdfs:domain :Service ;
+  rdfs:range :Provider .
+
+:hasBooking a owl:ObjectProperty ;
+  rdfs:domain :Client ;
+  rdfs:range :Booking .
+
+:booksService a owl:ObjectProperty ;
+  rdfs:domain :Booking ;
+  rdfs:range :Service .
+
+:bookedBy a owl:ObjectProperty ;
+  rdfs:domain :Booking ;
+  rdfs:range :Client .
+
+:servedBy a owl:ObjectProperty ;
+  rdfs:domain :Booking ;
+  rdfs:range :Provider .
+
+:hasDetail a owl:ObjectProperty ;
+  rdfs:domain :Booking ;
+  rdfs:range :ReservationDetail .
+
+:hasTransaction a owl:ObjectProperty ;
+  rdfs:domain :Booking ;
+  rdfs:range :Transaction .
+
+:hasOffer a owl:ObjectProperty ;
+  rdfs:domain :Service ;
+  rdfs:range :Offer .
+
+:hasReview a owl:ObjectProperty ;
+  rdfs:domain :Booking ;
+  rdfs:range :Review .
+
+:reviewBooking a owl:ObjectProperty ;
+  rdfs:domain :Review ;
+  rdfs:range :Booking .
+
+:reviewedProvider a owl:ObjectProperty ;
+  rdfs:domain :Review ;
+  rdfs:range :Provider .
+
+:reviewedBy a owl:ObjectProperty ;
+  rdfs:domain :Review ;
+  rdfs:range :Account .
+
+:hasPortfolio a owl:ObjectProperty ;
+  rdfs:domain :Provider ;
+  rdfs:range :Portfolio .
+
+:hasCertification a owl:ObjectProperty ;
+  rdfs:domain :Provider ;
+  rdfs:range :Certification .
+
+:hasCompetence a owl:ObjectProperty ;
+  rdfs:domain :Provider ;
+  rdfs:range :Competence .
+
+:hasAvailability a owl:ObjectProperty ;
+  rdfs:domain :Provider ;
+  rdfs:range :Availability .
+
+:hasNotation a owl:ObjectProperty ;
+  rdfs:domain :Provider ;
+  rdfs:range :Notation .
+
+:hasCommission a owl:ObjectProperty ;
+  rdfs:domain :Transaction ;
+  rdfs:range :Commission .
+
+:hasInvoice a owl:ObjectProperty ;
+  rdfs:domain :Transaction ;
+  rdfs:range :Invoice .
+
+:commissionBooking a owl:ObjectProperty ;
+  rdfs:domain :Commission ;
+  rdfs:range :Booking .
+
+:invoiceBooking a owl:ObjectProperty ;
+  rdfs:domain :Invoice ;
+  rdfs:range :Booking .
+
+:transactionBooking a owl:ObjectProperty ;
+  rdfs:domain :Transaction ;
+  rdfs:range :Booking .
+
+:hasTracking a owl:ObjectProperty ;
+  rdfs:domain :Booking ;
+  rdfs:range :Tracking .
+
+:hasNotification a owl:ObjectProperty ;
+  rdfs:domain :Account ;
+  rdfs:range :Notification .
+
+:belongsToBooking a owl:ObjectProperty ;
+  rdfs:domain :Tracking ;
+  rdfs:range :Booking .
+
+:hasRecipient a owl:ObjectProperty ;
+  rdfs:domain :Notification ;
+  rdfs:range :Account .
+
+:hasActor a owl:ObjectProperty ;
+  rdfs:domain :Notification ;
+  rdfs:range :Account .
+
+:category a owl:DatatypeProperty ;
+:name a owl:DatatypeProperty ;
+:email a owl:DatatypeProperty .
+:phone a owl:DatatypeProperty .
+:companyName a owl:DatatypeProperty .
+:location a owl:DatatypeProperty .
+:address a owl:DatatypeProperty .
+:description a owl:DatatypeProperty .
+:title a owl:DatatypeProperty .
+:businessName a owl:DatatypeProperty .
+:license a owl:DatatypeProperty .
+:insurance a owl:DatatypeProperty .
+:provider a owl:DatatypeProperty .
+:score a owl:DatatypeProperty .
+:average a owl:DatatypeProperty ;
+  rdfs:range xsd:decimal .
+:total a owl:DatatypeProperty ;
+  rdfs:range xsd:integer .
+:priceMin a owl:DatatypeProperty ;
+  rdfs:range xsd:decimal .
+:basePrice a owl:DatatypeProperty ;
+  rdfs:range xsd:decimal .
+:totalPrice a owl:DatatypeProperty ;
+  rdfs:range xsd:decimal .
+:currency a owl:DatatypeProperty .
+:duration a owl:DatatypeProperty ;
+  rdfs:range xsd:integer .
+:discount a owl:DatatypeProperty ;
+  rdfs:range xsd:decimal .
+:status a owl:DatatypeProperty .
+:method a owl:DatatypeProperty .
+:expectedAt a owl:DatatypeProperty ;
+  rdfs:range xsd:dateTime .
+:validUntil a owl:DatatypeProperty ;
+  rdfs:range xsd:dateTime .
+:active a owl:DatatypeProperty ;
+  rdfs:range xsd:boolean .
+:urgent a owl:DatatypeProperty ;
+  rdfs:range xsd:boolean .
+:day a owl:DatatypeProperty ;
+  rdfs:range xsd:integer .
+:start a owl:DatatypeProperty .
+:end a owl:DatatypeProperty .
+:level a owl:DatatypeProperty .
+:verificationStatus a owl:DatatypeProperty .
+:experienceYears a owl:DatatypeProperty ;
+  rdfs:range xsd:integer .
+:serviceRadius a owl:DatatypeProperty ;
+  rdfs:range xsd:integer .
+:turnover a owl:DatatypeProperty .
+:months a owl:DatatypeProperty ;
+  rdfs:range xsd:integer .
+:numberVisits a owl:DatatypeProperty ;
+  rdfs:range xsd:integer .
+:monthlyPrice a owl:DatatypeProperty ;
+  rdfs:range xsd:decimal .
+:authority a owl:DatatypeProperty .
+:imageUrl a owl:DatatypeProperty .
+:expiresAt a owl:DatatypeProperty ;
+  rdfs:range xsd:dateTime .
+:externalId a owl:DatatypeProperty .
+:fees a owl:DatatypeProperty ;
+  rdfs:range xsd:decimal .
+:providerAmount a owl:DatatypeProperty ;
+  rdfs:range xsd:decimal .
+:providerPayoutStatus a owl:DatatypeProperty .
+:percentage a owl:DatatypeProperty ;
+  rdfs:range xsd:decimal .
+:amount a owl:DatatypeProperty ;
+  rdfs:range xsd:decimal .
+:number a owl:DatatypeProperty .
+:issuedAt a owl:DatatypeProperty ;
+  rdfs:range xsd:dateTime .
+:comment a owl:DatatypeProperty .
+:type a owl:DatatypeProperty .
+:content a owl:DatatypeProperty .
+:destination a owl:DatatypeProperty .
+:metadata a owl:DatatypeProperty .
+:readAt a owl:DatatypeProperty ;
+  rdfs:range xsd:dateTime .
+:position a owl:DatatypeProperty .
+:at a owl:DatatypeProperty ;
+  rdfs:range xsd:dateTime .
+
+:Plumbing a :ServiceCategory .
+:Electricity a :ServiceCategory .
+:AirConditioning a :ServiceCategory .
+:Cleaning a :ServiceCategory .
+:OtherService a :ServiceCategory .

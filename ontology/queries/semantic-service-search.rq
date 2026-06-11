@@ -1,0 +1,17 @@
+PREFIX : <http://servpro.local/ontology#>
+
+SELECT ?service ?serviceName ?description ?category ?providerName
+WHERE {
+  ?service a :Service ;
+           :name ?serviceName ;
+           :category ?category ;
+           :hasProvider ?provider .
+  OPTIONAL { ?service :description ?description . }
+  ?provider :name ?providerName .
+  FILTER(
+    CONTAINS(LCASE(STR(?serviceName)), LCASE("plomberie")) ||
+    CONTAINS(LCASE(STR(?category)), LCASE("plomberie")) ||
+    (BOUND(?description) && CONTAINS(LCASE(STR(?description)), LCASE("plomberie")))
+  )
+}
+ORDER BY LCASE(STR(?serviceName))

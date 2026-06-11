@@ -1,0 +1,17 @@
+PREFIX : <http://servpro.local/ontology#>
+
+SELECT ?provider ?providerName ?companyName ?location ?experienceYears ?verificationStatus ?average ?total
+WHERE {
+  ?provider a :Provider ;
+            :name ?providerName .
+  OPTIONAL { ?provider :companyName ?companyName . }
+  OPTIONAL { ?provider :location ?location . }
+  OPTIONAL { ?provider :experienceYears ?experienceYears . }
+  OPTIONAL { ?provider :verificationStatus ?verificationStatus . }
+  OPTIONAL {
+    ?provider :hasNotation ?notation .
+    OPTIONAL { ?notation :average ?average . }
+    OPTIONAL { ?notation :total ?total . }
+  }
+}
+ORDER BY LCASE(STR(?providerName))

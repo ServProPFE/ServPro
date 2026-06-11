@@ -18,8 +18,8 @@ Langues supportees: anglais et arabe (RTL).
 
 2. `ServProFrontEnd`
 - Application client (React + Vite)
-- Recherche intelligente, reservation, suivi, historique des transactions, chatbot
-- Suggestions IA sur la page d'accueil, recherche a score, et annuaire prestataires avec filtres/insights
+- Exploration de services via Fuseki et ontologie, reservation, suivi, historique des transactions, chatbot
+- Suggestions IA sur la page d'accueil, requetes ontologiques, et annuaire prestataires avec filtres/insights
 
 3. `ServProDashboard`
 - Back-office prestataire/admin (React + Vite)
@@ -210,7 +210,7 @@ Le backend doit fournir:
 - Transactions creees automatiquement a la confirmation
 - Chatbot bilingue avec suggestion de service et details prestataire
 - Suggestions rapides reutilisees entre mobile, front web, et chatbot
-- Recherche de services et de prestataires avec classement par pertinence
+- Recherche de services et de prestataires via Fuseki et l'ontologie du domaine
 - Insights prestataire/admin pour suivre les categories fortes, la qualite des profils et les tendances de performance
 - i18n EN/AR avec RTL cote frontend et dashboard
 - Annuaire prestataires: routes frontend `/providers` et `/providers/:providerId`
@@ -228,6 +228,7 @@ Le backend doit fournir:
 - Dashboard Docker: `ServProDashboard/README.Docker.md`
 - Mobile: `ServProMobile/README.md`
 - Mobile Docker: `ServProMobile/README.Docker.md`
+- Ontologie et Fuseki: `ontology/README.md`
 - Kubernetes manifests: `k8s/README.md`
 - Setup chatbot Python AI: `PYTHON_AI_SETUP.md`
 
