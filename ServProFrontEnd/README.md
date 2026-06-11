@@ -29,6 +29,10 @@ Customer-facing web app for browsing services, viewing details, and booking prov
 - Backend running locally on `http://localhost:4000` or deployed on Render
 - AI chatbot is handled by the backend via its configured `PYTHON_AI_SERVICE`
 
+## Deployment Notes
+
+When the app runs on Vercel, it uses a same-origin `/api` proxy to reach the backend and avoid browser CORS issues. If you want to override that behavior, set `VITE_API_BASE_URL` explicitly.
+
 ## Setup
 ```bash
 npm install
