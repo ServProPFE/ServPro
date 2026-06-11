@@ -9,7 +9,7 @@ const toPositiveInt = (value, fallback) => {
 
 const getFusekiConfig = () => {
   const baseUrl = normalizeEndpoint(process.env.FUSEKI_BASE_URL || "http://localhost:3030");
-  const dataset = (process.env.FUSEKI_DATASET || "servpro").trim();
+  const dataset = (process.env.FUSEKI_DATASET || "servpro_db").trim();
 
   return {
     queryEndpoint: normalizeEndpoint(process.env.FUSEKI_QUERY_ENDPOINT || `${baseUrl}/${dataset}/query`),
