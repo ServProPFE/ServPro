@@ -70,6 +70,11 @@ export const API_ENDPOINTS = {
   // Chatbot
   CHATBOT: `${API_BASE_URL}/chatbot`,
   CHATBOT_SUGGESTIONS: `${API_BASE_URL}/chatbot/suggestions`,
+
+  // Ontology / Fuseki bridge
+  ONTOLOGY_QUERY: `${API_BASE_URL}/ontology/query`,
+  ONTOLOGY_EXPORT: `${API_BASE_URL}/ontology/export`,
+  ONTOLOGY_CONFIG: `${API_BASE_URL}/ontology/config`,
 };
 
 export default API_BASE_URL;

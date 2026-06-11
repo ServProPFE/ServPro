@@ -5,7 +5,7 @@ import { API_ENDPOINTS } from '../config/api';
 import apiService from '../services/apiService';
 import ServiceCard from '../components/ServiceCard';
 import SearchBar from '../components/SearchBar';
-import { filterServicesBySearch } from '../utils/serviceSearch';
+import { searchServicesWithOntology } from '../services/ontologySearchService';
 
 const normalizeItems = (payload) => {
   if (Array.isArray(payload?.items)) {
@@ -88,8 +88,8 @@ const Home = () => {
     }
   };
 
-  const handleSearch = (searchTerm, category) => {
-    const filtered = filterServicesBySearch({
+  const handleSearch = async (searchTerm, category) => {
+    const filtered = await searchServicesWithOntology({
       services,
       searchTerm,
       category,
@@ -99,8 +99,8 @@ const Home = () => {
     setFilteredServices(filtered);
   };
 
-  const applySmartSuggestion = (suggestion) => {
-    const filtered = filterServicesBySearch({
+  const applySmartSuggestion = async (suggestion) => {
+    const filtered = await searchServicesWithOntology({
       services,
       searchTerm: suggestion,
       category: 'ALL',

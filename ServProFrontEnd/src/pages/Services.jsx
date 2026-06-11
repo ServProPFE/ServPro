@@ -4,7 +4,7 @@ import { API_ENDPOINTS } from '../config/api';
 import apiService from '../services/apiService';
 import ServiceCard from '../components/ServiceCard';
 import SearchBar from '../components/SearchBar';
-import { filterServicesBySearch } from '../utils/serviceSearch';
+import { searchServicesWithOntology } from '../services/ontologySearchService';
 
 const Services = () => {
   const { t } = useTranslation();
@@ -50,8 +50,8 @@ const Services = () => {
     }
   };
 
-  const handleSearch = (searchTerm, category) => {
-    const filtered = filterServicesBySearch({
+  const handleSearch = async (searchTerm, category) => {
+    const filtered = await searchServicesWithOntology({
       services,
       searchTerm,
       category,
@@ -62,13 +62,17 @@ const Services = () => {
     setFilteredServices(filtered);
   };
 
-  const handleCategoryClick = (category) => {
+  const handleCategoryClick = async (category) => {
     setSelectedCategory(category);
-    if (category === 'ALL') {
-      setFilteredServices(services);
-    } else {
-      setFilteredServices(services.filter(service => service.category === category));
-    }
+
+    const filtered = await searchServicesWithOntology({
+      services,
+      searchTerm: '',
+      category,
+      t,
+    });
+
+    setFilteredServices(filtered);
   };
 
   if (loading) {
