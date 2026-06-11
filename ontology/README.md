@@ -17,7 +17,7 @@ This folder contains a project-specific ontology extracted from the ServPro back
 
 ```env
 FUSEKI_BASE_URL=http://localhost:3030
-FUSEKI_DATASET=servpro
+FUSEKI_DATASET=servpro_db
 FUSEKI_QUERY_ENDPOINT=http://localhost:3030/servpro/query
 FUSEKI_UPDATE_ENDPOINT=http://localhost:3030/servpro/update
 ```
