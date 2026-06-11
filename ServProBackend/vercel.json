@@ -1,4 +1,5 @@
 {
+  "installCommand": "npm ci --omit=dev",
   "version": 2,
   "functions": {
     "api/index.js": {
