@@ -1,6 +1,6 @@
 {
   "framework": "vite",
-  "installCommand": "npm ci --omit=dev",
+  "installCommand": "npm ci",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
