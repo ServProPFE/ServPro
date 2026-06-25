@@ -36,12 +36,12 @@
     }
   },
   "search": {
-    "placeholder": "Query the ontology...",
-    "categoryAll": "All ontology classes",
-    "button": "Explore Fuseki",
-    "tipLabel": "Ontology tips",
-    "scopeHint": "Query the Fuseki-backed ontology by service name, class, price, or duration.",
-    "clear": "Reset query"
+    "placeholder": "Search a service...",
+    "categoryAll": "All categories",
+    "button": "Search Service",
+    "tipLabel": "Search tips",
+    "scopeHint": "Search by service name, class, price, or duration.",
+    "clear": "Reset search"
   },
   "hero": {
     "title": "Find the right professional",
@@ -51,9 +51,9 @@
     "badge": "Trusted Home Service Platform",
     "ctaPrimary": "Browse services",
     "ctaSecondary": "Meet providers",
-    "quickSearch": "Ontology Query",
+    "quickSearch": "Quick Search",
     "smartTitle": "Smart suggestions",
-    "smartSubtitle": "Tap a suggestion to refine your Fuseki ontology query instantly",
+    "smartSubtitle": "Tap a suggestion to refine your search query instantly",
     "smartLoading": "Loading smart suggestions...",
     "smartFallback": "Suggestions based on popular service requests",
     "whyTitle": "Why choose ServPro",
