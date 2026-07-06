@@ -6,16 +6,25 @@ const { runFusekiQuery } = require("../services/fusekiService");
 //Semantic Search using SPARQL with fallback to MongoDB text search
 const semanticSearch = asyncHandler(async (req, res) => {
   const query = req.query.q || req.body.query || "";
+  const category = req.query.category || req.body.category || "";
 
   if (!query || query.trim().length === 0) {
     return res.json({ items: [] });
   }
 
-  // Try to use Fuseki SPARQL query if configured
-  const useFuseki = process.env.FUSEKI_QUERY_ENDPOINT && process.env.FUSEKI_QUERY_ENDPOINT.trim().length > 0;
+  // Trim and sanitize the query to prevent SPARQL injection
+  const sanitizedQuery = query.trim().substring(0, 100);
+  const sanitizedCategory = category ? String(category).trim().substring(0, 50) : "";
 
-  if (useFuseki) {
+  // Try to use Fuseki SPARQL query if configured
+  const fusekiConfigured = !!(process.env.FUSEKI_QUERY_ENDPOINT && process.env.FUSEKI_QUERY_ENDPOINT.trim().length > 0);
+
+  if (fusekiConfigured) {
     try {
+      const categoryFilter = sanitizedCategory
+        ? `FILTER(STR(?category) = "${sanitizedCategory}")`
+        : '';
+
       const sparqlQuery = `
 PREFIX : <http://servpro.local/ontology#>
 
@@ -27,10 +36,11 @@ WHERE {
            :hasProvider ?provider .
   OPTIONAL { ?service :description ?description . }
   ?provider :name ?providerName .
+  ${categoryFilter}
   FILTER(
-    CONTAINS(LCASE(STR(?serviceName)), LCASE("${query.replace(/"/g, '\\"')}")) ||
-    CONTAINS(LCASE(STR(?category)), LCASE("${query.replace(/"/g, '\\"')}")) ||
-    (BOUND(?description) && CONTAINS(LCASE(STR(?description)), LCASE("${query.replace(/"/g, '\\"')}")))
+    CONTAINS(LCASE(STR(?serviceName)), LCASE("${sanitizedQuery.replace(/"/g, '\\"')}")) ||
+    CONTAINS(LCASE(STR(?category)), LCASE("${sanitizedQuery.replace(/"/g, '\\"')}")) ||
+    (BOUND(?description) && CONTAINS(LCASE(STR(?description)), LCASE("${sanitizedQuery.replace(/"/g, '\\"')}")))
   )
 }
 ORDER BY LCASE(STR(?serviceName))
@@ -46,23 +56,35 @@ ORDER BY LCASE(STR(?serviceName))
       }));
       return res.json({ items });
     } catch (error) {
-      console.warn("Fuseki SPARQL query failed, falling back to MongoDB text search:", error.message);
+      const errorMsg = error.response?.status === 403 ? "Fuseki access forbidden" : error.message;
+      console.warn(`[SemanticSearch] Fuseki query failed (${error.response?.status || 'unknown'}): ${errorMsg}. Falling back to MongoDB.`);
       // Continue to MongoDB fallback below
     }
+  } else {
+    console.info("[SemanticSearch] Fuseki not configured. Using MongoDB text search.");
   }
 
   // Fallback to MongoDB text search
   try {
-    const services = await Service.find({
+    const mongoQuery = {
       $or: [
-        { name: { $regex: query, $options: 'i' } },
-        { category: { $regex: query, $options: 'i' } },
-        { description: { $regex: query, $options: 'i' } },
+        { name: { $regex: sanitizedQuery, $options: 'i' } },
+        { category: { $regex: sanitizedQuery, $options: 'i' } },
+        { description: { $regex: sanitizedQuery, $options: 'i' } },
       ]
-    }).lean();
+    };
+
+    // Add category filter if specified
+    if (sanitizedCategory) {
+      mongoQuery.category = sanitizedCategory;
+    }
+
+    const services = await Service.find(mongoQuery).limit(50).lean();
+    
     res.json({ items: services });
   } catch (error) {
-    console.error("MongoDB search failed:", error);
+    console.error("[SemanticSearch] MongoDB search failed:", error.message);
+    // Return empty results instead of error
     res.json({ items: [] });
   }
 });

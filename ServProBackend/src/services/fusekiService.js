@@ -19,15 +19,36 @@ const getFusekiConfig = () => {
 };
 
 const requestFuseki = async ({ endpoint, payload, contentType }) => {
-  const response = await axios.post(endpoint, payload, {
-    timeout: toPositiveInt(process.env.FUSEKI_TIMEOUT_MS, 30000),
-    headers: {
-      Accept: "application/sparql-results+json, application/json;q=0.9, text/turtle;q=0.8, */*;q=0.7",
-      "Content-Type": contentType,
-    },
-  });
+  try {
+    const response = await axios.post(endpoint, payload, {
+      timeout: toPositiveInt(process.env.FUSEKI_TIMEOUT_MS, 30000),
+      headers: {
+        Accept: "application/sparql-results+json, application/json;q=0.9, text/turtle;q=0.8, */*;q=0.7",
+        "Content-Type": contentType,
+      },
+      validateStatus: () => true, // Don't throw on any status code; we'll handle it ourselves
+    });
 
-  return response.data;
+    if (!response.status || response.status >= 400) {
+      const statusMsg = `${response.status} ${response.statusText}`;
+      const errorMsg = response.data?.message || response.data?.error || response.data || "Unknown error";
+      throw new Error(`Fuseki request failed with ${statusMsg}: ${errorMsg}`);
+    }
+
+    return response.data;
+  } catch (error) {
+    if (error.response) {
+      // Axios error with response
+      const status = error.response.status;
+      const statusText = error.response.statusText || 'Unknown';
+      throw new Error(`Fuseki HTTP ${status} ${statusText}: ${error.message}`);
+    } else if (error.code === 'ECONNREFUSED') {
+      throw new Error(`Fuseki connection refused. Endpoint may not be running: ${endpoint}`);
+    } else if (error.code === 'ETIMEDOUT') {
+      throw new Error(`Fuseki request timeout after ${toPositiveInt(process.env.FUSEKI_TIMEOUT_MS, 30000)}ms`);
+    }
+    throw error;
+  }
 };
 
 const runFusekiQuery = async (sparqlQuery) => {

@@ -79,6 +79,7 @@ export const API_ENDPOINTS = {
   ONTOLOGY_QUERY: `${API_BASE_URL}/ontology/query`,
   ONTOLOGY_EXPORT: `${API_BASE_URL}/ontology/export`,
   ONTOLOGY_CONFIG: `${API_BASE_URL}/ontology/config`,
+  SERVICES_SEMANTIC_SEARCH: (query) => `${API_BASE_URL}/services/search/semantic?q=${encodeURIComponent(query)}`,
 };
 
 export default API_BASE_URL;

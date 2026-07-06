@@ -93,20 +93,46 @@ export const searchServicesWithOntology = async ({ services, searchTerm = '', ca
   }
 
   try {
-    const query = buildOntologySearchQuery({ searchTerm: normalizedSearch, category: normalizedCategory, limit });
-    const payload = await apiService.post(API_ENDPOINTS.ONTOLOGY_QUERY, { query });
+    // Use public semantic search endpoint instead of protected ontology endpoint
+    let payload;
+    if (normalizedSearch) {
+      const searchUrl = normalizedCategory && normalizedCategory !== 'ALL'
+        ? `${API_ENDPOINTS.SERVICES_SEMANTIC_SEARCH(normalizedSearch)}&category=${encodeURIComponent(normalizedCategory)}`
+        : API_ENDPOINTS.SERVICES_SEMANTIC_SEARCH(normalizedSearch);
+      
+      const response = await apiService.get(searchUrl);
+      // Transform response to match ontology format
+      payload = {
+        data: {
+          results: {
+            bindings: (response.items || []).map((item) => ({
+              service: { value: item._id },
+              serviceName: { value: item.name },
+              category: { value: item.category },
+              providerName: { value: item.provider },
+              description: item.description ? { value: item.description } : undefined,
+              priceMin: item.priceMin ? { value: item.priceMin } : undefined,
+              duration: item.duration ? { value: item.duration } : undefined,
+            }))
+          }
+        }
+      };
+    } else {
+      payload = { data: { results: { bindings: [] } } };
+    }
+    
     const orderedIds = extractOntologyServiceIds(payload);
 
     return mergeOntologyResultsWithLocalServices({
       services,
       orderedIds,
-      searchTerm,
-      category,
+      searchTerm: normalizedSearch,
+      category: normalizedCategory,
       t,
     });
   } catch (error) {
-    console.warn('Ontology search fallback to local filtering:', error.message);
-    return filterServicesBySearch({ services, searchTerm, category, t });
+    console.warn('Semantic search error, falling back to local filtering:', error.message);
+    return filterServicesBySearch({ services, searchTerm: normalizedSearch, category: normalizedCategory, t });
   }
 };
 
