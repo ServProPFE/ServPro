@@ -3,7 +3,7 @@ const { Service } = require("../models/Service");
 const { asyncHandler } = require("../utils/asyncHandler");
 const { runFusekiQuery } = require("../services/fusekiService");
 
-//Semantic Search using SPARQL
+//Semantic Search using SPARQL with fallback to MongoDB text search
 const semanticSearch = asyncHandler(async (req, res) => {
   const query = req.query.q || req.body.query || "";
 
@@ -11,7 +11,12 @@ const semanticSearch = asyncHandler(async (req, res) => {
     return res.json({ items: [] });
   }
 
-  const sparqlQuery = `
+  // Try to use Fuseki SPARQL query if configured
+  const useFuseki = process.env.FUSEKI_QUERY_ENDPOINT && process.env.FUSEKI_QUERY_ENDPOINT.trim().length > 0;
+
+  if (useFuseki) {
+    try {
+      const sparqlQuery = `
 PREFIX : <http://servpro.local/ontology#>
 
 SELECT ?service ?serviceName ?description ?category ?providerName
@@ -29,21 +34,25 @@ WHERE {
   )
 }
 ORDER BY LCASE(STR(?serviceName))
-  `;
+      `;
 
+      const result = await runFusekiQuery(sparqlQuery);
+      const items = (result.results?.bindings || []).map((binding) => ({
+        _id: binding.service?.value,
+        name: binding.serviceName?.value,
+        description: binding.description?.value,
+        category: binding.category?.value,
+        provider: binding.providerName?.value,
+      }));
+      return res.json({ items });
+    } catch (error) {
+      console.warn("Fuseki SPARQL query failed, falling back to MongoDB text search:", error.message);
+      // Continue to MongoDB fallback below
+    }
+  }
+
+  // Fallback to MongoDB text search
   try {
-    const result = await runFusekiQuery(sparqlQuery);
-    const items = result.results?.bindings?.map((binding) => ({
-      _id: binding.service?.value,
-      name: binding.serviceName?.value,
-      description: binding.description?.value,
-      category: binding.category?.value,
-      provider: binding.providerName?.value,
-    })) || [];
-    res.json({ items });
-  } catch (error) {
-    console.error("Semantic search error:", error);
-    // Fallback to basic text search if SPARQL fails
     const services = await Service.find({
       $or: [
         { name: { $regex: query, $options: 'i' } },
@@ -52,6 +61,9 @@ ORDER BY LCASE(STR(?serviceName))
       ]
     }).lean();
     res.json({ items: services });
+  } catch (error) {
+    console.error("MongoDB search failed:", error);
+    res.json({ items: [] });
   }
 });
 
