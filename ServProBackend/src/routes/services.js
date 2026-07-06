@@ -3,13 +3,14 @@ const express = require("express");
 const { authenticate, authorizeRoles } = require("../middleware/auth");
 
 //Importer les fonctions du contrôleur
-const { listServices, getServiceById, createService, updateService, deleteService } = require("../controllers/servicesController");
+const { listServices, getServiceById, createService, updateService, deleteService, semanticSearch } = require("../controllers/servicesController");
 
 //Créer un routeur Express
 const router = express.Router();
 
 //Définir les routes pour les services
 router.get("/", listServices);
+router.get("/search/semantic", semanticSearch);
 router.get("/:id", getServiceById);
 router.post("/", authenticate, authorizeRoles("PROVIDER", "ADMIN"), createService);
 router.put("/:id", authenticate, authorizeRoles("PROVIDER", "ADMIN"), updateService);

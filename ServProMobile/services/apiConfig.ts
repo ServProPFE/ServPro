@@ -60,6 +60,7 @@ export const API_ENDPOINTS = {
   PROVIDERS: `${API_BASE_URL}/auth/providers`,
   SERVICES: `${API_BASE_URL}/services`,
   SERVICES_BY_PROVIDER: (providerId: string) => `${API_BASE_URL}/services?providerId=${providerId}`,
+  SERVICES_SEMANTIC_SEARCH: (query: string) => `${API_BASE_URL}/services/search/semantic?q=${encodeURIComponent(query)}`,
   ACTIVE_OFFERS: `${API_BASE_URL}/offers?active=true`,
   BOOKINGS: `${API_BASE_URL}/bookings`,
   BOOKING_BY_ID: (id: string) => `${API_BASE_URL}/bookings/${id}`,

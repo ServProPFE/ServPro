@@ -1,8 +1,61 @@
-//Importer les modeles et les utilitaires nécessaires
+//Importer los modeles y los utilitarios necesarios
 const { Service } = require("../models/Service");
 const { asyncHandler } = require("../utils/asyncHandler");
+const { runFusekiQuery } = require("../services/fusekiService");
 
-//Lister les services avec des filtres optionnels
+//Semantic Search using SPARQL
+const semanticSearch = asyncHandler(async (req, res) => {
+  const query = req.query.q || req.body.query || "";
+
+  if (!query || query.trim().length === 0) {
+    return res.json({ items: [] });
+  }
+
+  const sparqlQuery = `
+PREFIX : <http://servpro.local/ontology#>
+
+SELECT ?service ?serviceName ?description ?category ?providerName
+WHERE {
+  ?service a :Service ;
+           :name ?serviceName ;
+           :category ?category ;
+           :hasProvider ?provider .
+  OPTIONAL { ?service :description ?description . }
+  ?provider :name ?providerName .
+  FILTER(
+    CONTAINS(LCASE(STR(?serviceName)), LCASE("${query.replace(/"/g, '\\"')}")) ||
+    CONTAINS(LCASE(STR(?category)), LCASE("${query.replace(/"/g, '\\"')}")) ||
+    (BOUND(?description) && CONTAINS(LCASE(STR(?description)), LCASE("${query.replace(/"/g, '\\"')}")))
+  )
+}
+ORDER BY LCASE(STR(?serviceName))
+  `;
+
+  try {
+    const result = await runFusekiQuery(sparqlQuery);
+    const items = result.results?.bindings?.map((binding) => ({
+      _id: binding.service?.value,
+      name: binding.serviceName?.value,
+      description: binding.description?.value,
+      category: binding.category?.value,
+      provider: binding.providerName?.value,
+    })) || [];
+    res.json({ items });
+  } catch (error) {
+    console.error("Semantic search error:", error);
+    // Fallback to basic text search if SPARQL fails
+    const services = await Service.find({
+      $or: [
+        { name: { $regex: query, $options: 'i' } },
+        { category: { $regex: query, $options: 'i' } },
+        { description: { $regex: query, $options: 'i' } },
+      ]
+    }).lean();
+    res.json({ items: services });
+  }
+});
+
+//Lister los servicios con los filtros opcionales
 const listServices = asyncHandler(async (req, res) => {
   const { category, providerId } = req.query;
   const query = {};
@@ -20,7 +73,7 @@ const listServices = asyncHandler(async (req, res) => {
   res.json({ items: services });
 });
 
-//Obtenir un service par ID
+//Obtener un servicio por ID
 const getServiceById = asyncHandler(async (req, res) => {
   const service = await Service.findById(req.params.id).populate('provider', 'name email phone').lean();
   
@@ -33,7 +86,7 @@ const getServiceById = asyncHandler(async (req, res) => {
   res.json(service);
 });
 
-//Créer un nouveau service
+//Crear un nuevo servicio
 const createService = asyncHandler(async (req, res) => {
   const {
     provider,
@@ -60,7 +113,7 @@ const createService = asyncHandler(async (req, res) => {
   res.status(201).json(service);
 });
 
-//Mettre à jour un service
+//Actualizar un servicio
 const updateService = asyncHandler(async (req, res) => {
   const { name, category, priceMin, priceMax, duration, description, currency } = req.body;
     const service = await Service.findById(req.params.id);
@@ -82,7 +135,7 @@ const updateService = asyncHandler(async (req, res) => {
     res.json(service);
 });
 
-//Supprimer un service
+//Eliminar un servicio
 const deleteService = asyncHandler(async (req, res) => {
   const service = await Service.findByIdAndDelete(req.params.id);
   if (!service) {
@@ -93,5 +146,5 @@ const deleteService = asyncHandler(async (req, res) => {
   res.json({ message: "Service deleted" });
 });
 
-//Exporter les fonctions du contrôleur
-module.exports = { listServices, getServiceById, createService, updateService, deleteService };
+//Exportar las funciones del controlador
+module.exports = { listServices, getServiceById, createService, updateService, deleteService, semanticSearch };

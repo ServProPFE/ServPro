@@ -174,6 +174,30 @@ export const servproDataService = {
     }
   },
 
+  async semanticSearch(query: string): Promise<ServiceItem[]> {
+    if (!query.trim()) {
+      return this.getServices();
+    }
+
+    try {
+      const data = await apiService.get<ApiItems<ServiceItem>>(
+        API_ENDPOINTS.SERVICES_SEMANTIC_SEARCH(query),
+      );
+      const items = normalizeItems(data);
+      return items.length ? items : [];
+    } catch (error) {
+      // Fallback to local services with basic text filtering
+      const allServices = await this.getServices();
+      const queryLower = query.toLowerCase();
+      return allServices.filter(
+        (service) =>
+          service.name.toLowerCase().includes(queryLower) ||
+          service.category?.toLowerCase().includes(queryLower) ||
+          service.description?.toLowerCase().includes(queryLower),
+      );
+    }
+  },
+
   async getOffers(): Promise<OfferItem[]> {
     try {
       const data = await apiService.get<ApiItems<OfferItem>>(API_ENDPOINTS.ACTIVE_OFFERS);

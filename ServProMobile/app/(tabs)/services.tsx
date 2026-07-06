@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
@@ -28,6 +28,8 @@ export default function ServicesScreen() {
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ServiceCategory | 'ALL'>('ALL');
+  const [isSearching, setIsSearching] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | number | null>(null);
 
   const loadServices = useCallback(async () => {
     const data = await servproDataService.getServices();
@@ -44,14 +46,44 @@ export default function ServicesScreen() {
     }, [loadServices]),
   );
 
+  // Debounced semantic search
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    if (!searchTerm.trim()) {
+      setIsSearching(false);
+      loadServices();
+      return;
+    }
+
+    setIsSearching(true);
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        const results = await servproDataService.semanticSearch(searchTerm.trim());
+        setServices(results);
+      } catch (error) {
+        console.error('Semantic search error:', error);
+        loadServices();
+      } finally {
+        setIsSearching(false);
+      }
+    }, 500);
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchTerm, loadServices]);
+
   const filtered = useMemo(() => {
     return services.filter((item) => {
-      const matchesSearch =
-        !searchTerm.trim() || item.name.toLowerCase().includes(searchTerm.trim().toLowerCase());
       const matchesCategory = selectedCategory === 'ALL' || item.category === selectedCategory;
-      return matchesSearch && matchesCategory;
+      return matchesCategory;
     });
-  }, [searchTerm, selectedCategory, services]);
+  }, [selectedCategory, services]);
 
   return (
     <AppBackground>
@@ -64,13 +96,17 @@ export default function ServicesScreen() {
             onPress={() => router.push('/providers' as never)}>
             <Text style={styles.providerBtnText}>{t('providers.openDirectory')}</Text>
           </Pressable>
-          <TextInput
-            style={styles.search}
-            placeholder={t('search.placeholder')}
-            value={searchTerm}
-            onChangeText={setSearchTerm}
-            placeholderTextColor="#94a3b8"
-          />
+          <View style={styles.searchContainer}>
+            <TextInput
+              style={styles.search}
+              placeholder={t('search.placeholder')}
+              value={searchTerm}
+              onChangeText={setSearchTerm}
+              placeholderTextColor="#94a3b8"
+              editable={!isSearching}
+            />
+            {isSearching && <Text style={styles.searchingIndicator}>...</Text>}
+          </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
             {categories.map((category) => (
               <Pressable
@@ -97,7 +133,7 @@ export default function ServicesScreen() {
               onPress={(selected) => router.push(`/service/${selected._id}` as never)}
             />
           ))}
-          {filtered.length === 0 ? (
+          {filtered.length === 0 && !isSearching ? (
             <Text style={styles.emptyText}>{t('services.noResults')}</Text>
           ) : null}
         </View>
@@ -124,6 +160,10 @@ const styles = StyleSheet.create({
     padding: 14,
     ...AppTheme.shadow.card,
   },
+  searchContainer: {
+    position: 'relative',
+    marginTop: 10,
+  },
   search: {
     borderWidth: 1,
     borderColor: '#e2e8f0',
@@ -133,7 +173,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     color: AppTheme.colors.text,
     fontWeight: '600',
-    marginTop: 10,
+  },
+  searchingIndicator: {
+    position: 'absolute',
+    right: 12,
+    top: 12,
+    color: '#94a3b8',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   providerBtn: {
     marginTop: 12,
@@ -149,38 +196,39 @@ const styles = StyleSheet.create({
     color: '#0f172a',
     fontWeight: '800',
     fontSize: 12,
-    textTransform: 'uppercase',
   },
   filters: {
+    marginTop: 10,
     gap: 8,
-    marginTop: 12,
   },
   filterButton: {
-    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
     backgroundColor: '#f8fafc',
   },
   filterButtonActive: {
-    borderColor: '#0f172a',
-    backgroundColor: '#0f172a',
+    borderColor: AppTheme.colors.primary,
+    backgroundColor: AppTheme.colors.primary,
   },
   filterText: {
-    color: '#475569',
-    fontWeight: '700',
+    color: '#64748b',
+    fontWeight: '600',
     fontSize: 12,
   },
   filterTextActive: {
     color: '#ffffff',
   },
   section: {
-    marginTop: 14,
+    marginTop: 16,
+    gap: 12,
   },
   emptyText: {
     textAlign: 'center',
-    color: AppTheme.colors.mutedText,
-    paddingVertical: 16,
+    color: '#94a3b8',
+    marginTop: 20,
+    fontSize: 14,
   },
 });
